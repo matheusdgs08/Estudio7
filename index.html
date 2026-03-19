@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estúdio Se7e — Sistema Operacional</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--gold:#B8975A;--gold-l:#F5EFE4;--gold-d:#8B6B35;--ink:#1C1916;--ink2:#4A453F;--ink3:#8A8278;--bg:#FAF8F4;--bg2:#F0EDE8;--bg3:#E2DDD6;--wh:#FFFFFF;--r:10px;--rs:6px}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
+input,select,button,textarea{font-family:'DM Sans',sans-serif}
+
+/* NAV LATERAL */
+.app{display:flex;height:100vh;overflow:hidden}
+.nav{width:220px;background:var(--ink);flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
+.nav-logo{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.07)}
+.nav-logo-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:400;color:var(--wh);letter-spacing:.3px}
+.nav-logo-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:3px;letter-spacing:1px;text-transform:uppercase}
+.nav-section{padding:14px 12px 6px}
+.nav-sec-lbl{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px;font-weight:500;padding:0 8px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--rs);cursor:pointer;margin-bottom:2px;border:1px solid transparent;transition:all .15s;color:rgba(255,255,255,.55);font-size:12px}
+.nav-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.8)}
+.nav-item.on{background:rgba(184,151,90,.18);border-color:rgba(184,151,90,.3);color:var(--wh)}
+.nav-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:9px;font-weight:500;padding:1px 6px;border-radius:10px;background:rgba(255,140,0,.25);color:#FCD34D}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+
+/* ─── TELAS ─── */
+.screen{display:none;flex-direction:column;flex:1}
+.screen.active{display:flex}
+
+/* HEADER PADRÃO */
+.ph{background:var(--wh);border-bottom:1px solid var(--bg3);padding:20px 28px 16px;display:flex;align-items:flex-end;justify-content:space-between;flex-shrink:0}
+.eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.ptitle{font-family:'Playfair Display',serif;font-size:22px;font-weight:400;color:var(--ink)}
+.psub{font-size:11px;color:var(--ink3);margin-top:2px}
+.ph-right{display:flex;align-items:center;gap:8px}
+.srch{padding:7px 12px;border:1px solid var(--bg3);border-radius:var(--rs);background:var(--bg);color:var(--ink);outline:none;font-size:12px;width:200px}
+.srch:focus{border-color:var(--gold)}
+.fltrs{display:flex;gap:3px}
+.fb{padding:5px 11px;font-size:11px;border:1px solid var(--bg3);background:var(--wh);color:var(--ink3);border-radius:var(--rs);cursor:pointer;transition:all .15s}
+.fb.on{background:var(--ink);color:var(--wh);border-color:var(--ink)}
+.ph-pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ph-pill{font-size:11px;font-weight:500;padding:4px 12px;border-radius:20px;border:1px solid}
+.pp-a{background:#FFFBEB;color:#92400E;border-color:#FCD34D}
+.pp-r{background:#FEF2F2;color:#991B1B;border-color:#FECACA}
+.pp-g{background:var(--bg);color:var(--ink3);border-color:var(--bg3)}
+.pp-b{background:#EFF6FF;color:#1E40AF;border-color:#BFDBFE}
+
+/* CARDS ALUNO */
+.lista{padding:16px 28px;display:flex;flex-direction:column;gap:5px}
+.acard{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:14px}
+.acard:hover{border-color:var(--gold);transform:translateY(-1px);box-shadow:0 2px 10px rgba(184,151,90,.09)}
+.acard.done{opacity:.6}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.av-t{background:#E1F5EE;color:#0F6E56}.av-b{background:#E6F1FB;color:#185FA5}
+.av-a{background:#FAEEDA;color:#854F0B}.av-p{background:#EEEDFE;color:#534AB7}
+.av-c{background:#FAECE7;color:#993C1D}.av-g{background:#EAF3DE;color:#3B6D11}
+.ainfo{flex:1;min-width:0}
+.aname{font-size:13px;font-weight:500;color:var(--ink);margin-bottom:2px}
+.ameta{font-size:11px;color:var(--ink3)}
+.apnom{font-size:11px;color:var(--ink3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arest{margin-top:7px;font-size:11px;background:#FEF2F2;border-left:2px solid #FCA5A5;padding:3px 8px;color:#991B1B;border-radius:0 4px 4px 0}
+.aright{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sp{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500}
+.sp-ok{background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7}
+.sp-exp{background:#FFFBEB;color:#92400E;border:1px solid #FCD34D}
+.sp-end{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+.sp-no{background:var(--bg);color:var(--ink3);border:1px solid var(--bg3)}
+.sp-p{background:#FFFBEB;color:#92400E;border:1px solid #FCD34D}
+.sp-d{background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7}
+.ptrow{display:flex;align-items:center;gap:9px}
+.ptbar{flex:1;height:3px;background:var(--bg2);border-radius:99px;overflow:hidden}
+.ptfill{height:100%;border-radius:99px}
+.pttxt{font-size:11px;color:var(--ink3);white-space:nowrap}
+.hora-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--bg2);color:var(--ink3);border:1px solid var(--bg3)}
+.achev{color:var(--bg3);font-size:16px;transition:color .15s}
+.acard:hover .achev{color:var(--gold)}
+.btn-criar{font-size:11px;padding:5px 12px;background:var(--ink);color:var(--wh);border:none;border-radius:var(--rs);cursor:pointer;font-weight:500}
+
+/* EDITOR */
+.editor-shell{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.etop{background:var(--wh);border-bottom:1px solid var(--bg3);padding:0 20px;display:flex;align-items:center;gap:12px;height:52px;flex-shrink:0}
+.btnbk{background:none;border:none;cursor:pointer;color:var(--ink3);width:28px;height:28px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:15px}
+.btnbk:hover{background:var(--bg);color:var(--ink)}
+.ehdr{flex:1;min-width:0}
+.enome{font-family:'Playfair Display',serif;font-size:15px;font-weight:400;color:var(--ink);background:transparent;border:none;outline:none;width:100%}
+.esub{font-size:11px;color:var(--ink3)}
+.vtabs{display:flex;border:1px solid var(--bg3);border-radius:var(--rs);overflow:hidden}
+.vt{padding:5px 13px;font-size:11px;border:none;background:transparent;color:var(--ink3);cursor:pointer;border-right:1px solid var(--bg3);transition:all .15s}
+.vt:last-child{border-right:none}
+.vt.on{background:var(--ink);color:var(--wh)}
+.vt:not(.on):hover{background:var(--bg)}
+.btnsv{padding:6px 18px;background:var(--gold);color:var(--wh);border:none;border-radius:var(--rs);cursor:pointer;font-size:12px;font-weight:500}
+.btnsv.ok{background:#059669}
+.ebody{display:flex;flex:1;overflow:hidden;min-height:0}
+.esidebar{width:195px;flex-shrink:0;background:var(--wh);border-right:1px solid var(--bg3);display:flex;flex-direction:column;overflow-y:auto}
+.sbal{padding:16px 14px;border-bottom:1px solid var(--bg3)}
+.sbnome{font-family:'Playfair Display',serif;font-size:13px;color:var(--ink);margin-bottom:6px}
+.sbtags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:6px}
+.sbtag{font-size:10px;background:var(--bg2);color:var(--ink2);padding:2px 6px;border-radius:3px}
+.sbrest{font-size:10px;background:#FEF2F2;border-left:2px solid #FCA5A5;padding:3px 8px;color:#991B1B;border-radius:0 3px 3px 0}
+.sbfichas{padding:12px 11px;flex:1}
+.sbfhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.sbflbl{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:1.4px;font-weight:500}
+.btnnf{font-size:11px;color:var(--gold-d);background:none;border:none;cursor:pointer;font-weight:500}
+.ftab{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:var(--rs);cursor:pointer;margin-bottom:2px;border:1px solid transparent;transition:all .12s}
+.ftab:hover:not(.on){background:var(--bg)}
+.ftab.on{background:var(--gold-l);border-color:rgba(184,151,90,.3)}
+.ftl{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0}
+.ftl.on{background:var(--gold);color:var(--wh)}
+.ftl.off{background:var(--bg2);color:var(--ink3)}
+.ftn{font-size:11px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ftc{font-size:10px;color:var(--ink3)}
+.emain{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.fichatop{background:var(--wh);border-bottom:1px solid var(--bg3);padding:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.fninp{flex:1;font-family:'Playfair Display',serif;font-size:14px;font-weight:400;color:var(--ink);background:transparent;border:none;outline:none}
+.stimsel{font-size:11px;border:1px solid var(--bg3);border-radius:var(--rs);padding:4px 8px;background:var(--bg);color:var(--ink2);outline:none}
+.excnt{font-size:11px;color:var(--ink3)}
+.exscroll{flex:1;overflow-y:auto;padding:12px 16px}
+
+/* EXERCÍCIO */
+.bloco{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);margin-bottom:6px;overflow:hidden}
+.exrow{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.exnum{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;flex-shrink:0;background:var(--bg2);color:var(--ink3)}
+.exnum.nd{background:#DBEAFE;color:#1E40AF}
+.exnum.nt{background:#EDE9FE;color:#6D28D9}
+.exnc{flex:1;min-width:0}
+.exnm{font-size:12px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exgr{font-size:10px;color:var(--ink3);margin-top:1px}
+.exfields{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.ef{display:flex;flex-direction:column;align-items:center;width:54px}
+.ef-lbl{font-size:9px;color:var(--ink3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px;font-weight:500}
+.ef-inp{width:54px;text-align:center;font-size:18px;font-weight:500;color:var(--ink);border:1px solid var(--bg3);border-radius:var(--rs);padding:6px 4px;background:var(--wh);outline:none}
+.ef-inp:focus{border-color:var(--gold);background:var(--gold-l)}
+.ef-carga{font-size:14px;font-weight:500;color:var(--ink3);padding:6px 4px;width:54px;text-align:center}
+.btnrm{width:20px;height:20px;border-radius:50%;border:none;background:transparent;cursor:pointer;color:var(--bg3);font-size:14px;display:flex;align-items:center;justify-content:center}
+.btnrm:hover{background:#FEF2F2;color:#DC2626}
+.obsrow{padding:0 14px 8px 44px}
+.oi{width:100%;font-size:11px;border:1px solid var(--bg3);border-radius:var(--rs);padding:4px 10px;background:transparent;color:var(--ink);outline:none}
+.oi:focus{border-color:var(--gold)}
+.oi::placeholder{color:var(--bg3)}
+.grprow{padding:0 14px 9px 44px}
+.btngrp{font-size:10px;padding:3px 10px;background:var(--bg);color:var(--ink2);border:1px solid var(--bg3);border-radius:var(--rs);cursor:pointer}
+.btngrp:hover{background:#EFF6FF;color:#1E40AF;border-color:#BFDBFE}
+.gbloco{border-radius:var(--rs);margin-bottom:6px;overflow:hidden}
+.ghdr{padding:7px 14px;display:flex;align-items:center;justify-content:space-between}
+.glbl{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase}
+.gacts{display:flex;gap:5px}
+.btngd{font-size:10px;padding:3px 9px;border:1px solid #FECACA;color:#DC2626;border-radius:var(--rs);cursor:pointer;background:transparent}
+.gbody{background:var(--wh)}
+.gexrow{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid}
+.buscabar{background:var(--wh);border-top:1px solid var(--bg3);padding:9px 14px;flex-shrink:0;position:relative}
+.binp{width:100%;padding:8px 12px;border:1px solid var(--bg3);border-radius:var(--r);background:var(--bg);color:var(--ink);outline:none;font-size:12px}
+.binp:focus{border-color:var(--gold);background:var(--wh)}
+.binp::placeholder{color:var(--bg3)}
+.dd{position:absolute;bottom:calc(100%+2px);left:14px;right:14px;background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden;z-index:50;max-height:200px;overflow-y:auto;box-shadow:0 -4px 20px rgba(0,0,0,.07)}
+.ddi{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--bg);transition:background .1s}
+.ddi:last-child{border-bottom:none}
+.ddi:hover{background:var(--gold-l)}
+.ddn{font-size:12px;font-weight:500;color:var(--ink)}
+.ddg{font-size:10px;color:var(--ink3);margin-top:1px}
+
+/* COMPARAR */
+.cshell{flex:1;overflow-x:auto;display:flex;flex-direction:column;background:var(--bg2);min-height:0}
+.ccols{display:flex;flex:1;overflow-y:auto}
+.ccol{min-width:260px;max-width:320px;flex:1;background:var(--wh);border-right:1px solid var(--bg3);display:flex;flex-direction:column}
+.ccol:last-child{border-right:none}
+.cchdr{padding:12px 14px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:9px;background:var(--wh);position:sticky;top:0;z-index:2}
+.ccletra{width:26px;height:26px;border-radius:50%;background:var(--ink);color:var(--wh);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.ccnome{font-family:'Playfair Display',serif;font-size:13px;color:var(--ink)}
+.ccsub{font-size:10px;color:var(--ink3);margin-top:1px}
+.ccbody{padding:9px 11px;overflow-y:auto;flex:1}
+.cex{background:var(--bg);border:1px solid var(--bg3);border-radius:var(--rs);margin-bottom:4px;overflow:hidden}
+.cexrow{display:flex;align-items:center;gap:7px;padding:7px 10px}
+.cnum{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;flex-shrink:0;background:var(--bg3);color:var(--ink2)}
+.cnum.cd{background:#DBEAFE;color:#1E40AF}
+.cnum.ct{background:#EDE9FE;color:#6D28D9}
+.cexinf{flex:1;min-width:0}
+.cexnm{font-size:11px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cexgr{font-size:10px;color:var(--ink3)}
+.cexfl{font-size:10px;color:var(--ink2);white-space:nowrap}
+.cgrp{border-radius:var(--rs);margin-bottom:4px;overflow:hidden}
+.cghdr{padding:5px 10px;font-size:10px;font-weight:500;letter-spacing:.7px;text-transform:uppercase}
+.cgbody{background:var(--wh)}
+.cgrow{display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid}
+.cmuscles{padding:9px 11px;border-top:1px solid var(--bg3);background:var(--bg2);flex-shrink:0}
+.cmlbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px;font-weight:500}
+.cmtags{display:flex;flex-wrap:wrap;gap:3px}
+.cmtag{font-size:10px;padding:2px 8px;border-radius:var(--rs)}
+
+/* AULA DADA */
+.tcard{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden}
+.tchdr{padding:10px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between}
+.tcico{width:28px;height:28px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:12px}
+.tctitle{font-size:12px;font-weight:500;color:var(--ink)}
+.tcsub{font-size:10px;color:var(--ink3);margin-top:1px}
+.tcbadge{font-size:10px;padding:2px 9px;border-radius:20px;background:var(--bg2);color:var(--ink3);border:1px solid var(--bg3)}
+.tcbody{padding:8px 12px}
+.tex{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--rs)}
+.tnum{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;flex-shrink:0;background:var(--bg2);color:var(--ink3)}
+.tnum.nd{background:#DBEAFE;color:#1E40AF}.tnum.nt{background:#EDE9FE;color:#6D28D9}
+.texinfo{flex:1;min-width:0}
+.texnm{font-size:12px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.texmeta{font-size:10px;color:var(--ink3);margin-top:1px}
+.tex-carga{font-size:13px;font-weight:500;min-width:28px;text-align:right;flex-shrink:0}
+.btn-edit-ex{width:26px;height:26px;border-radius:50%;border:1px solid var(--bg3);background:var(--wh);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink3);transition:all .15s;flex-shrink:0}
+.btn-edit-ex:hover{border-color:var(--gold);background:var(--gold-l);color:var(--gold-d)}
+.btn-edit-ex.has-data{border-color:var(--gold);background:var(--gold-l);color:var(--gold-d)}
+.btn-edit-ex.has-sol{border-color:#FCD34D;background:#FFFBEB;color:#92400E}
+.tgrp{border:1px solid;border-radius:var(--rs);margin:5px 0;overflow:hidden}
+.tghdr{padding:4px 10px;font-size:9px;font-weight:500;letter-spacing:.8px;text-transform:uppercase}
+.tgrow{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid}
+.tgrow:last-child{border-bottom:none}
+.sec{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden}
+.sec-hdr{padding:10px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.sec-title{font-size:12px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:8px}
+.sec-badge{font-size:10px;padding:1px 7px;border-radius:20px}
+.sec-tog{font-size:12px;color:var(--ink3);transition:transform .2s}
+.sec-tog.open{transform:rotate(180deg)}
+.sec-body{padding:12px 16px}
+.obs-area{width:100%;font-size:12px;border:1px solid var(--bg3);border-radius:var(--rs);padding:8px 12px;background:var(--wh);color:var(--ink);outline:none;resize:none;line-height:1.6;min-height:72px}
+.obs-area:focus{border-color:var(--gold)}
+.obs-area::placeholder{color:var(--bg3)}
+.contato-toggle{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer}
+.tsw{width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s}
+.tsw.on{background:#059669}.tsw.off{background:var(--bg3)}
+.tsw::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:var(--wh);top:2px;transition:left .15s}
+.tsw.on::after{left:18px}.tsw.off::after{left:2px}
+.cbody{padding:0 16px 14px}
+.curg{display:flex;align-items:center;gap:8px;margin-top:8px}
+.ulbl{font-size:11px;color:var(--ink3)}
+.ubtn{font-size:10px;padding:3px 10px;border-radius:20px;cursor:pointer;border:1px solid;transition:all .15s}
+.ubtn.on.alta{background:#FEF2F2;color:#991B1B;border-color:#FECACA}
+.ubtn.on.normal{background:#FFFBEB;color:#92400E;border-color:#FCD34D}
+.ubtn:not(.on){background:transparent;color:var(--ink3);border-color:var(--bg3)}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(28,25,22,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-box{background:var(--wh);border-radius:var(--r);width:100%;max-width:480px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:pop .18s ease}
+@keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.ms-hdr{padding:16px 20px;border-bottom:1px solid var(--bg3);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:var(--wh);z-index:2}
+.ms-title{font-family:'Playfair Display',serif;font-size:14px;font-weight:400;color:var(--ink);line-height:1.3}
+.ms-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.ms-close{width:28px;height:28px;border-radius:50%;border:1px solid var(--bg3);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink3);flex-shrink:0}
+.ms-close:hover{background:var(--bg)}
+.ms-body{padding:16px 20px;display:flex;flex-direction:column;gap:16px}
+.ms-section{display:flex;flex-direction:column;gap:6px}
+.ms-lbl{font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.6px;text-transform:uppercase}
+.pref-box{background:var(--gold-l);border:1px solid rgba(184,151,90,.25);border-radius:var(--rs);padding:8px 12px;font-size:12px;color:var(--ink2);display:flex;align-items:flex-start;gap:8px}
+.carga-row{display:flex;align-items:center;gap:16px}
+.cf{display:flex;flex-direction:column;align-items:center;gap:4px}
+.cf-lbl2{font-size:10px;color:var(--ink3);letter-spacing:.6px;text-transform:uppercase;font-weight:500}
+.cf-static{font-size:26px;font-weight:500;color:var(--ink3)}
+.cf-arrow{font-size:20px;color:var(--bg3);margin-top:10px}
+.cf-inp{width:88px;text-align:center;font-size:26px;font-weight:500;color:var(--ink);border:1px solid var(--bg3);border-radius:var(--rs);padding:8px 4px;background:var(--wh);outline:none}
+.cf-inp:focus{border-color:var(--gold);background:var(--gold-l)}
+.cf-inp.changed{border-color:#059669;background:#ECFDF5;color:#065F46}
+.cf-inp:disabled{opacity:.3;cursor:default}
+.ms-textarea{width:100%;font-size:12px;border:1px solid var(--bg3);border-radius:var(--rs);padding:8px 12px;background:var(--wh);color:var(--ink);outline:none;resize:none;line-height:1.6}
+.ms-textarea:focus{border-color:var(--gold)}
+.ms-textarea::placeholder{color:var(--bg3)}
+.sol-btns{display:flex;gap:6px;flex-wrap:wrap}
+.sol-btn{font-size:11px;padding:5px 12px;border-radius:var(--rs);cursor:pointer;border:1px solid;background:transparent;transition:all .15s}
+.sb-troca{color:#1E40AF;border-color:#BFDBFE}.sb-troca:hover{background:#EFF6FF}
+.sb-remov{color:#DC2626;border-color:#FECACA}.sb-remov:hover{background:#FEF2F2}
+.sol-form{background:var(--bg);border:1px solid var(--bg3);border-radius:var(--rs);padding:12px}
+.sol-form-title{font-size:11px;font-weight:500;color:var(--ink2);margin-bottom:10px}
+.sol-inp{width:100%;font-size:12px;border:1px solid var(--bg3);border-radius:var(--rs);padding:6px 10px;background:var(--wh);color:var(--ink);outline:none;margin-bottom:8px}
+.sol-inp:focus{border-color:var(--gold)}
+.sol-acts{display:flex;gap:8px;margin-top:8px}
+.btn-env{font-size:12px;padding:6px 16px;background:var(--gold);color:var(--wh);border:none;border-radius:var(--rs);cursor:pointer;font-weight:500}
+.btn-can{font-size:12px;padding:6px 12px;border:1px solid var(--bg3);background:transparent;color:var(--ink3);border-radius:var(--rs);cursor:pointer}
+.sol-sent{font-size:12px;color:#059669;font-style:italic;padding:4px 0}
+.ms-footer{padding:12px 20px;border-top:1px solid var(--bg3);display:flex;justify-content:flex-end;position:sticky;bottom:0;background:var(--wh)}
+.btn-concluir{padding:7px 22px;background:var(--ink);color:var(--wh);border:none;border-radius:var(--rs);cursor:pointer;font-size:12px;font-weight:500}
+
+/* FILA VANESSA */
+.fv-acard{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden}
+.fv-achdr{padding:12px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;transition:background .15s}
+.fv-achdr:hover{background:var(--bg)}
+.fv-badges{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+.badge{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;border:1px solid}
+.b-troca{background:#EFF6FF;color:#1E40AF;border-color:#BFDBFE}
+.b-remov{background:#FEF2F2;color:#991B1B;border-color:#FECACA}
+.b-add{background:#ECFDF5;color:#065F46;border-color:#6EE7B7}
+.b-cont{background:#FFF1F2;color:#9F1239;border-color:#FECDD3}
+.b-obs{background:#F0F9FF;color:#0C4A6E;border-color:#BAE6FD}
+.fv-chevron{font-size:14px;color:var(--bg3);transition:transform .2s;flex-shrink:0}
+.fv-chevron.open{transform:rotate(90deg)}
+.sol-item{padding:14px 16px;border-bottom:1px solid var(--bg3);transition:background .1s}
+.sol-item:last-child{border-bottom:none}
+.sol-item.resolved{opacity:.55}
+.sol-top{display:flex;align-items:flex-start;gap:10px}
+.sol-ico{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.ico-troca{background:#EFF6FF}.ico-remov{background:#FEF2F2}.ico-add{background:#ECFDF5}.ico-cont{background:#FFF1F2}.ico-obs{background:#F0F9FF}
+.sol-info{flex:1;min-width:0}
+.sol-tipo{font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px}
+.tc-troca{color:#1E40AF}.tc-remov{color:#991B1B}.tc-add{color:#065F46}.tc-cont{color:#9F1239}.tc-obs{color:#0C4A6E}
+.sol-ex{font-size:12px;font-weight:500;color:var(--ink);margin-bottom:2px}
+.sol-prof{font-size:11px;color:var(--ink3)}
+.sol-motivo{font-size:12px;color:var(--ink2);margin-top:6px;line-height:1.5}
+.sol-sugestao{font-size:12px;color:var(--ink);margin-top:5px;padding:6px 10px;background:var(--bg);border-radius:var(--rs);border-left:2px solid var(--gold)}
+.sol-actions{display:flex;gap:8px;margin-top:10px;align-items:center}
+.btn-apr{font-size:11px;padding:5px 14px;background:#059669;color:var(--wh);border:none;border-radius:var(--rs);cursor:pointer;font-weight:500}
+.btn-apr:hover{background:#047857}
+.btn-rej{font-size:11px;padding:5px 14px;background:transparent;color:#DC2626;border:1px solid #FECACA;border-radius:var(--rs);cursor:pointer}
+.btn-rej:hover{background:#FEF2F2}
+.sol-resolved{font-size:11px;font-weight:500;padding:5px 12px;border-radius:var(--rs)}
+.sr-apr{background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7}
+.sr-rej{background:#F3F4F6;color:#6B7280;border:1px solid #E5E7EB}
+.sol-date{font-size:10px;color:var(--ink3);margin-left:auto}
+.rej-form{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.rej-inp{width:100%;font-size:12px;border:1px solid var(--bg3);border-radius:var(--rs);padding:6px 10px;background:var(--wh);color:var(--ink);outline:none}
+.rej-inp:focus{border-color:var(--gold)}
+.rej-acts{display:flex;gap:6px}
+.btn-rej-conf{font-size:11px;padding:4px 12px;background:#DC2626;color:var(--wh);border:none;border-radius:var(--rs);cursor:pointer}
+.btn-rej-can{font-size:11px;padding:4px 10px;border:1px solid var(--bg3);background:transparent;color:var(--ink3);border-radius:var(--rs);cursor:pointer}
+
+.empty-state{padding:48px 28px;text-align:center;color:var(--ink3)}
+.empty-ico{font-size:28px;margin-bottom:8px;opacity:.3}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="nav-logo">
+      <div class="nav-logo-title">Estúdio Se7e</div>
+      <div class="nav-logo-sub">Sistema Operacional</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-lbl">Coordenação</div>
+      <div class="nav-item" onclick="showScreen('treino')" id="nav-treino">
+        <span class="nav-ico">🏋</span> Módulo de Treino
+      </div>
+      <div class="nav-item" onclick="showScreen('fila')" id="nav-fila">
+        <span class="nav-ico">📋</span> Fila de Solicitações
+        <span class="nav-badge">3</span>
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-lbl">Professor</div>
+      <div class="nav-item" onclick="showScreen('aula')" id="nav-aula">
+        <span class="nav-ico">📝</span> Aulas do dia
+      </div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-sec-lbl">Recepção</div>
+      <div class="nav-item" onclick="showScreen('agenda')" id="nav-agenda">
+        <span class="nav-ico">📅</span> Agenda
+      </div>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content" id="content">
+    <!-- as telas são renderizadas via JS aqui -->
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  DADOS
+// ════════════════════════════════════════
+const CAT=[
+  {id:'e1',n:'QUADRICEPS - LEG PRESS 45',g:'quadriceps'},
+  {id:'e2',n:'QUADRICEPS - AFUNDO COM HALTER',g:'quadriceps'},
+  {id:'e3',n:'GLUTEO - AGACHAMENTO SUMÔ',g:'gluteo'},
+  {id:'e4',n:'GLUTEO - MESA FLEXORA',g:'gluteo'},
+  {id:'e5',n:'POSTERIOR - CADEIRA FLEXORA',g:'posterior'},
+  {id:'e6',n:'DORSAL - PULL DOWN BARRA',g:'dorsal'},
+  {id:'e7',n:'DORSAL - REMADA POLIA ALTA CORDA',g:'dorsal'},
+  {id:'e9',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'peitoral'},
+  {id:'e10',n:'BICEPS - ROSCA DIRETA BARRA',g:'biceps'},
+  {id:'e11',n:'TRICEPS - PULLEY BARRA RETA',g:'triceps'},
+  {id:'e12',n:'OMBRO - ELEVAÇÃO LATERAL',g:'ombro'},
+  {id:'e13',n:'ABDOMEN - PRANCHA ISOMETRICA',g:'abdomen'},
+  {id:'e14',n:'ABDOMEN - FLEXÃO DE TRONCO',g:'abdomen'},
+  {id:'e15',n:'CORE - PRANCHA LATERAL',g:'core'},
+  {id:'e16',n:'LOMBAR - HIPEREXTENSÃO',g:'lombar'},
+  {id:'e17',n:'PANTURRILHA - STEP UNILATERAL',g:'panturrilha'},
+  {id:'e19',n:'ALONGAMENTO - SOLO - PADRÃO 5MIN',g:'alongamento'},
+  {id:'e20',n:'ADUTOR - CADEIRA ADUTORA',g:'adutor'},
+  {id:'e21',n:'ABDUTOR - CADEIRA ABDUTORA',g:'abdutor'},
+  {id:'e22',n:'TRAPEZIO - ENCOLHIMENTO HALTERES',g:'trapezio'},
+];
+const MG={quadriceps:{bg:'#F0FDF4',tc:'#166534'},gluteo:{bg:'#EFF6FF',tc:'#1E40AF'},posterior:{bg:'#FFF7ED',tc:'#9A3412'},dorsal:{bg:'#F0F9FF',tc:'#0C4A6E'},peitoral:{bg:'#FFF1F2',tc:'#9F1239'},biceps:{bg:'#F5F3FF',tc:'#6D28D9'},triceps:{bg:'#F5F3FF',tc:'#6D28D9'},ombro:{bg:'#F0FDFA',tc:'#134E4A'},abdomen:{bg:'#F9FAFB',tc:'#374151'},core:{bg:'#F9FAFB',tc:'#374151'},lombar:{bg:'#FFF7ED',tc:'#9A3412'},panturrilha:{bg:'#F0FDF4',tc:'#166534'},alongamento:{bg:'#FAFAF9',tc:'#57534E'},adutor:{bg:'#FDF2F8',tc:'#86198F'},abdutor:{bg:'#FDF2F8',tc:'#86198F'},trapezio:{bg:'#FFFBEB',tc:'#92400E'}};
+const AVC=['av-t','av-b','av-a','av-p','av-c','av-g'];
+const ini=n=>n.split(' ').slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
+const avc=n=>AVC[n.charCodeAt(0)%AVC.length];
+const uid=()=>Math.random().toString(36).slice(2);
+const stripKg=v=>v?String(v).replace(/kg/gi,'').trim():v;
+const cx=b=>b.reduce((a,x)=>a+(x.type==='single'?1:x.exs.length),0);
+const gs=p=>!p?'none':p.completed>=p.goal?'completed':p.completed>=p.goal*.875?'expiring':'active';
+const gp=p=>p?Math.min(100,Math.round(p.completed/p.goal*100)):0;
+
+// ─── ESTADO GLOBAL ───
+let currentScreen='treino';
+let T={busca:'',filtro:'todos',sel:null,fidx:0,bex:'',showDD:false,saveOk:false,view:'edit'};
+let AD={busca:'',sel:null,secOpen:{obs_prof:true,contato:false},modalEx:null,solForm:null,saveOk:false};
+let FV={filtro:'todos',expandido:{},rejForm:{}};
+
+const ALUNOS_TREINO=[
+  {id:1,name:'Ana Paula Tanaka',mat:2660,freq:2,obj:'Fortalecimento',nivel:'Intermediário',idade:58,restricoes:'Punho: Tendinite · Não elevar acima ombro',
+   prog:{id:'p1',name:'Programa Fortalecimento · Jan 2026',completed:14,goal:16,fichas:[
+     {id:'f1',letra:'A',nome:'Treino A',stim:'Rest Pause',blocos:[
+       {type:'single',ex:{id:'x1',n:'QUADRICEPS - LEG PRESS 45',g:'quadriceps',s:'4',r:'12',d:'60',obs:'',carga:'80'}},
+       {type:'group',label:'Dupla',exs:[
+         {id:'x2',n:'DORSAL - PULL DOWN BARRA',g:'dorsal',s:'4',r:'10',d:'0',obs:'Não elevar acima ombro',carga:'25'},
+         {id:'x3',n:'BICEPS - ROSCA DIRETA BARRA',g:'biceps',s:'4',r:'12',d:'90',obs:'',carga:'8'},
+       ]},
+       {type:'single',ex:{id:'x4',n:'GLUTEO - AGACHAMENTO SUMÔ',g:'gluteo',s:'3',r:'15',d:'60',obs:'',carga:'20'}},
+       {type:'single',ex:{id:'x5',n:'ABDOMEN - PRANCHA ISOMETRICA',g:'abdomen',s:'3',r:'30s',d:'45',obs:'',carga:'—'}},
+       {type:'single',ex:{id:'x6',n:'ALONGAMENTO - SOLO - PADRÃO 5MIN',g:'alongamento',s:'1',r:'5min',d:'0',obs:'',carga:'—'}},
+     ]},
+     {id:'f2',letra:'B',nome:'Treino B',stim:'Rest Pause',blocos:[
+       {type:'single',ex:{id:'x7',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'peitoral',s:'4',r:'12',d:'90',obs:'Amplitude reduzida',carga:'12'}},
+       {type:'group',label:'Trio',exs:[
+         {id:'x8',n:'ABDOMEN - FLEXÃO DE TRONCO',g:'abdomen',s:'3',r:'15',d:'0',obs:'',carga:'—'},
+         {id:'x9',n:'CORE - PRANCHA LATERAL',g:'core',s:'3',r:'20s',d:'0',obs:'',carga:'—'},
+         {id:'x10',n:'LOMBAR - HIPEREXTENSÃO',g:'lombar',s:'3',r:'12',d:'60',obs:'Amplitude reduzida',carga:'—'},
+       ]},
+       {type:'single',ex:{id:'x11',n:'ALONGAMENTO - SOLO - PADRÃO 5MIN',g:'alongamento',s:'1',r:'5min',d:'0',obs:'',carga:'—'}},
+     ]},
+   ]}},
+  {id:2,name:'Renata Yoshihara',mat:2326,freq:3,obj:'Hipertrofia',nivel:'Avançado',idade:45,restricoes:'',
+   prog:{id:'p2',name:'Programa Hipertrofia · Dez 2025',completed:8,goal:24,fichas:[
+     {id:'f3',letra:'A',nome:'Treino A',stim:'Padrão',blocos:[
+       {type:'single',ex:{id:'y1',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'peitoral',s:'4',r:'12',d:'90',obs:'',carga:'14'}},
+       {type:'group',label:'Dupla',exs:[
+         {id:'y2',n:'TRICEPS - PULLEY BARRA RETA',g:'triceps',s:'3',r:'12',d:'0',obs:'',carga:'18'},
+         {id:'y3',n:'OMBRO - ELEVAÇÃO LATERAL',g:'ombro',s:'3',r:'15',d:'60',obs:'',carga:'5'},
+       ]},
+       {type:'single',ex:{id:'y4',n:'POSTERIOR - CADEIRA FLEXORA',g:'posterior',s:'3',r:'15',d:'60',obs:'',carga:'25'}},
+     ]},
+     {id:'f4',letra:'B',nome:'Treino B',stim:'Padrão',blocos:[
+       {type:'single',ex:{id:'y5',n:'QUADRICEPS - LEG PRESS 45',g:'quadriceps',s:'4',r:'12',d:'90',obs:'',carga:'100'}},
+       {type:'single',ex:{id:'y6',n:'GLUTEO - MESA FLEXORA',g:'gluteo',s:'3',r:'15',d:'60',obs:'',carga:'30'}},
+       {type:'single',ex:{id:'y7',n:'DORSAL - REMADA POLIA ALTA CORDA',g:'dorsal',s:'4',r:'10',d:'90',obs:'',carga:'32'}},
+     ]},
+     {id:'f5',letra:'C',nome:'Treino C',stim:'Padrão',blocos:[
+       {type:'group',label:'Dupla',exs:[
+         {id:'y10',n:'TRAPEZIO - ENCOLHIMENTO HALTERES',g:'trapezio',s:'3',r:'12',d:'0',obs:'',carga:'20'},
+         {id:'y11',n:'BICEPS - ROSCA DIRETA BARRA',g:'biceps',s:'3',r:'12',d:'60',obs:'',carga:'10'},
+       ]},
+       {type:'single',ex:{id:'y12',n:'ADUTOR - CADEIRA ADUTORA',g:'adutor',s:'3',r:'15',d:'60',obs:'',carga:'35'}},
+     ]},
+   ]}},
+  {id:3,name:'Fabio Bonomi',mat:2504,freq:3,obj:'Fortalecimento',nivel:'Intermediário',idade:52,restricoes:'',prog:null},
+  {id:4,name:'Mariana Yun',mat:2564,freq:2,obj:'Definição',nivel:'Iniciante',idade:38,restricoes:'Lombar: Hérnia',
+   prog:{id:'p3',name:'Programa Definição · Nov 2025',completed:16,goal:16,fichas:[
+     {id:'f6',letra:'A',nome:'Treino A',stim:'Padrão',blocos:[
+       {type:'single',ex:{id:'z1',n:'QUADRICEPS - AFUNDO COM HALTER',g:'quadriceps',s:'3',r:'12',d:'60',obs:'',carga:'6'}},
+     ]},
+   ]}},
+  {id:5,name:'Patricia Yumi',mat:2631,freq:2,obj:'Emagrecimento',nivel:'Iniciante',idade:49,restricoes:'Joelho: Condromalácia',
+   prog:{id:'p5',name:'Programa Emagrecimento · Jan 2026',completed:4,goal:16,fichas:[
+     {id:'f7',letra:'A',nome:'Treino A',stim:'Padrão',blocos:[
+       {type:'single',ex:{id:'w1',n:'ABDUTOR - CADEIRA ABDUTORA',g:'abdutor',s:'3',r:'15',d:'60',obs:'',carga:'25'}},
+     ]},
+   ]}},
+];
+
+const ALUNOS_AULA=[
+  {id:1,name:'Ana Paula Tanaka',mat:2660,hora:'06:00',treino:'Treino A',seq:3,done:false,
+   restricoes:'Punho: Tendinite · Não elevar acima ombro',obs_prox_prof:'',contato:false,contato_motivo:'',contato_urgencia:'normal',
+   treino_impresso:{nome:'Treino A',stim:'Rest Pause',impresso_at:'05:55',blocos:[
+     {type:'single',ex:{id:'a1',n:'QUADRICEPS - LEG PRESS 45',g:'quadriceps',s:'4',r:'12',d:'60',ca:'80',cn:'80',obs:'',pref:'Prefere amplitude parcial',sol:null}},
+     {type:'group',label:'Dupla',exs:[
+       {id:'a2',n:'DORSAL - PULL DOWN BARRA',g:'dorsal',s:'4',r:'10',d:'0',ca:'25',cn:'25',obs:'',pref:'',sol:null},
+       {id:'a3',n:'BICEPS - ROSCA DIRETA BARRA',g:'biceps',s:'4',r:'12',d:'90',ca:'8',cn:'8',obs:'',pref:'Prefere rosca alternada',sol:null},
+     ]},
+     {type:'single',ex:{id:'a4',n:'GLUTEO - AGACHAMENTO SUMÔ',g:'gluteo',s:'3',r:'15',d:'60',ca:'20',cn:'20',obs:'',pref:'',sol:null}},
+     {type:'single',ex:{id:'a5',n:'ABDOMEN - PRANCHA ISOMETRICA',g:'abdomen',s:'3',r:'30s',d:'45',ca:'—',cn:'—',obs:'',pref:'',sol:null}},
+   ]}},
+  {id:2,name:'Renata Yoshihara',mat:2326,hora:'06:00',treino:'Treino B',seq:2,done:false,
+   restricoes:'',obs_prox_prof:'Leve dor no joelho.',contato:false,contato_motivo:'',contato_urgencia:'normal',
+   treino_impresso:{nome:'Treino B',stim:'Padrão',impresso_at:'05:55',blocos:[
+     {type:'single',ex:{id:'b1',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'peitoral',s:'4',r:'12',d:'90',ca:'14',cn:'14',obs:'',pref:'',sol:null}},
+     {type:'group',label:'Dupla',exs:[
+       {id:'b2',n:'TRICEPS - PULLEY BARRA RETA',g:'triceps',s:'3',r:'12',d:'0',ca:'18',cn:'18',obs:'',pref:'',sol:null},
+       {id:'b3',n:'OMBRO - ELEVAÇÃO LATERAL',g:'ombro',s:'3',r:'15',d:'60',ca:'5',cn:'5',obs:'',pref:'Prefere executar sentada',sol:null},
+     ]},
+     {type:'single',ex:{id:'b4',n:'POSTERIOR - CADEIRA FLEXORA',g:'posterior',s:'3',r:'15',d:'60',ca:'25',cn:'25',obs:'',pref:'',sol:null}},
+   ]}},
+  {id:3,name:'Fabio Bonomi',mat:2504,hora:'07:00',treino:'Treino A',seq:1,done:false,
+   restricoes:'',obs_prox_prof:'',contato:false,contato_motivo:'',contato_urgencia:'normal',
+   treino_impresso:{nome:'Treino A',stim:'Padrão',impresso_at:'06:55',blocos:[
+     {type:'single',ex:{id:'c1',n:'QUADRICEPS - LEG PRESS 45',g:'quadriceps',s:'4',r:'12',d:'90',ca:'100',cn:'100',obs:'',pref:'',sol:null}},
+     {type:'single',ex:{id:'c2',n:'GLUTEO - MESA FLEXORA',g:'gluteo',s:'3',r:'15',d:'60',ca:'30',cn:'30',obs:'',pref:'',sol:null}},
+     {type:'single',ex:{id:'c3',n:'DORSAL - REMADA POLIA ALTA CORDA',g:'dorsal',s:'4',r:'10',d:'90',ca:'32',cn:'32',obs:'',pref:'',sol:null}},
+   ]}},
+];
+
+const FILA_ALUNOS=[
+  {id:1,name:'Ana Paula Tanaka',mat:2660,treino:'Treino A',solicitacoes:[
+    {id:'s1',tipo:'troca',ex:'DORSAL - PULL DOWN BARRA',sugestao:'DORSAL - REMADA MÁQUINA',motivo:'Aluna sente desconforto no punho na barra reta.',prof:'Rafael Caires',data:'hoje 06:42',status:'pend'},
+    {id:'s2',tipo:'contato',ex:null,motivo:'Aluna mencionou tontura no final da aula. Pode estar relacionado à labirintite.',prof:'Rafael Caires',data:'hoje 06:45',status:'pend',urgencia:'alta'},
+  ]},
+  {id:2,name:'Renata Yoshihara',mat:2326,treino:'Treino B',solicitacoes:[
+    {id:'s3',tipo:'remocao',ex:'POSTERIOR - CADEIRA FLEXORA',motivo:'Aluna relatou dor no joelho direito durante o exercício.',prof:'Pedro Moraes',data:'ontem 07:15',status:'pend'},
+    {id:'s4',tipo:'obs_prof',ex:null,motivo:'Leve dor no joelho ao agachar. Cuidado na próxima aula.',prof:'Pedro Moraes',data:'ontem 07:16',status:'pend'},
+  ]},
+  {id:3,name:'Fabio Bonomi',mat:2504,treino:'Treino A',solicitacoes:[
+    {id:'s5',tipo:'adicao',ex:null,sugestao:'CORE - PRANCHA LATERAL',motivo:'Aluno pediu para incluir exercício de core. Boa evolução geral.',prof:'Matheus Martins',data:'ontem 08:05',status:'pend'},
+    {id:'s6',tipo:'troca',ex:'GLUTEO - AGACHAMENTO SUMÔ',sugestao:'GLUTEO - MESA FLEXORA',motivo:'Aluno tem dificuldade com postura no sumô.',prof:'Matheus Martins',data:'ontem 08:08',status:'apr'},
+  ]},
+];
+
+const TIPO_CFG={
+  troca:{label:'Troca de exercício',ico:'↔',icoCls:'ico-troca',tc:'tc-troca',badge:'b-troca'},
+  remocao:{label:'Remoção de exercício',ico:'✕',icoCls:'ico-remov',tc:'tc-remov',badge:'b-remov'},
+  adicao:{label:'Adição de exercício',ico:'＋',icoCls:'ico-add',tc:'tc-add',badge:'b-add'},
+  contato:{label:'Contato com o aluno',ico:'✉',icoCls:'ico-cont',tc:'tc-cont',badge:'b-cont'},
+  obs_prof:{label:'Obs. do professor',ico:'📝',icoCls:'ico-obs',tc:'tc-obs',badge:'b-obs'},
+};
+
+// ════════════════════════════════════════
+//  NAV
+// ════════════════════════════════════════
+function showScreen(id){
+  currentScreen=id;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('on'));
+  const navEl=document.getElementById('nav-'+id);
+  if(navEl)navEl.classList.add('on');
+  renderScreen();
+}
+
+function renderScreen(){
+  const c=document.getElementById('content');
+  if(currentScreen==='treino') renderTreinoScreen(c);
+  else if(currentScreen==='aula') renderAulaScreen(c);
+  else if(currentScreen==='fila') renderFilaScreen(c);
+  else if(currentScreen==='agenda') renderAgendaScreen(c);
+}
+
+// ════════════════════════════════════════
+//  MÓDULO DE TREINO
+// ════════════════════════════════════════
+function ring(pct,st){
+  const r=17,c=2*Math.PI*r,off=c-(c*pct/100);
+  const col=st==='completed'?'#DC2626':st==='expiring'?'#D97706':'#B8975A';
+  const trk=st==='completed'?'#FEE2E2':st==='expiring'?'#FEF3C7':'#F5EFE4';
+  return `<svg width="46" height="46" style="flex-shrink:0"><circle cx="23" cy="23" r="${r}" fill="none" stroke="${trk}" stroke-width="3"/><circle cx="23" cy="23" r="${r}" fill="none" stroke="${col}" stroke-width="3" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 23 23)"/><text x="23" y="27" text-anchor="middle" font-size="10" font-weight="500" fill="${col}" font-family="'DM Sans',sans-serif">${pct}%</text></svg>`;
+}
+
+function renderTreinoScreen(c){
+  if(T.sel){
+    renderTreinoEditor(c);
+  } else {
+    renderTreinoLista(c);
+  }
+}
+
+function renderTreinoLista(c){
+  const sc={active:'sp-ok',expiring:'sp-exp',completed:'sp-end',none:'sp-no'};
+  const sl={active:'Ativo',expiring:'Vencendo',completed:'Vencido',none:'Sem treino'};
+  const pc={active:'#059669',expiring:'#D97706',completed:'#DC2626',none:'#D1D5DB'};
+  const ct={v:ALUNOS_TREINO.filter(a=>gs(a.prog)==='expiring').length,c:ALUNOS_TREINO.filter(a=>gs(a.prog)==='completed').length,s:ALUNOS_TREINO.filter(a=>gs(a.prog)==='none').length};
+  const fl=ALUNOS_TREINO.filter(a=>{
+    const st=gs(a.prog);
+    if(T.filtro==='vencendo'&&st!=='expiring')return false;
+    if(T.filtro==='vencido'&&st!=='completed')return false;
+    if(T.filtro==='sem'&&st!=='none')return false;
+    if(T.busca&&!a.name.toLowerCase().includes(T.busca.toLowerCase()))return false;
+    return true;
+  });
+  const cards=fl.map(a=>{
+    const p=a.prog,st=gs(p),pct=gp(p);
+    return `<div class="acard" onclick="treinoAbrirEditor(${a.id})">
+      ${p?ring(pct,st):`<div class="av ${avc(a.name)}" style="width:46px;height:46px;font-size:14px">${ini(a.name)}</div>`}
+      <div class="ainfo">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <span class="aname">${a.name}</span>
+          <span class="sp ${sc[st]}">${sl[st]}</span>
+        </div>
+        <div class="ameta">mat. ${a.mat} · ${a.obj} · ${a.freq}×/sem · ${a.nivel}</div>
+        ${p?`<div class="ptrow" style="margin-top:5px">
+          <div class="ptbar"><div class="ptfill" style="width:${pct}%;background:${pc[st]}"></div></div>
+          <span class="pttxt">${p.completed}/${p.goal} aulas</span>
+        </div><div class="apnom">${p.name} · ${p.fichas.length} ficha${p.fichas.length!==1?'s':''}</div>`
+        :`<span style="font-size:11px;color:#9CA3AF">Sem programa — clique para criar</span>`}
+      </div>
+      <div class="aright">
+        ${st==='completed'||st==='none'?`<button class="btn-criar" onclick="event.stopPropagation();treinoAbrirEditor(${a.id})">${st==='none'?'Criar':'Renovar'}</button>`:''}
+        <span class="achev">›</span>
+      </div>
+      ${a.restricoes?`</div><div style="padding:0 16px 10px"><div class="arest">⚠ ${a.restricoes}`:''}</div>`;
+  }).join('');
+
+  c.innerHTML=`<div style="display:flex;flex-direction:column;flex:1">
+    <div class="ph">
+      <div>
+        <div class="eyebrow">Coordenação · Vanessa Ramos</div>
+        <div class="ptitle">Módulo de Treino</div>
+        <div class="psub">${ALUNOS_TREINO.length} alunos</div>
+        ${ct.v||ct.c||ct.s?`<div class="ph-pills">
+          ${ct.v?`<span class="ph-pill pp-a">⚠ ${ct.v} vencendo</span>`:''}
+          ${ct.c?`<span class="ph-pill pp-r">✕ ${ct.c} vencido${ct.c>1?'s':''}</span>`:''}
+          ${ct.s?`<span class="ph-pill pp-g">— ${ct.s} sem treino</span>`:''}
+        </div>`:''}
+      </div>
+      <div class="ph-right">
+        <input class="srch" placeholder="Buscar aluno…" value="${T.busca}" oninput="T.busca=this.value;renderScreen()">
+        <div class="fltrs">${[['todos','Todos'],['vencendo','⚠'],['vencido','✕'],['sem','—']].map(([v,l])=>`<button class="fb ${T.filtro===v?'on':''}" onclick="T.filtro='${v}';renderScreen()">${l}</button>`).join('')}</div>
+      </div>
+    </div>
+    <div class="lista">${cards}</div>
+  </div>`;
+}
+
+function treinoAbrirEditor(id){
+  const a=ALUNOS_TREINO.find(x=>x.id===id);
+  if(!a)return;
+  a._fichas=a.prog?JSON.parse(JSON.stringify(a.prog.fichas)):[{id:uid(),letra:'A',nome:'Treino A',stim:'Rest Pause',blocos:[]}];
+  a._nome=a.prog?a.prog.name:`Programa ${a.obj}`;
+  T.sel=a;T.fidx=0;T.bex='';T.showDD=false;T.view='edit';
+  renderScreen();
+}
+
+function treinoVoltar(){T.sel=null;T.saveOk=false;renderScreen();}
+
+function renderTreinoEditor(c){
+  const a=T.sel;
+  const fichas=a._fichas,idx=Math.min(T.fidx,fichas.length-1),ficha=fichas[idx],goal=a.freq*8;
+  const ftabs=fichas.map((f,i)=>`<div class="ftab ${i===idx?'on':''}" onclick="T.fidx=${i};T.view='edit';renderScreen()">
+    <div class="ftl ${i===idx?'on':'off'}">${f.letra}</div>
+    <div><div class="ftn">${f.nome}</div><div class="ftc">${cx(f.blocos)} ex · ${f.stim}</div></div>
+  </div>`).join('');
+
+  let n=0;
+  const bHtml=T.view==='compare'?'':(ficha.blocos.length?ficha.blocos.map((bl,bi)=>{
+    if(bl.type==='single'){n++;const ex=bl.ex;return `<div class="bloco">
+      <div class="exrow">
+        <div class="exnum">${n}</div>
+        <div class="exnc"><div class="exnm" title="${ex.n}">${ex.n}</div><div class="exgr">${ex.g}</div></div>
+        <div class="exfields">
+          <div class="ef"><div class="ef-lbl">Séries</div><input class="ef-inp" value="${ex.s}" onchange="treinoUpdEx('${ex.id}','s',this.value)"></div>
+          <div class="ef"><div class="ef-lbl">Reps</div><input class="ef-inp" value="${ex.r}" onchange="treinoUpdEx('${ex.id}','r',this.value)"></div>
+          <div class="ef"><div class="ef-lbl">Desc.</div><input class="ef-inp" value="${ex.d}" onchange="treinoUpdEx('${ex.id}','d',this.value)"></div>
+          <div class="ef"><div class="ef-lbl">Carga</div><div class="ef-carga">${ex.carga}</div></div>
+        </div>
+        <button class="btnrm" onclick="treinoRmEx('${ex.id}')">×</button>
+      </div>
+      <div class="obsrow"><input class="oi" value="${ex.obs}" placeholder="Observação…" onchange="treinoUpdEx('${ex.id}','obs',this.value)"></div>
+      <div class="grprow"><button class="btngrp" onclick="treinoAgrupar(${bi})">＋ Dupla / Trio</button></div>
+    </div>`;}
+    const d=bl.label==='Dupla';
+    const gc=d?{bg:'#EFF6FF',bd:'#BFDBFE',tc:'#1E40AF',rb:'#DBEAFE',cls:'nd'}:{bg:'#F5F3FF',bd:'#C4B5FD',tc:'#6D28D9',rb:'#EDE9FE',cls:'nt'};
+    return `<div class="gbloco" style="border:1.5px solid ${gc.bd}">
+      <div class="ghdr" style="background:${gc.bg}">
+        <span class="glbl" style="color:${gc.tc}">${bl.label} — sem descanso</span>
+        <div class="gacts">
+          ${bl.exs.length<3?`<button style="font-size:10px;padding:3px 9px;border-radius:var(--rs);cursor:pointer;border:1px solid ${gc.bd};color:${gc.tc};background:transparent" onclick="treinoAddToGrp(${bi})">＋ Exercício</button>`:''}
+          <button class="btngd" onclick="treinoDesagrupar(${bi})">Desagrupar</button>
+        </div>
+      </div>
+      <div class="gbody">${bl.exs.map((ex,ei)=>{n++;const il=ei===bl.exs.length-1;return `
+        <div class="gexrow" style="border-color:${il?'transparent':gc.rb}">
+          <div class="exnum ${gc.cls}">${n}</div>
+          <div class="exnc" style="flex:1;min-width:0"><div class="exnm">${ex.n}</div><div class="exgr">${ex.g}</div></div>
+          <div class="exfields">
+            <div class="ef"><div class="ef-lbl">Séries</div><input class="ef-inp" value="${ex.s}" onchange="treinoUpdEx('${ex.id}','s',this.value)"></div>
+            <div class="ef"><div class="ef-lbl">Reps</div><input class="ef-inp" value="${ex.r}" onchange="treinoUpdEx('${ex.id}','r',this.value)"></div>
+            ${il?`<div class="ef"><div class="ef-lbl">Desc.</div><input class="ef-inp" value="${ex.d}" onchange="treinoUpdEx('${ex.id}','d',this.value)"></div>`:`<div class="ef"><div class="ef-lbl">Desc.</div><div class="ef-carga" style="opacity:.4">—</div></div>`}
+            <div class="ef"><div class="ef-lbl">Carga</div><div class="ef-carga">${ex.carga}</div></div>
+          </div>
+        </div>
+        <div class="obsrow"><input class="oi" value="${ex.obs}" placeholder="Obs…" onchange="treinoUpdEx('${ex.id}','obs',this.value)"></div>`}).join('')}
+      </div>
+    </div>`;
+  }).join(''):`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:150px;gap:6px;color:var(--ink3);font-size:12px"><span style="font-size:22px;opacity:.15">✦</span>Busque exercícios no catálogo abaixo</div>`);
+
+  // COMPARE VIEW
+  let compareHtml='';
+  if(T.view==='compare'){
+    const cols=fichas.map(f=>{
+      let nn=0;const grupos=new Set();
+      f.blocos.forEach(bl=>{if(bl.type==='single')grupos.add(bl.ex.g);else bl.exs.forEach(e=>grupos.add(e.g));});
+      const bh=f.blocos.length?f.blocos.map(bl=>{
+        if(bl.type==='single'){nn++;const ex=bl.ex;return `<div class="cex"><div class="cexrow"><div class="cnum">${nn}</div><div class="cexinf"><div class="cexnm" title="${ex.n}">${ex.n}</div><div class="cexgr">${ex.g}</div></div><span class="cexfl">${ex.s}×${ex.r} · ${ex.d}s</span></div></div>`;}
+        const dd=bl.label==='Dupla';
+        const gc=dd?{bg:'#EFF6FF',bd:'#BFDBFE',tc:'#1E40AF',rb:'#DBEAFE',cls:'cd'}:{bg:'#F5F3FF',bd:'#C4B5FD',tc:'#6D28D9',rb:'#EDE9FE',cls:'ct'};
+        return `<div class="cgrp" style="border:1.5px solid ${gc.bd}"><div class="cghdr" style="background:${gc.bg};color:${gc.tc}">${bl.label} — sem descanso</div><div class="cgbody">${bl.exs.map((ex,ei)=>{nn++;const il=ei===bl.exs.length-1;return `<div class="cgrow" style="border-color:${il?'transparent':gc.rb}"><div class="cnum ${gc.cls}">${nn}</div><div class="cexinf"><div class="cexnm">${ex.n}</div><div class="cexgr">${ex.g}</div></div><span class="cexfl">${ex.s}×${ex.r}${il?` · ${ex.d}s`:''}</span></div>`}).join('')}</div></div>`;
+      }).join(''):`<div style="padding:20px;text-align:center;font-size:11px;color:#9CA3AF">Ficha vazia</div>`;
+      const tags=[...grupos].map(g=>{const m=MG[g]||{bg:'#F9FAFB',tc:'#374151'};return `<span class="cmtag" style="background:${m.bg};color:${m.tc}">${g}</span>`;}).join('');
+      return `<div class="ccol"><div class="cchdr"><div class="ccletra">${f.letra}</div><div><div class="ccnome">${f.nome}</div><div class="ccsub">${f.stim} · ${cx(f.blocos)} exercícios</div></div></div><div class="ccbody">${bh}</div><div class="cmuscles"><div class="cmlbl">Grupos musculares</div><div class="cmtags">${tags}</div></div></div>`;
+    }).join('');
+    compareHtml=`<div class="cshell"><div class="ccols">${cols}</div></div>`;
+  }
+
+  const res=T.bex?CAT.filter(e=>e.n.toLowerCase().includes(T.bex.toLowerCase())).slice(0,8):[];
+  const ddHtml=res.length&&T.showDD?`<div class="dd">${res.map(e=>`<div class="ddi" onmousedown="treinoAddEx('${e.id}')"><div class="ddn">${e.n}</div><div class="ddg">${e.g}</div></div>`).join('')}</div>`:'';
+
+  c.innerHTML=`<div class="editor-shell">
+    <div class="etop">
+      <button class="btnbk" onclick="treinoVoltar()">←</button>
+      <div class="ehdr">
+        <input class="enome" value="${a._nome}" onchange="T.sel._nome=this.value">
+        <div class="esub">${a.name} · ${a.freq}×/sem · meta: ${goal} aulas</div>
+      </div>
+      <div class="vtabs">
+        <button class="vt ${T.view==='edit'?'on':''}" onclick="T.view='edit';renderScreen()">✎ Editar</button>
+        <button class="vt ${T.view==='compare'?'on':''}" onclick="T.view='compare';renderScreen()">⊞ Comparar</button>
+      </div>
+      <button class="btnsv ${T.saveOk?'ok':''}" onclick="treinoSalvar()">${T.saveOk?'✓ Salvo':'Salvar'}</button>
+    </div>
+    <div class="ebody">
+      <div class="esidebar">
+        <div class="sbal">
+          <div class="sbnome">${a.name}</div>
+          <div class="sbtags">${[a.obj,a.nivel,`${a.freq}×/sem`,`${a.idade}a`].map(t=>`<span class="sbtag">${t}</span>`).join('')}</div>
+          ${a.restricoes?`<div class="sbrest">⚠ ${a.restricoes}</div>`:''}
+        </div>
+        <div class="sbfichas">
+          <div class="sbfhdr"><span class="sbflbl">Fichas</span><button class="btnnf" onclick="treinoAddFicha()">+ Ficha</button></div>
+          ${ftabs}
+        </div>
+      </div>
+      <div class="emain">
+        ${T.view==='compare'?compareHtml:`<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+          <div class="fichatop">
+            <input class="fninp" value="${ficha.nome}" onchange="T.sel._fichas[Math.min(T.fidx,T.sel._fichas.length-1)].nome=this.value">
+            <select class="stimsel" onchange="T.sel._fichas[Math.min(T.fidx,T.sel._fichas.length-1)].stim=this.value">${['Padrão','Rest Pause','Bi-Set','Drop Set','Circuito'].map(s=>`<option ${ficha.stim===s?'selected':''}>${s}</option>`).join('')}</select>
+            <span class="excnt">${cx(ficha.blocos)} ex</span>
+          </div>
+          <div class="exscroll">${bHtml}</div>
+          <div class="buscabar">${ddHtml}<input class="binp" placeholder="Buscar exercício no catálogo…" value="${T.bex}" oninput="T.bex=this.value;T.showDD=true;renderScreen()" onfocus="T.showDD=true;renderScreen()" onblur="setTimeout(()=>{T.showDD=false;renderScreen()},200)"></div>
+        </div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+function treinoGetFicha(){return T.sel._fichas[Math.min(T.fidx,T.sel._fichas.length-1)];}
+function treinoFindEx(id){for(const bl of treinoGetFicha().blocos){if(bl.type==='single'&&bl.ex.id===id)return bl.ex;if(bl.type==='group'){const e=bl.exs.find(x=>x.id===id);if(e)return e;}}return null;}
+function treinoUpdEx(id,f,v){const e=treinoFindEx(id);if(e)e[f]=v;}
+function treinoRmEx(id){treinoGetFicha().blocos=treinoGetFicha().blocos.filter(b=>!(b.type==='single'&&b.ex.id===id));renderScreen();}
+function treinoAddEx(id){const e=CAT.find(x=>x.id===id);if(!e)return;treinoGetFicha().blocos.push({type:'single',ex:{id:uid(),n:e.n,g:e.g,s:'3',r:'12',d:'60',obs:'',carga:'—'}});T.bex='';T.showDD=false;renderScreen();}
+function treinoAgrupar(bi){const bl=treinoGetFicha().blocos,nx=bl.findIndex((b,i)=>i>bi&&b.type==='single');if(nx===-1)return;const exA=bl[bi].ex,exB=bl[nx].ex,nv=bl.filter((_,i)=>i!==bi&&i!==nx);nv.splice(bi,0,{type:'group',label:'Dupla',exs:[exA,exB]});treinoGetFicha().blocos=nv;renderScreen();}
+function treinoAddToGrp(bi){const bl=treinoGetFicha().blocos,nx=bl.findIndex((b,i)=>i>bi&&b.type==='single');if(nx===-1)return;const ex=bl[nx].ex;bl.splice(nx,1);bl[bi]={...bl[bi],label:'Trio',exs:[...bl[bi].exs,ex]};renderScreen();}
+function treinoDesagrupar(bi){const g=treinoGetFicha().blocos[bi];treinoGetFicha().blocos=[...treinoGetFicha().blocos.slice(0,bi),...g.exs.map(ex=>({type:'single',ex})),...treinoGetFicha().blocos.slice(bi+1)];renderScreen();}
+function treinoAddFicha(){const l='ABCDEFGHIJKLMNOPQRSTUVWXYZ'[T.sel._fichas.length]||String(T.sel._fichas.length+1);T.sel._fichas.push({id:uid(),letra:l,nome:'Treino '+l,stim:'Padrão',blocos:[]});T.fidx=T.sel._fichas.length-1;T.view='edit';renderScreen();}
+function treinoSalvar(){const a=T.sel,goal=a.freq*8,prog={id:a.prog?a.prog.id:uid(),name:a._nome,completed:a.prog?a.prog.completed:0,goal,fichas:JSON.parse(JSON.stringify(a._fichas))};const idx=ALUNOS_TREINO.findIndex(x=>x.id===a.id);if(idx>-1)ALUNOS_TREINO[idx].prog=prog;T.saveOk=true;renderScreen();setTimeout(()=>{T.saveOk=false;T.sel=null;renderScreen();},900);}
+
+// ════════════════════════════════════════
+//  AULAS DO DIA
+// ════════════════════════════════════════
+function getAllExsAula(a){const r=[];a.treino_impresso.blocos.forEach(b=>{if(b.type==='single')r.push(b.ex);else b.exs.forEach(e=>r.push(e));});return r;}
+function findExAula(a,id){return getAllExsAula(a).find(e=>e.id===id);}
+
+function renderAulaScreen(c){
+  if(AD.sel) renderAulaRel(c);
+  else renderAulaLista(c);
+}
+
+function renderAulaLista(c){
+  const feitos=ALUNOS_AULA.filter(a=>a.done).length;
+  c.innerHTML=`<div style="display:flex;flex-direction:column;flex:1">
+    <div class="ph">
+      <div>
+        <div class="eyebrow">Rafael Caires · Hoje</div>
+        <div class="ptitle">Aulas do dia</div>
+        <div class="psub">${feitos}/${ALUNOS_AULA.length} relatórios concluídos</div>
+      </div>
+      <input class="srch" placeholder="Buscar aluno…" value="${AD.busca}" oninput="AD.busca=this.value;renderScreen()">
+    </div>
+    <div class="lista">${ALUNOS_AULA.filter(a=>!AD.busca||a.name.toLowerCase().includes(AD.busca.toLowerCase())).map(a=>`
+      <div class="acard ${a.done?'done':''}" onclick="aulaAbrirRel(${a.id})">
+        <div class="av ${avc(a.name)}">${ini(a.name)}</div>
+        <div class="ainfo">
+          <div class="aname">${a.name}</div>
+          <div class="ameta">mat. ${a.mat} · ${a.treino} · seq. ${a.seq}</div>
+          ${a.restricoes?`<div class="arest">⚠ ${a.restricoes}</div>`:''}
+        </div>
+        <div class="aright">
+          <span class="hora-badge">${a.hora}</span>
+          <span class="sp ${a.done?'sp-d':'sp-p'}">${a.done?'✓ Feito':'Pendente'}</span>
+          <span class="achev">›</span>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function aulaAbrirRel(id){AD.sel=ALUNOS_AULA.find(x=>x.id===id);AD.saveOk=false;AD.modalEx=null;AD.solForm=null;renderScreen();}
+function aulaVoltar(){AD.sel=null;renderScreen();}
+
+function renderAulaRel(c){
+  const a=AD.sel;
+  const ti=a.treino_impresso;
+  let n=0;
+  const totalEx=ti.blocos.reduce((acc,b)=>acc+(b.type==='single'?1:b.exs.length),0);
+  const comDados=getAllExsAula(a).filter(e=>e.cn!==e.ca||e.obs.trim()).length;
+  const solEnv=getAllExsAula(a).filter(e=>e.sol&&e.sol.sent).length;
+
+  const bHtml=ti.blocos.map(bl=>{
+    if(bl.type==='single'){n++;const ex=bl.ex;const isDash=ex.ca==='—';const changed=!isDash&&ex.cn!==ex.ca;
+      return `<div class="tex"><div class="tnum">${n}</div>
+        <div class="texinfo"><div class="texnm" title="${ex.n}">${ex.n}</div><div class="texmeta">${ex.s}×${ex.r}${ex.d!=='0'?' · '+ex.d+'s':''}</div></div>
+        ${!isDash?`<div class="tex-carga" style="color:${changed?'#059669':'var(--ink2)'}">${changed?ex.cn:ex.ca}</div>`:''}
+        <button class="btn-edit-ex ${ex.sol&&ex.sol.sent?'has-sol':ex.cn!==ex.ca||ex.obs.trim()?'has-data':''}" onclick="aulaAbrirModal('${ex.id}')">✎</button>
+      </div>`;}
+    const d=bl.label==='Dupla';
+    const gc=d?{bg:'#EFF6FF',bd:'#BFDBFE',tc:'#1E40AF',rb:'#DBEAFE',cls:'nd'}:{bg:'#F5F3FF',bd:'#C4B5FD',tc:'#6D28D9',rb:'#EDE9FE',cls:'nt'};
+    return `<div class="tgrp" style="border-color:${gc.bd}">
+      <div class="tghdr" style="background:${gc.bg};color:${gc.tc}">${bl.label} — sem descanso</div>
+      <div style="background:var(--wh)">${bl.exs.map((ex,ei)=>{n++;const il=ei===bl.exs.length-1;const isDash=ex.ca==='—';const changed=!isDash&&ex.cn!==ex.ca;return `
+        <div class="tgrow" style="border-color:${il?'transparent':gc.rb}">
+          <div class="tnum ${gc.cls}">${n}</div>
+          <div class="texinfo" style="flex:1"><div class="texnm">${ex.n}</div><div class="texmeta">${ex.s}×${ex.r}${il?' · '+ex.d+'s':''}</div></div>
+          ${!isDash?`<div class="tex-carga" style="color:${changed?'#059669':'var(--ink2)'}">${changed?ex.cn:ex.ca}</div>`:''}
+          <button class="btn-edit-ex ${ex.sol&&ex.sol.sent?'has-sol':ex.cn!==ex.ca||ex.obs.trim()?'has-data':''}" onclick="aulaAbrirModal('${ex.id}')">✎</button>
+        </div>`}).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  const modalHtml=AD.modalEx?renderAulaModal(a):'';
+
+  c.innerHTML=`<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="etop">
+      <button class="btnbk" onclick="aulaVoltar()">←</button>
+      <div class="ehdr"><div class="enome" style="background:transparent;border:none;outline:none;font-family:'Playfair Display',serif;font-size:15px">${a.name}</div>
+        <div class="esub">mat. ${a.mat} · ${a.treino} · seq. ${a.seq} · ${a.hora}</div>
+      </div>
+      <button class="btnsv ${AD.saveOk?'ok':''}" onclick="aulaSalvar()">${AD.saveOk?'✓ Salvo':'Salvar relatório'}</button>
+    </div>
+    <div style="overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;flex:1">
+      ${a.restricoes?`<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--rs);padding:8px 14px;font-size:12px;color:#991B1B">⚠ ${a.restricoes}</div>`:''}
+      <div class="tcard">
+        <div class="tchdr">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="tcico">🖨</div>
+            <div><div class="tctitle">Treino impresso · ${ti.nome}</div><div class="tcsub">${ti.stim} · ${ti.impresso_at} · clique ✎ para editar</div></div>
+          </div>
+          <div style="display:flex;gap:5px">
+            ${comDados?`<span class="tcbadge" style="background:#ECFDF5;color:#065F46;border-color:#6EE7B7">${comDados} atualizado${comDados>1?'s':''}</span>`:''}
+            ${solEnv?`<span class="tcbadge" style="background:#FFFBEB;color:#92400E;border-color:#FCD34D">${solEnv} sol. enviada${solEnv>1?'s':''}</span>`:''}
+            <span class="tcbadge">${totalEx} exercícios</span>
+          </div>
+        </div>
+        <div class="tcbody">${bHtml}</div>
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="aulaToggleSec('obs_prof')">
+          <div class="sec-title">Obs. para o próximo professor</div>
+          <span class="sec-tog ${AD.secOpen.obs_prof?'open':''}">▾</span>
+        </div>
+        ${AD.secOpen.obs_prof?`<div class="sec-body">
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">Visível apenas para o próximo professor.</div>
+          <textarea class="obs-area" rows="3" placeholder="Ex: Aluno relatou dor no joelho…" onchange="AD.sel.obs_prox_prof=this.value">${a.obs_prox_prof}</textarea>
+        </div>`:''}
+      </div>
+      <div class="sec">
+        <div class="sec-hdr" onclick="aulaToggleSec('contato')">
+          <div class="sec-title">Contato com o aluno ${a.contato?`<span class="sec-badge" style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA">Solicitado</span>`:''}</div>
+          <span class="sec-tog ${AD.secOpen.contato?'open':''}">▾</span>
+        </div>
+        ${AD.secOpen.contato?`<div>
+          <div class="contato-toggle" onclick="aulaToggleContato()">
+            <button class="tsw ${a.contato?'on':'off'}"></button>
+            <div><div style="font-size:12px;color:var(--ink2)">Solicitar contato da coordenação</div><div style="font-size:11px;color:var(--ink3)">Vanessa será notificada</div></div>
+          </div>
+          ${a.contato?`<div class="cbody">
+            <textarea class="obs-area" rows="3" placeholder="Descreva o motivo…" onchange="AD.sel.contato_motivo=this.value">${a.contato_motivo}</textarea>
+            <div class="curg"><span class="ulbl">Urgência:</span>
+              <button class="ubtn ${a.contato_urgencia==='normal'?'on normal':''}" onclick="AD.sel.contato_urgencia='normal';renderScreen()">Normal</button>
+              <button class="ubtn ${a.contato_urgencia==='alta'?'on alta':''}" onclick="AD.sel.contato_urgencia='alta';renderScreen()">Alta</button>
+            </div>
+          </div>`:''}
+        </div>`:''}
+      </div>
+    </div>
+    ${modalHtml}
+  </div>`;
+}
+
+function renderAulaModal(a){
+  const ex=findExAula(a,AD.modalEx);if(!ex)return'';
+  const isDash=ex.ca==='—';const changed=!isDash&&ex.cn!==ex.ca;
+  let solHtml='';
+  if(ex.sol&&ex.sol.sent){solHtml=`<div class="sol-sent">✓ Solicitação enviada (${ex.sol.tipo}) — aguardando Vanessa</div>`;}
+  else if(AD.solForm){
+    const isTroca=AD.solForm.tipo==='troca';
+    solHtml=`<div class="sol-form">
+      <div class="sol-form-title">${isTroca?'Solicitar troca':'Solicitar remoção'}</div>
+      ${isTroca?`<input class="sol-inp" placeholder="Exercício sugerido…" oninput="AD.solForm.sugestao=this.value" value="${AD.solForm.sugestao||''}">`:''}
+      <textarea class="ms-textarea" rows="2" placeholder="Motivo…" onchange="AD.solForm.motivo=this.value">${AD.solForm.motivo||''}</textarea>
+      <div class="sol-acts" style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-env" onclick="aulaEnviarSol('${ex.id}')">Enviar para Vanessa</button>
+        <button class="btn-can" onclick="AD.solForm=null;renderScreen()">Cancelar</button>
+      </div>
+    </div>`;
+  } else {
+    solHtml=`<div class="sol-btns">
+      <button class="sol-btn sb-troca" onclick="AD.solForm={tipo:'troca',sugestao:'',motivo:''};renderScreen()">↔ Trocar exercício</button>
+      <button class="sol-btn sb-remov" onclick="AD.solForm={tipo:'remover',sugestao:'',motivo:''};renderScreen()">✕ Solicitar remoção</button>
+    </div>`;
+  }
+  return `<div class="modal-overlay" onclick="aulaFecharModal(event)">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="ms-hdr">
+        <div><div class="ms-title">${ex.n}</div><div class="ms-sub">${ex.g} · ${ex.s}×${ex.r}${ex.d!=='0'?' · desc. '+ex.d+'s':''}</div></div>
+        <button class="ms-close" onclick="aulaFecharModal()">✕</button>
+      </div>
+      <div class="ms-body">
+        ${ex.pref?`<div class="pref-box"><span style="font-size:14px;color:var(--gold)">★</span><span>${ex.pref}</span></div>`:''}
+        ${!isDash?`<div class="ms-section">
+          <div class="ms-lbl">Carga</div>
+          <div class="carga-row">
+            <div class="cf"><div class="cf-lbl2">Anterior</div><div class="cf-static">${ex.ca}</div></div>
+            <div class="cf-arrow">→</div>
+            <div class="cf"><div class="cf-lbl2">Nova carga</div><input class="cf-inp ${changed?'changed':''}" value="${ex.cn}" onchange="aulaUpdCarga('${ex.id}',this.value)"></div>
+            ${changed?`<div style="font-size:11px;color:#059669;align-self:flex-end;padding-bottom:8px">✓ alterada</div>`:''}
+          </div>
+        </div>`:`<div style="font-size:12px;color:var(--ink3);font-style:italic">Sem carga registrada.</div>`}
+        <div class="ms-section">
+          <div class="ms-lbl">Observação desta aula</div>
+          <textarea class="ms-textarea" rows="3" placeholder="Algo específico que aconteceu hoje…" onchange="aulaUpdObs('${ex.id}',this.value)">${ex.obs}</textarea>
+        </div>
+        <div class="ms-section"><div class="ms-lbl">Solicitações</div>${solHtml}</div>
+      </div>
+      <div class="ms-footer"><button class="btn-concluir" onclick="aulaFecharModal()">Concluído</button></div>
+    </div>
+  </div>`;
+}
+
+function aulaAbrirModal(id){AD.modalEx=id;AD.solForm=null;renderScreen();}
+function aulaFecharModal(e){if(e&&e.target.className!=='modal-overlay')return;AD.modalEx=null;AD.solForm=null;renderScreen();}
+function aulaToggleSec(k){AD.secOpen[k]=!AD.secOpen[k];renderScreen();}
+function aulaToggleContato(){AD.sel.contato=!AD.sel.contato;if(!AD.secOpen.contato)AD.secOpen.contato=true;renderScreen();}
+function aulaUpdCarga(id,val){const ex=findExAula(AD.sel,id);if(ex){ex.cn=stripKg(val);const inp=document.querySelector('.cf-inp');if(inp)inp.classList.toggle('changed',ex.cn!==ex.ca);}}
+function aulaUpdObs(id,val){const ex=findExAula(AD.sel,id);if(ex)ex.obs=val;}
+function aulaEnviarSol(id){const ex=findExAula(AD.sel,id);if(!AD.solForm)return;ex.sol={...AD.solForm,sent:true};AD.solForm=null;renderScreen();}
+function aulaSalvar(){AD.sel.done=true;AD.saveOk=true;renderScreen();setTimeout(()=>{AD.saveOk=false;AD.sel=null;renderScreen();},1000);}
+
+// ════════════════════════════════════════
+//  FILA DA VANESSA
+// ════════════════════════════════════════
+function renderFilaScreen(c){
+  const totalPend=FILA_ALUNOS.reduce((acc,a)=>acc+a.solicitacoes.filter(s=>s.status==='pend').length,0);
+  const totalCont=FILA_ALUNOS.reduce((acc,a)=>acc+a.solicitacoes.filter(s=>s.status==='pend'&&s.tipo==='contato').length,0);
+
+  let alunos=FILA_ALUNOS.map(a=>{
+    const sols=a.solicitacoes.filter(s=>{
+      if(FV.filtro==='pend')return s.status==='pend';
+      if(FV.filtro==='resolvidos')return s.status!=='pend';
+      if(FV.filtro==='contato')return s.tipo==='contato';
+      if(FV.filtro==='obs_prof')return s.tipo==='obs_prof';
+      return true;
+    });
+    return{...a,solicitacoes:sols};
+  }).filter(a=>a.solicitacoes.length>0);
+
+  const cards=alunos.map(a=>{
+    const isOpen=FV.expandido[a.id]!==false;
+    const pend=a.solicitacoes.filter(s=>s.status==='pend');
+    const tipos=[...new Set(a.solicitacoes.map(s=>s.tipo))];
+    const badgesHtml=tipos.map(t=>{const cfg=TIPO_CFG[t];const n=a.solicitacoes.filter(s=>s.tipo===t&&s.status==='pend').length;return n>0?`<span class="badge ${cfg.badge}">${n} ${cfg.label}</span>`:''}).join('');
+    const solsHtml=a.solicitacoes.map(sol=>{
+      const cfg=TIPO_CFG[sol.tipo];const isDone=sol.status!=='pend';
+      let actionHtml='';
+      if(isDone){actionHtml=`<span class="sol-resolved ${sol.status==='apr'?'sr-apr':'sr-rej'}">${sol.status==='apr'?'✓ Aprovado':'✕ Rejeitado'}</span>`;}
+      else if(sol.tipo==='obs_prof'||sol.tipo==='contato'){actionHtml=`<div class="sol-actions"><button class="btn-apr" onclick="filaResolver('${a.id}','${sol.id}','apr')">Ciente</button><span class="sol-date">${sol.data}</span></div>`;}
+      else if(FV.rejForm[sol.id]!==undefined){actionHtml=`<div class="rej-form"><input class="rej-inp" placeholder="Motivo da rejeição (opcional)…" oninput="FV.rejForm['${sol.id}']=this.value" value="${FV.rejForm[sol.id]||''}"><div class="rej-acts"><button class="btn-rej-conf" onclick="filaResolver('${a.id}','${sol.id}','rej')">Confirmar rejeição</button><button class="btn-rej-can" onclick="delete FV.rejForm['${sol.id}'];renderScreen()">Cancelar</button></div></div>`;}
+      else{actionHtml=`<div class="sol-actions"><button class="btn-apr" onclick="filaResolver('${a.id}','${sol.id}','apr')">✓ Aprovar</button><button class="btn-rej" onclick="FV.rejForm['${sol.id}']='';renderScreen()">✕ Rejeitar</button><span class="sol-date">${sol.data}</span></div>`;}
+      return `<div class="sol-item ${isDone?'resolved':''}">
+        <div class="sol-top">
+          <div class="sol-ico ${cfg.icoCls}">${cfg.ico}</div>
+          <div class="sol-info">
+            <div class="sol-tipo ${cfg.tc}">${cfg.label}${sol.urgencia==='alta'?' <span style="color:#991B1B;font-size:9px">● URGENTE</span>':''}</div>
+            ${sol.ex?`<div class="sol-ex">${sol.ex}</div>`:''}
+            <div class="sol-prof">Prof: ${sol.prof}</div>
+            ${sol.motivo?`<div class="sol-motivo">"${sol.motivo}"</div>`:''}
+            ${sol.sugestao?`<div class="sol-sugestao">Sugestão: ${sol.sugestao}</div>`:''}
+            ${actionHtml}
+          </div>
+          ${isDone?`<span class="sol-date" style="flex-shrink:0">${sol.data}</span>`:''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="fv-acard">
+      <div class="fv-achdr" onclick="filaToggleAluno('${a.id}')">
+        <div class="av ${avc(a.name)}">${ini(a.name)}</div>
+        <div><div class="aname">${a.name}</div><div class="ameta">mat. ${a.mat} · ${a.treino}</div></div>
+        <div class="fv-badges">${badgesHtml}</div>
+        <span class="fv-chevron ${isOpen?'open':''}">›</span>
+      </div>
+      ${isOpen?`<div>${solsHtml}</div>`:''}
+    </div>`;
+  }).join('');
+
+  c.innerHTML=`<div style="display:flex;flex-direction:column;flex:1">
+    <div class="ph">
+      <div>
+        <div class="eyebrow">Coordenador · Vanessa Ramos</div>
+        <div class="ptitle">Fila de solicitações</div>
+        <div class="psub">Separadas por aluno</div>
+        ${totalPend?`<div class="ph-pills">
+          <span class="ph-pill pp-a">⚠ ${totalPend} pendente${totalPend>1?'s':''}</span>
+          ${totalCont?`<span class="ph-pill pp-r">✉ ${totalCont} contato${totalCont>1?'s':''} urgente${totalCont>1?'s':''}</span>`:''}
+        </div>`:''}
+      </div>
+      <div class="fltrs">${[['todos','Todos'],['pend','Pendentes'],['resolvidos','Resolvidos'],['contato','Contatos'],['obs_prof','Obs. prof']].map(([v,l])=>`<button class="fb ${FV.filtro===v?'on':''}" onclick="FV.filtro='${v}';renderScreen()">${l}</button>`).join('')}</div>
+    </div>
+    <div class="lista">${cards||`<div class="empty-state"><div class="empty-ico">✓</div><div>Nenhuma solicitação encontrada</div></div>`}</div>
+  </div>`;
+}
+
+function filaToggleAluno(id){FV.expandido[id]=FV.expandido[id]===false;renderScreen();}
+function filaResolver(alunoId,solId,decisao){
+  const a=FILA_ALUNOS.find(x=>x.id==alunoId);
+  const sol=a.solicitacoes.find(s=>s.id===solId);
+  sol.status=decisao;delete FV.rejForm[solId];renderScreen();
+}
+
+// ════════════════════════════════════════
+//  AGENDA (placeholder)
+// ════════════════════════════════════════
+function renderAgendaScreen(c){
+  c.innerHTML=`<div style="display:flex;flex-direction:column;flex:1">
+    <div class="ph">
+      <div>
+        <div class="eyebrow">Recepção</div>
+        <div class="ptitle">Agenda</div>
+        <div class="psub">Em desenvolvimento</div>
+      </div>
+    </div>
+    <div class="empty-state" style="padding:60px 28px;text-align:center;color:var(--ink3)">
+      <div class="empty-ico">📅</div>
+      <div style="font-size:14px;margin-top:8px">Módulo de agenda em desenvolvimento</div>
+      <div style="font-size:12px;margin-top:4px">Gestão de horários, presença e lista de espera</div>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+FILA_ALUNOS.forEach(a=>FV.expandido[a.id]=true);
+showScreen('treino');
+</script>
+</body>
+</html>
