@@ -302,6 +302,7 @@ button{cursor:pointer}
       <div class="sb-section">Treinos</div>
       <button class="sb-item on" onclick="setMod('treinos',this)"><span class="sb-ico">💪</span> Fichas de treino</button>
       <button class="sb-item" onclick="setMod('fila',this)"><span class="sb-ico">📥</span> Solicitações<span class="sb-badge" id="badge-fila">3</span></button>
+      <button class="sb-item" onclick="setMod('catalogo',this)"><span class="sb-ico">📚</span> Catálogo de exercícios</button>
       <div class="sb-section">Alunos</div>
       <button class="sb-item" onclick="setMod('avaliacao',this)"><span class="sb-ico">📊</span> Avaliação física</button>
       <button class="sb-item" onclick="setMod('evolucao',this)"><span class="sb-ico">📈</span> Evolução</button>
@@ -1004,7 +1005,7 @@ function exNomeExibir(n){return n.replace(/^[A-ZÁÉÍÓÚÃÕÇ]+ - /,'');}
 
 let D={
   alunos:[
-    {id:1,nm:'Ana Paula Tanaka',mat:2660,freq_semana:3,treinos_previstos:24,treinos_realizados:31,contrato_vence:'2026-04-15',treino_atualizado:'2026-01-10',programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
+    {id:1,nm:'Ana Paula Tanaka',mat:2660,freq_semana:3,treinos_previstos:24,treinos_realizados:31,contrato_vence:'2026-04-15',treino_atualizado:'2026-01-10',restricoes:'Punho: Tendinite — Não elevar acima do ombro',patologias:['tendinite_punho'],exerc_proibidos:['DELTOIDE - EM PE - ELEVACAO FRONTAL COM HALTER','DELTOIDE - CROSS - ELEVACAO FRONTAL BARRA PEG PRON'],exerc_nao_quer:[],programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
       {id:'f1',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',
        esboço:[
          {id:'es1',g:'Quadríceps',s:4,r:'12',num_ex:2,estimulo:'Rest Pause',obs:'Foco em amplitude'},
@@ -1043,7 +1044,7 @@ let D={
          {id:'e11',tp:'s',n:'ABDOMEN - ABDOMINAL SUPRA',g:'Abdômen',s:3,r:'20',d:30,ca:null,obs:''},
       ]},
     ]}]},
-    {id:2,nm:'Renata Yoshihara',mat:2326,freq_semana:2,treinos_previstos:16,treinos_realizados:14,contrato_vence:'2026-03-28',treino_atualizado:'2026-02-20',programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
+    {id:2,nm:'Renata Yoshihara',mat:2326,freq_semana:2,treinos_previstos:16,treinos_realizados:14,contrato_vence:'2026-03-28',treino_atualizado:'2026-02-20',restricoes:'Hérnia lombar — evitar carga axial na cadeia posterior',patologias:['hernia_lombar'],exerc_proibidos:['POSTERIOR DE COXA - EM PE - LEVANTAMENTO TERRA BAR','POSTERIOR DE COXA - EM PE - STIFF COM BARRA'],exerc_nao_quer:['POSTERIOR DE COXA - CADEIRA FLEXORA - FLEXORA UNI'],programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
       {id:'f4',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Aluna prefere aparelhos guiados — evitar livres por enquanto.',esboço:[
         {id:'es9',g:'Quadríceps',s:4,r:'12',num_ex:2,estimulo:'Padrão',obs:''},
         {id:'es10',g:'Posterior',s:3,r:'12',num_ex:1,estimulo:'Padrão',obs:''},
@@ -1054,7 +1055,7 @@ let D={
         {id:'e14',tp:'s',n:'GLUTEO - ELEVAÇÃO PÉLVICA',g:'Glúteo',s:3,r:'15',d:60,ca:25,obs:''},
       ]},
     ]}]},
-    {id:3,nm:'Fabio Bonomi',mat:2504,freq_semana:3,treinos_previstos:24,treinos_realizados:29,contrato_vence:'2026-05-10',treino_atualizado:'2025-12-01',programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
+    {id:3,nm:'Fabio Bonomi',mat:2504,freq_semana:3,treinos_previstos:24,treinos_realizados:29,contrato_vence:'2026-05-10',treino_atualizado:'2025-12-01',restricoes:'',patologias:[],exerc_proibidos:[],exerc_nao_quer:[],programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
       {id:'f5',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[
         {id:'e15',tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:90,ca:100,obs:''},
         {id:'e16',tp:'s',n:'POSTERIOR - MESA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:30,obs:''},
@@ -1104,7 +1105,7 @@ function setMod(m,el){
 
 function toggleSketch(id){sketchOpen[id]=sketchOpen[id]!==false?false:true;render();}
 function render(){
-  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho']};
+  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho']};
   const [tt,ts]=titles[modulo]||['',''];
   document.getElementById('tb-title').textContent=tt;
   document.getElementById('tb-sub').textContent=ts;
@@ -1118,10 +1119,13 @@ function render(){
     acts.innerHTML=`<button class="btn-secondary" onclick="novoPrograma()">+ Programa</button>`;
   } else if(modulo==='fila'){
     acts.innerHTML=`<span style="font-size:13px;color:var(--ink3)">${novas} pendente${novas!==1?'s':''}</span>`;
+  } else if(modulo==='catalogo'){
+    acts.innerHTML=`<button class="btn-secondary" onclick="addExercicioCatalogo()">+ Exercício</button>`;
   } else acts.innerHTML='';
   document.getElementById('content').innerHTML=
     modulo==='treinos'?renderTreinos():
     modulo==='fila'?renderFila():
+    modulo==='catalogo'?renderCatalogo():
     `<div class="empty-state"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div></div>`;
   setupDragDrop();
 }
@@ -1238,6 +1242,7 @@ function renderFichasArea(){
     const fa=fs[fichaAtiva]||fs[0];
     body=`<div class="exercicios-area">
       <div class="exercicios-body" id="exs-body-${fa.id}">
+        ${renderRestricoesBanner()}
         ${renderNotaInterna(fa)}
         ${renderEsboço(fa)}
         ${renderExsGrupados(fa)}
@@ -1253,6 +1258,21 @@ function renderFichasArea(){
 }
 
 // ── NOTA INTERNA ──
+// ── BANNER RESTRIÇÕES DO ALUNO ──
+function renderRestricoesBanner(){
+  if(!alunoSel)return'';
+  const proib=alunoSel.exerc_proibidos||[];
+  const naoQuer=alunoSel.exerc_nao_quer||[];
+  const restricao=alunoSel.restricoes||'';
+  if(!proib.length&&!naoQuer.length&&!restricao)return'';
+  return`<div style="background:#FEF2F2;border:1.5px solid #FECACA;border-radius:var(--rs);padding:10px 14px;margin-bottom:4px;font-size:12px">
+    <div style="font-weight:600;color:#991B1B;margin-bottom:${(proib.length||naoQuer.length)?'6px':'0'}">⛔ Restrições de ${alunoSel.nm.split(' ')[0]}</div>
+    ${restricao?`<div style="color:#991B1B;margin-bottom:4px">${restricao}</div>`:''}
+    ${proib.length?`<div style="color:#991B1B;margin-top:4px"><strong>Proibidos:</strong> ${proib.map(e=>e.split(' - ').slice(-1)[0]).join(', ')}</div>`:''}
+    ${naoQuer.length?`<div style="color:#92400E;margin-top:4px;background:#FFFBEB;padding:4px 8px;border-radius:4px"><strong>Prefere evitar:</strong> ${naoQuer.map(e=>e.split(' - ').slice(-1)[0]).join(', ')}</div>`:''}
+  </div>`;
+}
+
 function renderNotaInterna(f){
   const aberta=notaAberta[f.id]||false;
   const temNota=f.nota&&f.nota.trim();
@@ -1289,7 +1309,7 @@ function calcMatch(f){
   // Compara com o planejado no esboço
   let totalPlanejado=0, totalOk=0;
   const detalhes=f.esboço.map(es=>{
-    const planejado=es.num_ex||1;
+    const planejado=(es.num_singles||0)+(es.num_duplas||0)*2+(es.num_trios||0)*3||(es.num_ex||1);
     totalPlanejado+=planejado;
     // match por grupo (case insensitive partial)
     const gKey=es.g.toLowerCase();
@@ -1332,9 +1352,10 @@ function renderEsboço(f){
         ${statusDot}
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:3px" title="Nº de exercícios para este grupo">
-          <span style="font-size:10px;color:var(--ink3);white-space:nowrap">exs</span>
-          <input class="esboço-num-inp" type="number" min="1" max="8" value="${e.num_ex||1}" oninput="e_upd('${f.id}','${e.id}','num_ex',parseInt(this.value)||1)" title="Quantidade de exercícios para este grupo">
+        <div style="display:flex;align-items:center;gap:4px" title="Estrutura de exercícios">
+          <span style="font-size:9px;color:var(--ink3);white-space:nowrap;background:var(--bg);padding:2px 5px;border-radius:4px;border:1px solid var(--bg3)" title="Exercícios individuais">1×<input type="number" min="0" max="6" value="${e.num_singles||0}" oninput="e_upd('${f.id}','${e.id}','num_singles',parseInt(this.value)||0)" style="width:26px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center"></span>
+          <span style="font-size:9px;color:#1E40AF;white-space:nowrap;background:#EFF6FF;padding:2px 5px;border-radius:4px;border:1px solid #BFDBFE" title="Duplas (bi-set)">2×<input type="number" min="0" max="4" value="${e.num_duplas||0}" oninput="e_upd('${f.id}','${e.id}','num_duplas',parseInt(this.value)||0)" style="width:26px;border:none;background:transparent;font-size:12px;font-weight:600;color:#1E40AF;outline:none;padding:0;text-align:center"></span>
+          <span style="font-size:9px;color:#6D28D9;white-space:nowrap;background:#F5F3FF;padding:2px 5px;border-radius:4px;border:1px solid #C4B5FD" title="Trios (tri-set)">3×<input type="number" min="0" max="3" value="${e.num_trios||0}" oninput="e_upd('${f.id}','${e.id}','num_trios',parseInt(this.value)||0)" style="width:26px;border:none;background:transparent;font-size:12px;font-weight:600;color:#6D28D9;outline:none;padding:0;text-align:center"></span>
         </div>
         <span class="esboço-sep" style="color:var(--bg3)">|</span>
         <input class="esboço-inp" type="number" min="1" max="10" value="${e.s}" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)" title="Séries">
@@ -1350,14 +1371,15 @@ function renderEsboço(f){
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
 
-  const matchBadge=temEsboço&&f.exs.length>0?`
+  // Barra de match — sempre visível no banner (aberto ou fechado)
+  const matchBadge=temEsboço?`
     <div style="display:flex;align-items:center;gap:6px">
-      <div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
+      ${f.exs.length>0?`<div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
       </div>
       <span style="font-size:11px;font-weight:700;color:${is100?'#059669':pct>=70?'#D97706':'var(--purple)'}">${is100?'✓ 100%':pct+'%'}</span>
-    </div>`:
-    temEsboço&&!aberto?`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_ex||1),0)} ex planejados</span>`:'';
+      `:`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_ex||1),0)} ex planejados</span>`}
+    </div>`:''  ;
 
   return`<div class="esboço-banner" style="cursor:pointer" onclick="toggleSketch('${f.id}')">
     <div style="font-size:16px">${is100&&f.exs.length>0?'✅':'📐'}</div>
@@ -1439,13 +1461,18 @@ function renderExsGrupados(f){
 
 function renderExSingle(e,num,fichaId){
   const gi=getGrupoInfo(e.g);
-  return`<div class="ex-card" draggable="true" data-ficha="${fichaId}" data-ex="${e.id}" data-idx="${e._idx}">
+  const restr=getExRestrictions(e.n);
+  const restrBadge=restr?`<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;background:${restr.tipo==='proibido'?'#FEF2F2':'#FFFBEB'};color:${restr.tipo==='proibido'?'#991B1B':'#92400E'};border:1px solid ${restr.tipo==='proibido'?'#FECACA':'#FCD34D'}">${restr.tipo==='proibido'?'⛔ Proibido':'⚠️ Evitar'}</span>`:'';
+  return`<div class="ex-card ${restr?'ex-card-warn':''}" draggable="true" data-ficha="${fichaId}" data-ex="${e.id}" data-idx="${e._idx}" style="${restr?'border-left:3px solid '+(restr.tipo==='proibido'?'#DC2626':'#D97706')+';':''}" >
     <div class="ex-main">
       <span class="ex-drag" title="Arrastar para reordenar">⠿</span>
       <div class="ex-num">${num}</div>
       <div class="ex-info">
         <div class="ex-nome">${exNomeExibir(e.n)}</div>
-        <span class="ex-grupo-tag" style="background:${gi.cor};color:${gi.tc}">${e.g}</span>
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          <span class="ex-grupo-tag" style="background:${gi.cor};color:${gi.tc}">${e.g}</span>
+          ${restrBadge}
+        </div>
       </div>
       <div class="ex-params">
         <span class="ex-param">${e.s}× ${e.r}</span>
@@ -1628,6 +1655,7 @@ function renderModal(){
             placeholder="Preenchido ao selecionar exercício"
             value="${ex.g||''}">
         </div>
+        <div id="m-ex-warn" style="display:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r?'block':'none';})()};padding:9px 14px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid;margin-top:-4px;background:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r&&r.tipo==='proibido'?'#FEF2F2':'#FFFBEB';})()};border-color:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r&&r.tipo==='proibido'?'#FECACA':'#FCD34D';})()};color:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r&&r.tipo==='proibido'?'#991B1B':'#92400E';})()}">${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r?r.msg:'';})()}</div>
         <div class="params-row">
           <div class="mf"><label class="ml">Séries</label><input class="mi" type="number" min="1" max="10" value="${ex.s}" oninput="modal.ex.s=parseInt(this.value)||4"></div>
           <div class="mf"><label class="ml">Reps</label><input class="mi" value="${ex.r}" oninput="modal.ex.r=this.value" placeholder="12 ou 10-12"></div>
@@ -1652,7 +1680,7 @@ function modalBuscaEx(q){
   modal.ex.n=q;
   if(!q||q.length<1){dd.style.display='none';return;}
   const ql=q.toLowerCase();
-  const matches=EXERCICIOS.filter(e=>e.n.toLowerCase().includes(ql)).slice(0,12);
+  const matches=EXERCICIOS.filter(e=>e.n.toLowerCase().includes(ql)&&!EXERCICIOS_INATIVOS.has(e.n)).slice(0,12);
   if(!matches.length){dd.style.display='none';return;}
   dd.style.display='block';
   dd.innerHTML=matches.map((e,i)=>`<div
@@ -1671,10 +1699,36 @@ function modalSelecionarEx(nome,grupo){
   const grp=document.getElementById('m-ex-grupo');
   if(inp)inp.value=nome;
   if(grp)grp.value=grupo;
+  // Show restriction warning
+  const restr=getExRestrictions(nome);
+  const warn=document.getElementById('m-ex-warn');
+  if(warn){
+    if(restr){
+      warn.style.display='block';
+      warn.style.background=restr.tipo==='proibido'?'#FEF2F2':'#FFFBEB';
+      warn.style.borderColor=restr.tipo==='proibido'?'#FECACA':'#FCD34D';
+      warn.style.color=restr.tipo==='proibido'?'#991B1B':'#92400E';
+      warn.textContent=restr.msg;
+    } else {
+      warn.style.display='none';
+    }
+  }
 }
 function fecharModal(){modal=null;document.getElementById('modal-root').innerHTML='';}
+function getExRestrictions(nomeEx){
+  if(!alunoSel)return null;
+  const n=nomeEx.toUpperCase();
+  const proib=(alunoSel.exerc_proibidos||[]).find(e=>e.toUpperCase()===n||n.includes(e.toUpperCase().split(' - ').slice(-1)[0]));
+  const naoQuer=(alunoSel.exerc_nao_quer||[]).find(e=>e.toUpperCase()===n);
+  if(proib)return{tipo:'proibido',msg:'⛔ Exercício proibido para este aluno (patologia/lesão)'};
+  if(naoQuer)return{tipo:'nao_quer',msg:'⚠️ Aluno pediu para não fazer este exercício'};
+  return null;
+}
 function salvarEx(){
   const ex=modal.ex;if(!ex.n)return;
+  const restr=getExRestrictions(ex.n);
+  if(restr&&restr.tipo==='proibido'){alert(restr.msg+'\n\nEste exercício não pode ser adicionado à ficha deste aluno.');return;}
+  if(restr&&restr.tipo==='nao_quer'){if(!confirm(restr.msg+'\n\nDeseja adicionar mesmo assim?'))return;}
   if(modal.type==='ex'){
     const f=modal.ficha;const idx=f.exs.findIndex(e=>e.id===ex.id);
     if(idx>=0)f.exs[idx]={...f.exs[idx],...ex};else f.exs.push({...ex,tp:'s'});
@@ -1686,6 +1740,61 @@ function salvarEx(){
 }
 
 // ── FILA ──
+// ── CATÁLOGO DE EXERCÍCIOS ──
+function renderCatalogo(){
+  const grupos=[...new Set(EXERCICIOS.map(e=>e.g))].sort();
+  const filtrados=EXERCICIOS.filter(e=>{
+    const bOk=!catalogoBusca||e.n.toLowerCase().includes(catalogoBusca.toLowerCase());
+    const gOk=!catalogoFiltroGrupo||e.g===catalogoFiltroGrupo;
+    return bOk&&gOk;
+  });
+  const ativos=filtrados.filter(e=>!EXERCICIOS_INATIVOS.has(e.n));
+  const inativos=filtrados.filter(e=>EXERCICIOS_INATIVOS.has(e.n));
+  const grupoOpts=`<option value="">Todos os grupos</option>`+grupos.map(g=>`<option value="${g}" ${catalogoFiltroGrupo===g?'selected':''}>${g}</option>`).join('');
+  const rows=e=>e.map(ex=>{
+    const off=EXERCICIOS_INATIVOS.has(ex.n);
+    const gi=getGrupoInfo(ex.g);
+    return`<div class="cat-row ${off?'inativo':''}">
+      <span class="cat-grupo-tag" style="background:${gi.cor}22;color:${gi.tc};border:1px solid ${gi.cor}55">${ex.g}</span>
+      <span class="cat-nome" title="${ex.n}">${ex.n}</span>
+      <button class="btn-cat-toggle ${off?'btn-cat-off':'btn-cat-on'}" onclick="toggleExCatalogo('${ex.n.replace(/'/g,"\\'")}')">
+        ${off?'Reativar':'Desativar'}
+      </button>
+    </div>`;
+  }).join('');
+  return`<div style="padding:20px 24px;max-width:900px">
+    <div class="cat-filters">
+      <input class="cat-search" placeholder="Buscar exercício…" value="${catalogoBusca}" oninput="catalogoBusca=this.value;document.getElementById('content').innerHTML=renderCatalogo();setupDragDrop()">
+      <select class="cat-grupo-sel" onchange="catalogoFiltroGrupo=this.value;document.getElementById('content').innerHTML=renderCatalogo();setupDragDrop()">${grupoOpts}</select>
+      <span class="cat-count">${ativos.length} ativos · ${EXERCICIOS_INATIVOS.size} desativados</span>
+    </div>
+    ${ativos.length?`<div class="cat-grid">${rows(ativos)}</div>`:''}
+    ${inativos.length?`<div style="margin-top:16px">
+      <div style="font-size:12px;font-weight:600;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Desativados (${inativos.length})</div>
+      <div class="cat-grid">${rows(inativos)}</div>
+    </div>`:''}
+  </div>`;
+}
+function toggleExCatalogo(nome){
+  if(EXERCICIOS_INATIVOS.has(nome))EXERCICIOS_INATIVOS.delete(nome);
+  else EXERCICIOS_INATIVOS.add(nome);
+  document.getElementById('content').innerHTML=renderCatalogo();
+  setupDragDrop();
+}
+function addExercicioCatalogo(){
+  const nome=prompt('Nome do novo exercício (ex: QUADRICEPS - NOVO EXERCÍCIO):');
+  if(!nome||!nome.trim())return;
+  const grupo=prompt('Grupo muscular:');
+  if(!grupo||!grupo.trim())return;
+  const n=nome.trim().toUpperCase();
+  const g=grupo.trim();
+  if(EXERCICIOS.find(e=>e.n===n)){alert('Exercício já existe no catálogo.');return;}
+  EXERCICIOS.push({n,g});
+  EXERCICIOS.sort((a,b)=>a.g.localeCompare(b.g)||a.n.localeCompare(b.n));
+  document.getElementById('content').innerHTML=renderCatalogo();
+  setupDragDrop();
+}
+
 function renderFila(){
   const novas=D.solicitacoes.filter(s=>s.status==='nova');
   const hist=D.solicitacoes.filter(s=>s.status!=='nova');
