@@ -387,7 +387,7 @@ let S={
   dentro:false,regs:[],loc:null,locLoad:false,locErr:false,
   hexp:{},
   prof:{nome:'Rafael Caires',email:'rafael@estudio7.com.br',senha:'Prof123'},
-  dados:{nome:'Rafael Caires',rg:'12.345.678-9',cpf:'123.456.789-00',endereco:'Rua Domingos de Morais, 1042 · Vila Mariana · São Paulo',pix:'rafael@estudio7.com.br',
+  dados:{nome:'Rafael Caires',cargo:'estagiario',rg:'12.345.678-9',cpf:'123.456.789-00',endereco:'Rua Domingos de Morais, 1042 · Vila Mariana · São Paulo',pix:'rafael@estudio7.com.br',
     horarios:[{dia:'Segunda',hora:'05:45–12:30',ativo:true},{dia:'Terça',hora:'05:45–12:30',ativo:true},{dia:'Quarta',hora:'05:45–12:30',ativo:true},{dia:'Quinta',hora:'05:45–12:30',ativo:true},{dia:'Sexta',hora:'05:45–12:30',ativo:true},{dia:'Sábado',hora:'Folga',ativo:false},{dia:'Domingo',hora:'Folga',ativo:false}],
     contrato:{vigente:{nome:'contrato_estagio_v3.pdf',vigencia:'01 fev 2026',vencimento:'2026-06-30'},versoes:[{id:'v1',nome:'contrato_estagio_v1.pdf',data:'10 ago 2025',isFinal:false,current:false},{id:'v2',nome:'contrato_estagio_v2.pdf',data:'15 nov 2025',isFinal:false,current:false},{id:'v3',nome:'contrato_estagio_v3.pdf',data:'14 fev 2026',isFinal:false,current:true}]}},
   faltas:[{id:'f1',tipo:'falta',data:'2026-03-25',fmt:'Quarta, 25 mar',motivo:'Consulta médica',status:'conf',arq:{nome:'atestado.pdf',tp:'pdf'}},{id:'f2',tipo:'ferias',dataIni:'2026-04-07',dataFim:'2026-04-18',fmt:'7 abr → 18 abr',dias:12,motivo:'Férias anuais',status:'pend',arq:null},{id:'f3',tipo:'falta',data:'2026-04-01',fmt:'Terça, 1 abr',motivo:'',status:'pend',arq:null}],
@@ -660,7 +660,147 @@ function rHist(){
       <div class="scroll">${diasHtml}</div>
     </div>
   </div>`;}
-function rMeusDados(){const d=S.dados;const dv=diasParaVencer(d.contrato.vigente.vencimento);const vCls=dv<=30?'vc-r':dv<=60?'vc-w':'vc-ok';const vTxt=dv<=30?`⚠ Vence em <b>${dv} dias</b> — renove urgente!`:dv<=60?`⚠ Vence em <b>${dv} dias</b> — fique atento.`:`✓ Vigente por mais <b>${dv} dias</b>`;function fld(lb,val,k){if(S.mdEdit)return`<div class="fld"><div class="flbl">${lb}</div><input class="finp" value="${val}" onchange="S.dados['${k}']=this.value"></div>`;return`<div class="fld"><div class="flbl">${lb}</div><div class="fval">${val}</div></div>`;}const vsHtml=d.contrato.versoes.map((v,i)=>`<div class="hvrow ${v.isFinal?'final':''}"><span style="font-size:16px">📄</span><div class="hvinfo"><div class="hvnome">${v.nome}</div><div class="hvmeta">Enviado em ${v.data}</div></div><span class="hvbdg ${v.isFinal?'hvb-ok':'hvb-v'}">${v.isFinal?'✓ Final':v.current?'Atual':'v'+(i+1)}</span><button style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--bg3);background:transparent;color:var(--ink3)">Ver</button></div>`).join('');return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden"><div class="mdhdr"><button class="btn-bk" onclick="">←</button><div class="mdtitle">Meus dados</div><button class="btn-edit ${S.mdEdit?'on':''}" onclick="S.mdEdit=!S.mdEdit;R()">${S.mdEdit?'Salvar':'Editar'}</button></div><div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"><div class="scroll"><div class="card"><div class="chdr"><div class="ctitle">👤 Dados pessoais</div></div><div class="cbody" style="display:flex;flex-direction:column;gap:12px">${fld('Nome completo',d.nome,'nome')}<div class="fldrow">${fld('RG',d.rg,'rg')}${fld('CPF',d.cpf,'cpf')}</div>${fld('Endereço',d.endereco,'endereco')}${fld('Chave PIX',d.pix,'pix')}${S.mdEdit?`<div style="font-size:12px;color:var(--ink3);background:var(--bg);border-radius:var(--rs);padding:10px 12px;line-height:1.5">💡 Alterações são revisadas pelo admin antes de serem aplicadas.</div>`:''}</div></div><div class="card"><div class="chdr"><div class="ctitle">🕐 Horário de trabalho</div><span style="font-size:12px;color:var(--ink3)">Definido pela gestão</span></div><div class="cbody" style="display:flex;flex-direction:column;gap:6px">${d.horarios.map(h=>`<div class="htag"><span class="hdia">${h.dia}</span><span class="hhora">${h.hora}</span><span class="hbdg ${h.ativo?'hb-ok':'hb-f'}">${h.ativo?'✓':'Folga'}</span></div>`).join('')}</div></div><div class="card"><div class="chdr"><div class="ctitle">📋 Contrato de estágio ${dv<=60?`<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;${dv<=30?'background:#FEF2F2;color:#991B1B;border:1px solid #FECACA':'background:#FFFBEB;color:#92400E;border:1px solid #FCD34D'}">${dv<=30?'Urgente':'Atenção'}</span>`:''}</div></div><div class="cbody" style="display:flex;flex-direction:column;gap:12px"><div class="venc-chip ${vCls}">${vTxt}</div><div><div class="flbl" style="margin-bottom:6px">Contrato vigente</div><div class="cv-box"><span style="font-size:22px">📄</span><div class="cv-info"><div class="cv-nome">${d.contrato.vigente.nome}</div><div class="cv-meta">Vigência: ${d.contrato.vigente.vigencia} · Vence: ${new Date(d.contrato.vigente.vencimento+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div></div><button style="font-size:12px;padding:6px 14px;border:1px solid var(--bg3);border-radius:20px;background:transparent;color:var(--ink2)">Ver</button></div></div><div><div class="flbl" style="margin-bottom:6px">Enviar nova versão</div><label class="uzone-mini ${S.mdContratoArq?'tem':''}"><div style="font-size:${S.mdContratoArq?'13':'20'}px;margin-bottom:4px">${S.mdContratoArq?`📄 ${S.mdContratoArq.nome}`:'📎'}</div>${S.mdContratoArq?`<div style="font-size:12px;color:var(--gold-d)">Pronto para enviar</div>`:`<div style="font-size:13px;font-weight:600;color:var(--ink2)">Selecionar arquivo PDF</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">Nova versão do contrato</div>`}<input type="file" accept=".pdf" onchange="const f=this.files[0];if(f){S.mdContratoArq={nome:f.name};R();}"></label>${S.mdContratoArq?`<button class="btn-env" onclick="(function(){const n=S.dados.contrato.versoes.length+1;const hj=new Date().toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});S.dados.contrato.versoes.forEach(v=>v.current=false);S.dados.contrato.versoes.push({id:'v'+n,nome:S.mdContratoArq.nome,data:hj,isFinal:false,current:true});S.dados.contrato.vigente.nome=S.mdContratoArq.nome;S.mdContratoArq=null;R();})()" >Enviar nova versão</button>`:''}</div><div><div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0" onclick="S.mdHistAberto=!S.mdHistAberto;R()"><span style="font-size:14px;color:var(--ink3);${S.mdHistAberto?'display:inline-block;transform:rotate(90deg)':''}">›</span><span style="font-size:13px;color:var(--ink3)">Histórico de versões (${d.contrato.versoes.length})</span></div>${S.mdHistAberto?`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${vsHtml}</div>`:''}</div></div></div></div></div></div>`;}
+function rMeusDados(){
+  const d=S.dados;
+  const cargo=d.cargo||'estagiario';
+  const isEstagiario=cargo==='estagiario';
+  const CARGOS={estagiario:'Estagiário(a)',professor:'Professor(a)',coordenador:'Coordenador(a)',recepcionista:'Recepcionista',limpeza:'Limpeza'};
+  const cargoLabel=CARGOS[cargo]||cargo;
+
+  const dv=diasParaVencer(d.contrato.vigente.vencimento);
+  const vCls=dv<=30?'vc-r':dv<=60?'vc-w':'vc-ok';
+  const vTxt=dv<=30?`⚠ Vence em <b>${dv} dias</b> — renove urgente!`:dv<=60?`⚠ Vence em <b>${dv} dias</b> — fique atento.`:`✓ Vigente por mais <b>${dv} dias</b>`;
+
+  const contratoLabel=isEstagiario?'Contrato de estágio':'Contrato de trabalho';
+  const contratoIco=isEstagiario?'📋':'📄';
+
+  function fld(lb,val,k,type='text'){
+    if(S.mdEdit){
+      // cargo usa select
+      if(k==='cargo'){
+        return`<div class="fld"><div class="flbl">${lb}</div>
+          <select class="finp" onchange="S.dados.cargo=this.value;R()" style="background-image:none">
+            ${Object.entries(CARGOS).map(([v,l])=>`<option value="${v}" ${cargo===v?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>`;
+      }
+      return`<div class="fld"><div class="flbl">${lb}</div><input class="finp" type="${type}" value="${val}" onchange="S.dados['${k}']=this.value"></div>`;
+    }
+    if(k==='cargo')return`<div class="fld"><div class="flbl">${lb}</div>
+      <div style="display:flex;align-items:center;gap:8px;padding:4px 0">
+        <span style="font-size:13px;padding:4px 12px;border-radius:20px;font-weight:600;background:var(--gold-l);color:var(--gold-d);border:1px solid rgba(184,151,90,.3)">${cargoLabel}</span>
+      </div>
+    </div>`;
+    return`<div class="fld"><div class="flbl">${lb}</div><div class="fval">${val}</div></div>`;
+  }
+
+  const vsHtml=d.contrato.versoes.map((v,i)=>`
+    <div class="hvrow ${v.isFinal?'final':''}">
+      <span style="font-size:16px">${v.isFinal?'✅':'📄'}</span>
+      <div class="hvinfo"><div class="hvnome">${v.nome}</div><div class="hvmeta">Enviado em ${v.data}</div></div>
+      <span class="hvbdg ${v.isFinal?'hvb-ok':'hvb-v'}">${v.isFinal?'✓ Final':v.current?'Atual':'v'+(i+1)}</span>
+      <button style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--bg3);background:transparent;color:var(--ink3)">Ver</button>
+    </div>`).join('');
+
+  return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+    <div class="mdhdr">
+      <button class="btn-bk" onclick="">←</button>
+      <div class="mdtitle">Meus dados</div>
+      <button class="btn-edit ${S.mdEdit?'on':''}" onclick="S.mdEdit=!S.mdEdit;R()">${S.mdEdit?'✓ Salvar':'Editar'}</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+      <div class="scroll">
+
+        <!-- DADOS PESSOAIS -->
+        <div class="card">
+          <div class="chdr"><div class="ctitle">👤 Dados pessoais</div></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:12px">
+            ${fld('Cargo',cargoLabel,'cargo')}
+            ${fld('Nome completo',d.nome,'nome')}
+            <div class="fldrow">${fld('RG',d.rg,'rg')}${fld('CPF',d.cpf,'cpf')}</div>
+            ${fld('Endereço',d.endereco,'endereco')}
+            ${fld('Chave PIX',d.pix,'pix')}
+            ${S.mdEdit?`<div style="font-size:12px;color:var(--ink3);background:var(--bg);border-radius:var(--rs);padding:10px 12px;line-height:1.5">
+              💡 Alterações são revisadas pelo admin antes de serem aplicadas. O cargo só pode ser alterado pela gestão.
+            </div>`:''}
+          </div>
+        </div>
+
+        <!-- HORÁRIOS -->
+        <div class="card">
+          <div class="chdr"><div class="ctitle">🕐 Horário de trabalho</div><span style="font-size:12px;color:var(--ink3)">Definido pela gestão</span></div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:6px">
+            ${d.horarios.map(h=>`<div class="htag"><span class="hdia">${h.dia}</span><span class="hhora">${h.hora}</span><span class="hbdg ${h.ativo?'hb-ok':'hb-f'}">${h.ativo?'✓':'Folga'}</span></div>`).join('')}
+          </div>
+        </div>
+
+        <!-- CONTRATO — dinâmico por cargo -->
+        <div class="card">
+          <div class="chdr">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px">${contratoIco}</span>
+              <div>
+                <div class="ctitle">${contratoLabel}
+                  ${dv<=60?`<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;margin-left:4px;${dv<=30?'background:#FEF2F2;color:#991B1B;border:1px solid #FECACA':'background:#FFFBEB;color:#92400E;border:1px solid #FCD34D'}">${dv<=30?'Urgente':'Atenção'}</span>`:''}
+                </div>
+                <div style="font-size:11px;color:var(--ink3);margin-top:1px">${cargoLabel}</div>
+              </div>
+            </div>
+          </div>
+          <div class="cbody" style="display:flex;flex-direction:column;gap:12px">
+            <div class="venc-chip ${vCls}">${vTxt}</div>
+
+            <!-- Contrato vigente -->
+            <div>
+              <div class="flbl" style="margin-bottom:6px">Documento vigente</div>
+              <div class="cv-box">
+                <span style="font-size:22px">${contratoIco}</span>
+                <div class="cv-info">
+                  <div class="cv-nome">${d.contrato.vigente.nome}</div>
+                  <div class="cv-meta">Vigência: ${d.contrato.vigente.vigencia} · Vence: ${new Date(d.contrato.vigente.vencimento+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div>
+                </div>
+                <button style="font-size:12px;padding:6px 14px;border:1px solid var(--bg3);border-radius:20px;background:transparent;color:var(--ink2)">Ver</button>
+              </div>
+            </div>
+
+            <!-- Enviar nova versão -->
+            <div>
+              <div class="flbl" style="margin-bottom:6px">Enviar nova versão</div>
+              <label class="uzone-mini ${S.mdContratoArq?'tem':''}">
+                <div style="font-size:${S.mdContratoArq?'13':'20'}px;margin-bottom:4px">${S.mdContratoArq?`📄 ${S.mdContratoArq.nome}`:'📎'}</div>
+                ${S.mdContratoArq
+                  ?`<div style="font-size:12px;color:var(--gold-d)">Pronto para enviar</div>`
+                  :`<div style="font-size:13px;font-weight:600;color:var(--ink2)">Selecionar arquivo PDF</div>
+                    <div style="font-size:12px;color:var(--ink3);margin-top:2px">${isEstagiario?'Contrato de estágio assinado':'Contrato de trabalho assinado'}</div>`}
+                <input type="file" accept=".pdf" onchange="const f=this.files[0];if(f){S.mdContratoArq={nome:f.name};R();}">
+              </label>
+              ${S.mdContratoArq?`
+                <button class="btn-env" onclick="(function(){
+                  const n=S.dados.contrato.versoes.length+1;
+                  const hj=new Date().toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});
+                  S.dados.contrato.versoes.forEach(v=>v.current=false);
+                  S.dados.contrato.versoes.push({id:'v'+n,nome:S.mdContratoArq.nome,data:hj,isFinal:false,current:true});
+                  S.dados.contrato.vigente.nome=S.mdContratoArq.nome;
+                  S.mdContratoArq=null;R();
+                })()">Enviar nova versão</button>
+                <div class="uopt">O admin será notificado e revisará antes de aprovar como final.</div>
+              `:''}
+            </div>
+
+            <!-- Histórico de versões -->
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0" onclick="S.mdHistAberto=!S.mdHistAberto;R()">
+                <span style="font-size:14px;color:var(--ink3);transition:transform .2s;${S.mdHistAberto?'display:inline-block;transform:rotate(90deg)':''}">›</span>
+                <span style="font-size:13px;color:var(--ink3)">Histórico de versões (${d.contrato.versoes.length})</span>
+              </div>
+              ${S.mdHistAberto?`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${vsHtml}</div>`:''}
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>`;}
 
 S.hist.forEach((_,i)=>S.hexp[i]=false);
 R();
