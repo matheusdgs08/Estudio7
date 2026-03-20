@@ -1912,7 +1912,12 @@ ${exOk.length?`Exercícios seguros para restrições: ${exOk.join(', ')}`:''}
 Distribuição de grupos para ${a.objetivo}: ${distStr||'balanceado'}
 ${qRespostas.obs?`Observação do professor: ${qRespostas.obs}`:''}
 
-EXERCÍCIOS MAIS USADOS NO ESTÚDIO (base real) — use preferencialmente:
+ATENÇÃO CRÍTICA — NOMES DE EXERCÍCIOS:
+Você DEVE usar EXCLUSIVAMENTE os nomes abaixo, copiando-os letra por letra, sem abreviar, sem inventar.
+PROIBIDO usar nomes genéricos como "Supino Reto", "Agachamento Livre", "Rosca Direta".
+USE APENAS os nomes do catálogo do estúdio:
+
+CATÁLOGO REAL DO ESTÚDIO (copie exatamente):
 ${Object.entries(exSugeridos).map(([g,exs])=>`${g}: ${exs.join(' | ')}`).join('\n')}
 
 REGRAS:
@@ -1933,7 +1938,7 @@ ${Object.entries(window.SWAP_CONTEXT.subMap||{}).slice(0,8).map(([orig,subs])=>{
 `:''}
 ${window.SWAP_CONTEXT&&window.SWAP_CONTEXT.total>0?`APRENDIZADO: ${Object.entries(window.SWAP_CONTEXT.subMap||{}).slice(0,6).map(([o,s])=>{const t=Object.entries(s).sort((a,b)=>b[1]-a[1])[0];return t?o.split(' - ').slice(-1)[0]+' → '+t[0].split(' - ').slice(-1)[0]+'('+t[1]+'x)':''}).filter(Boolean).join(', ')}`:''}
 Responda SOMENTE com JSON:
-{"nm":"Programa IA","fichas":[{"letra":"A","nm":"Treino A","nota":"","estimulo":"${estimuloSugerido}","esboço":[{"g":"Quadríceps","s":4,"r":"12","num_singles":1,"num_duplas":1,"num_trios":0,"estimulo":"${estimuloSugerido}","obs":""}],"exs":[{"tp":"s","n":"NOME EXATO","g":"Grupo","s":4,"r":"12","d":60,"ca":null,"obs":""},{"tp":"g","grupo":"dupla","exs":[{"n":"EX1","g":"Grupo","s":3,"r":"12","d":0,"ca":null,"obs":""},{"n":"EX2","g":"Grupo","s":3,"r":"12","d":60,"ca":null,"obs":""}]}]}]}`;
+{"nm":"Programa IA","fichas":[{"letra":"A","nm":"Treino A","nota":"","estimulo":"${estimuloSugerido}","esboço":[{"g":"Quadríceps","s":4,"r":"12","num_singles":1,"num_duplas":1,"num_trios":0,"estimulo":"${estimuloSugerido}","obs":""}],"exs":[{"tp":"s","n":"QUADRICEPS - LEG 180 - LEG 180","g":"Grupo","s":4,"r":"12","d":60,"ca":null,"obs":""},{"tp":"g","grupo":"dupla","exs":[{"n":"POSTERIOR DE COXA - CADEIRA FLEXORA - CADEIRA FLEX","g":"Grupo","s":3,"r":"12","d":0,"ca":null,"obs":""},{"n":"GLUTEO - TECNOGYM - GLUTEO EXTENDIDO","g":"Grupo","s":3,"r":"12","d":60,"ca":null,"obs":""}]}]}]}`;
 
   try{
     const resp = await fetch('https://api.anthropic.com/v1/messages',{
