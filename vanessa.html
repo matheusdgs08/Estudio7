@@ -1039,12 +1039,14 @@ async function carregarDados(){
     render();
     console.log('✅ '+D.alunos.length+' alunos carregados');
 
-    // Load fichas async (background)
-    const [fResp,cResp]=await Promise.all([fetch('/fichas.js'),fetch('/carga_ref.js')]);
-    const [fJs,cJs]=await Promise.all([fResp.text(),cResp.text()]);
-    new Function(fJs)();   // sets window.FICHAS_DATA
-    new Function(cJs)();   // sets window.CARGA_REF
-    console.log('✅ Fichas e cargas de referência carregadas');
+    // Load fichas em paralelo (6 chunks) + carga_ref
+    window.FICHAS_DATA=window.FICHAS_DATA||{};
+    const fichaUrls=['/fichas_1.js','/fichas_2.js','/fichas_3.js','/fichas_4.js','/fichas_5.js','/fichas_6.js'];
+    const [cResp,...fResps]=await Promise.all([fetch('/carga_ref.js'),...fichaUrls.map(u=>fetch(u))]);
+    const [cJs,...fJsArr]=await Promise.all([cResp.text(),...fResps.map(r=>r.text())]);
+    new Function(cJs)(); // sets window.CARGA_REF
+    fJsArr.forEach(js=>new Function(js)()); // cada chunk adiciona ao window.FICHAS_DATA
+    console.log('✅ '+Object.keys(window.FICHAS_DATA).length+' fichas carregadas');
 
     // Merge fichas into current aluno if selected
     if(alunoSel) mergeAluno(alunoSel);
@@ -1059,14 +1061,12 @@ function mergeAluno(a){
   const mat=String(a.mat);
   const fichasData=window.FICHAS_DATA[mat];
   if(!fichasData||!fichasData.length) return;
-  // Sempre usa dados reais do CSV no programa atual (mais confiáveis)
-  // Mas só se não foi editado manualmente (checa flag)
   const prog=a.programas[0];
   if(!prog) return;
-  if(!prog._mergedFromCSV){
+  // Sempre injeta dados reais — respeita edições manuais só se prog já tem fichas editadas
+  if(!prog._editado){
     prog.fichas=fichasData;
-    prog.nm=prog.data_inicio?prog.nm:'Programa Atual';
-    prog._mergedFromCSV=true;
+    prog.nm=prog.nm||'Programa Atual';
   }
 }
 
@@ -1266,7 +1266,7 @@ function renderTreinos(){
     }
     if(dct<=30) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">📅 Contrato ${dct}d</span>`);
     else if(dct<=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FFFBEB;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">📅 Contrato ${dct}d</span>`);
-    return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno(${a.id})">
+    return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno('${a.id}')">
       <div class="aluno-av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
       <div class="aluno-info">
         <div class="aluno-nome">${a.nm}</div>
@@ -1673,7 +1673,26 @@ function setupDragDrop(){
 }
 
 // ── ACTIONS ──
-function selecionarAluno(id){alunoSel=D.alunos.find(a=>a.id===id);if(alunoSel)mergeAluno(alunoSel);fichaAtiva=0;compareMode=false;compareFichas=[];render();}
+function selecionarAluno(id){
+  alunoSel=D.alunos.find(a=>a.id===id);
+  fichaAtiva=0;compareMode=false;compareFichas=[];
+  if(alunoSel){
+    mergeAluno(alunoSel);
+    // If fichas.js not loaded yet, wait for it
+    if(!window.FICHAS_DATA){
+      render(); // render without fichas first
+      const check=setInterval(()=>{
+        if(window.FICHAS_DATA){
+          clearInterval(check);
+          mergeAluno(alunoSel);
+          render();
+        }
+      },200);
+      return;
+    }
+  }
+  render();
+}
 function toggleCompare(){compareMode=!compareMode;compareFichas=compareMode?[0,Math.min(1,getFichas(alunoSel).length-1)]:[];render();}
 function toggleCompareFicha(idx){compareFichas=compareFichas.includes(idx)?compareFichas.filter(i=>i!==idx):[...compareFichas,idx];render();}
 function novoPrograma(){
