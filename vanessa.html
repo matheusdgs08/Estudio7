@@ -1558,21 +1558,21 @@ function renderModal(){
       </div>
       <div class="modal-body">
         <div class="mf">
-          <label class="ml">Exercício</label>
+          <label class="ml">Nome do exercício</label>
           <div style="position:relative">
             <input class="mi" id="m-ex-busca" autocomplete="off"
-              placeholder="Digite para buscar…"
+              placeholder="Digite para buscar no catálogo…"
               value="${ex.n||''}"
               oninput="modalBuscaEx(this.value)"
-              onfocus="modalBuscaEx(this.value)"
-              onblur="setTimeout(()=>document.getElementById('m-ex-dd')&&(document.getElementById('m-ex-dd').style.display='none'),180)">
-            <div id="m-ex-dd" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:#fff;border:1px solid var(--bg3);border-radius:10px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.1)"></div>
+              onfocus="if(this.value.length>0)modalBuscaEx(this.value)"
+              onblur="setTimeout(()=>{const d=document.getElementById('m-ex-dd');if(d)d.style.display='none'},200)">
+            <div id="m-ex-dd" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 2px);background:#fff;border:1px solid var(--bg3);border-radius:10px;z-index:999;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)"></div>
           </div>
         </div>
         <div class="mf"><label class="ml">Grupo muscular</label>
           <input class="mi" id="m-ex-grupo" readonly
-            style="background:var(--bg);color:var(--ink3);cursor:default"
-            placeholder="Preenchido automaticamente"
+            style="background:var(--bg);color:var(--ink3);cursor:default;font-size:12px"
+            placeholder="Preenchido ao selecionar exercício"
             value="${ex.g||''}">
         </div>
         <div class="params-row">
