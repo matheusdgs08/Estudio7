@@ -332,7 +332,7 @@ let fichaAtiva=0;
 let compareMode=false;
 let compareFichas=[];
 let notaAberta={};   // fichaId → bool
-let esboçoAberto={};
+let sketchOpen={};
 let modal=null;
 let searchQ='';
 let dragState=null;
@@ -496,6 +496,7 @@ function setMod(m,el){
   render();
 }
 
+function toggleSketch(id){sketchOpen[id]=sketchOpen[id]!==false?false:true;render();}
 function render(){
   const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho']};
   const [tt,ts]=titles[modulo]||['',''];
@@ -665,7 +666,7 @@ function renderNotaInterna(f){
 
 // ── ESBOÇO ──
 function renderEsboço(f){
-  const aberto=esboçoAberto[f.id]!==false;
+  const aberto=sketchOpen[f.id]!==false;
   const temEsboço=f.esboço&&f.esboço.length>0;
   const gruposDisponiveis=Object.keys(GRUPOS_INFO);
 
@@ -699,7 +700,7 @@ function renderEsboço(f){
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
 
-  return`<div class="esboço-banner" style="cursor:pointer" onclick="esboçoAberto['${f.id}']=esboçoAberto['${f.id}']===false?true:false;render()">
+  return`<div class="esboço-banner" style="cursor:pointer" onclick="toggleSketch('${f.id}')">
     <div style="font-size:16px">📐</div>
     <div class="esboço-txt">
       <strong>Esboço da ficha</strong>
@@ -739,7 +740,7 @@ function e_add(fichaId){
   const usado=f.esboço.map(e=>e.g);
   const prox=Object.keys(GRUPOS_INFO).find(g=>!usado.includes(g))||'Quadríceps';
   f.esboço.push({id:uid(),g:prox,s:3,r:'12',obs:''});
-  esboçoAberto[fichaId]=true;
+  sketchOpen[fichaId]=true;
   render();
 }
 function e_del(fichaId,esId){
@@ -1033,7 +1034,7 @@ function renderFila(){
 }
 
 alunoSel=D.alunos[0];
-esboçoAberto[D.alunos[0].programas[0]?.fichas[0]?.id]=true;
+sketchOpen[D.alunos[0].programas[0]?.fichas[0]?.id]=true;
 render();
 </script>
 </body>
