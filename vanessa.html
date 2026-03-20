@@ -398,7 +398,7 @@ function exNomeExibir(n){return n.replace(/^[A-ZÁÉÍÓÚÃÕÇ]+ - /,'');}
 
 let D={
   alunos:[
-    {id:1,nm:'Ana Paula Tanaka',mat:2660,treinos_semana:3,aulas_semana:5,contrato_vence:'2026-04-15',treino_atualizado:'2026-01-10',programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
+    {id:1,nm:'Ana Paula Tanaka',mat:2660,freq_semana:3,treinos_previstos:24,treinos_realizados:31,contrato_vence:'2026-04-15',treino_atualizado:'2026-01-10',programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
       {id:'f1',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',
        esboço:[
          {id:'es1',g:'Quadríceps',s:4,r:'12',num_ex:2,estimulo:'Rest Pause',obs:'Foco em amplitude'},
@@ -437,7 +437,7 @@ let D={
          {id:'e11',tp:'s',n:'ABDOMEN - ABDOMINAL SUPRA',g:'Abdômen',s:3,r:'20',d:30,ca:null,obs:''},
       ]},
     ]}]},
-    {id:2,nm:'Renata Yoshihara',mat:2326,treinos_semana:2,aulas_semana:2,contrato_vence:'2026-03-28',treino_atualizado:'2026-02-20',programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
+    {id:2,nm:'Renata Yoshihara',mat:2326,freq_semana:2,treinos_previstos:16,treinos_realizados:14,contrato_vence:'2026-03-28',treino_atualizado:'2026-02-20',programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
       {id:'f4',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Aluna prefere aparelhos guiados — evitar livres por enquanto.',esboço:[
         {id:'es9',g:'Quadríceps',s:4,r:'12',num_ex:2,estimulo:'Padrão',obs:''},
         {id:'es10',g:'Posterior',s:3,r:'12',num_ex:1,estimulo:'Padrão',obs:''},
@@ -448,15 +448,15 @@ let D={
         {id:'e14',tp:'s',n:'GLUTEO - ELEVAÇÃO PÉLVICA',g:'Glúteo',s:3,r:'15',d:60,ca:25,obs:''},
       ]},
     ]}]},
-    {id:3,nm:'Fabio Bonomi',mat:2504,treinos_semana:3,aulas_semana:3,contrato_vence:'2026-05-10',treino_atualizado:'2025-12-01',programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
+    {id:3,nm:'Fabio Bonomi',mat:2504,freq_semana:3,treinos_previstos:24,treinos_realizados:29,contrato_vence:'2026-05-10',treino_atualizado:'2025-12-01',programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
       {id:'f5',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[
         {id:'e15',tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:90,ca:100,obs:''},
         {id:'e16',tp:'s',n:'POSTERIOR - MESA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:30,obs:''},
         {id:'e17',tp:'s',n:'DORSAL - REMADA POLIA ALTA CORDA',g:'Dorsal',s:4,r:'10',d:90,ca:32,obs:''},
       ]},
     ]}]},
-    {id:4,nm:'Mariana Costa',mat:2512,treinos_semana:2,aulas_semana:4,contrato_vence:'2026-03-31',treino_atualizado:'2025-11-15',programas:[]},
-    {id:5,nm:'Carlos Mendes',mat:2481,treinos_semana:4,aulas_semana:4,contrato_vence:'2026-06-30',treino_atualizado:'2026-03-01',programas:[{id:'p4',nm:'Programa — Março 2026',fichas:[
+    {id:4,nm:'Mariana Costa',mat:2512,freq_semana:2,treinos_previstos:16,treinos_realizados:22,contrato_vence:'2026-03-31',treino_atualizado:'2025-11-15',programas:[]},
+    {id:5,nm:'Carlos Mendes',mat:2481,freq_semana:4,treinos_previstos:32,treinos_realizados:33,contrato_vence:'2026-06-30',treino_atualizado:'2026-03-01',programas:[{id:'p4',nm:'Programa — Março 2026',fichas:[
       {id:'f6',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Histórico de dor lombar — evitar carga axial pesada.',esboço:[
         {id:'es12',g:'Quadríceps',s:4,r:'10',num_ex:2,estimulo:'Pirâmide',obs:''},
         {id:'es13',g:'Peitoral',s:4,r:'12',num_ex:2,estimulo:'Padrão',obs:''},
@@ -469,7 +469,7 @@ let D={
         {id:'e21',tp:'s',n:'OMBRO - DESENVOLVIMENTO HALTER',g:'Ombro',s:3,r:'12',d:60,ca:12,obs:''},
       ]},
     ]}]},
-    {id:6,nm:'Lucia Fernandes',mat:2390,treinos_semana:3,aulas_semana:6,contrato_vence:'2026-04-05',treino_atualizado:'2025-10-20',programas:[]},
+    {id:6,nm:'Lucia Fernandes',mat:2390,freq_semana:3,treinos_previstos:24,treinos_realizados:38,contrato_vence:'2026-04-05',treino_atualizado:'2025-10-20',programas:[]},
   ],
   solicitacoes:[
     {id:'s1',prof:'Rafael Caires',aluno:'Ana Paula Tanaka',mat:2660,tipo:'troca',exAtual:'BICEPS - ROSCA DIRETA BARRA',exSugere:'BICEPS - ROSCA MARTELO',motivo:'Aluna relatou desconforto no pulso. A rosca martelo alivia a tensão.',status:'nova',dt:'Hoje, 08:42'},
@@ -535,23 +535,32 @@ function renderTreinos(){
   const hoje=new Date();hoje.setHours(0,0,0,0);
   function diasParaContrato(a){if(!a.contrato_vence)return 999;const d=new Date(a.contrato_vence+'T00:00:00');return Math.round((d-hoje)/864e5);}
   function diasSemTreino(a){if(!a.treino_atualizado)return 0;const d=new Date(a.treino_atualizado+'T00:00:00');return Math.round((hoje-d)/864e5);}
-  function excesso(a){return(a.aulas_semana||0)-(a.treinos_semana||0);}
+  // Excesso = treinos realizados ALÉM do previsto no programa (freq × 8 semanas)
+  // Positivo = passou do limite e precisa trocar. Negativo = ainda dentro do programa.
+  function excessoTreinos(a){return(a.treinos_realizados||0)-(a.treinos_previstos||0);}
   let alunosFiltrados=[...alunos];
-  if(filtro==='excesso_desc') alunosFiltrados.sort((a,b)=>excesso(b)-excesso(a));
-  else if(filtro==='excesso_asc') alunosFiltrados.sort((a,b)=>excesso(a)-excesso(b));
-  else if(filtro==='vencido') alunosFiltrados=alunosFiltrados.filter(a=>diasSemTreino(a)>=60).sort((a,b)=>diasSemTreino(b)-diasSemTreino(a));
+  if(filtro==='excesso_desc') alunosFiltrados.sort((a,b)=>excessoTreinos(b)-excessoTreinos(a));
+  else if(filtro==='excesso_asc') alunosFiltrados.sort((a,b)=>excessoTreinos(a)-excessoTreinos(b));
+  else if(filtro==='vencido') alunosFiltrados=alunosFiltrados.filter(a=>excessoTreinos(a)>0).sort((a,b)=>excessoTreinos(b)-excessoTreinos(a));
   else if(filtro==='contrato') alunosFiltrados=alunosFiltrados.filter(a=>diasParaContrato(a)<=60).sort((a,b)=>diasParaContrato(a)-diasParaContrato(b));
 
   const listHtmlFiltrado=alunosFiltrados.map(a=>{
     const tp=a.programas.length>0;const sel=alunoSel&&alunoSel.id===a.id;
-    const exc=excesso(a);
-    const dsc=diasSemTreino(a);
+    const exc=excessoTreinos(a);
     const dct=diasParaContrato(a);
+    const realiz=a.treinos_realizados||0;
+    const prev=a.treinos_previstos||0;
     let alertas=[];
-    if(exc>0) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">+${exc}✕/sem</span>`);
-    if(dsc>=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">${dsc}d s/ treino</span>`);
-    if(dct<=30) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">Contrato ${dct}d</span>`);
-    else if(dct<=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FFFBEB;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">Contrato ${dct}d</span>`);
+    // Precisa trocar treino
+    if(exc>0){
+      const cor=exc>=10?'#FEF2F2:#991B1B:#FECACA':exc>=5?'#FEF3C7:#92400E:#FCD34D':'#FFFBEB:#92400E:#FCD34D';
+      const[bg,tc,bc]=cor.split(':');
+      alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${bg};color:${tc};border:1px solid ${bc};white-space:nowrap">⏰ ${realiz}/${prev} treinos</span>`);
+    } else {
+      alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--green-l);color:var(--green);border:1px solid var(--green-b);white-space:nowrap">✓ ${realiz}/${prev} treinos</span>`);
+    }
+    if(dct<=30) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">📅 Contrato ${dct}d</span>`);
+    else if(dct<=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FFFBEB;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">📅 Contrato ${dct}d</span>`);
     return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno(${a.id})">
       <div class="aluno-av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
       <div class="aluno-info">
@@ -566,9 +575,9 @@ function renderTreinos(){
 
   const filtros=[
     {k:'todos',lbl:'Todos'},
-    {k:'excesso_desc',lbl:'+ Aulas ↓'},
-    {k:'excesso_asc',lbl:'+ Aulas ↑'},
-    {k:'vencido',lbl:'⏰ Treino vencido'},
+    {k:'excesso_desc',lbl:'⏰ Mais atrasados'},
+    {k:'excesso_asc',lbl:'✓ Mais em dia'},
+    {k:'vencido',lbl:'🔁 Precisa trocar'},
     {k:'contrato',lbl:'📅 Contrato vence'},
   ];
   const filtrosHtml=filtros.map(f=>`<button onclick="filtro='${f.k}';render()" style="font-size:11px;padding:4px 10px;border-radius:20px;white-space:nowrap;border:1.5px solid;cursor:pointer;transition:all .15s;background:${filtro===f.k?'var(--ink)':'transparent'};color:${filtro===f.k?'var(--wh)':'var(--ink3)'};border-color:${filtro===f.k?'var(--ink)':'var(--bg3)'}">${f.lbl}</button>`).join('');
