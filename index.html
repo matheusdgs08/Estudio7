@@ -445,29 +445,103 @@ function rTela(){if(S.tela==='ponto')return rPonto();if(S.tela==='aulas')return 
 
 function buscaLoc(){S.locLoad=true;S.locErr=false;if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{S.loc=`${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`;S.locErr=false;S.locLoad=false;R();},()=>{S.loc='Não obtida';S.locErr=true;S.locLoad=false;R();});setTimeout(()=>{if(S.locLoad){S.loc='Vila Mariana, São Paulo';S.locErr=false;S.locLoad=false;R();}},1500);}
 
+function fmtMin(m){if(m<=0)return'0h 00min';const h=Math.floor(m/60),mn=m%60;return`${h}h ${String(mn).padStart(2,'0')}min`;}
+function calcPonto(){
+  let trabMs=0,intMs=0,eTs=null,iTs=null;
+  for(const r of S.regs){
+    if(r.tp==='e'){eTs=r.ts;}
+    else if(r.tp==='i'){if(eTs)trabMs+=r.ts-eTs;eTs=null;iTs=r.ts;}
+    else if(r.tp==='r'){if(iTs)intMs+=r.ts-iTs;iTs=null;eTs=r.ts;}
+    else if(r.tp==='s'){if(eTs)trabMs+=r.ts-eTs;eTs=null;}
+  }
+  return{trab:Math.round(trabMs/60000),int:Math.round(intMs/60000)};
+}
+function pontoEstado(){
+  if(!S.regs.length)return'fora';
+  const last=S.regs[S.regs.length-1].tp;
+  if(last==='e'||last==='r')return'trab';
+  if(last==='i')return'int';
+  if(last==='s')return'enc';
+  return'fora';
+}
 function rPonto(){
+  const st=pontoEstado();
+  const {trab,int:intMin}=calcPonto();
   const ent=S.regs.find(r=>r.tp==='e'),sai=S.regs.find(r=>r.tp==='s');
   const futs=S.faltas.filter(f=>{const d=f.tipo==='ferias'?f.dataFim:f.data;return d>=hoje;}).sort((a,b)=>(a.tipo==='ferias'?a.dataIni:a.data).localeCompare(b.tipo==='ferias'?b.dataIni:b.data));
   const fHtml=futs.length?futs.map(f=>{const isF=f.tipo==='ferias';return`<div class="fitem ${isF?'ferias':''}"><div class="fimain ${isF?'febg':'fbg'}"><div class="fiico ${isF?'fife':f.status==='conf'?'fic':'fip'}">${isF?'🏖':f.status==='conf'?'✕':'○'}</div><div class="fiinfo"><div class="fidata">${f.fmt}</div>${isF?`<div class="fdias">${f.dias} dias corridos</div>`:''} ${f.motivo?`<div class="fimot">${f.motivo}</div>`:''}<div class="fibdgs"><span class="fbdg ${isF?'fb-fe':f.status==='conf'?'fb-c':'fb-p'}">${isF?'🏖 Férias':f.status==='conf'?'Confirmada':'Aguardando'}</span><span class="fbdg fb-r">🔄 Rodízio ajustado</span></div></div>${f.status!=='conf'?`<button class="btn-delf" onclick="S.faltas=S.faltas.filter(x=>x.id!=='${f.id}');R()">×</button>`:''}</div><div class="arow ${f.arq?'tem':''}">${f.arq?`<span style="font-size:16px">${f.arq.tp==='pdf'?'📄':'🖼'}</span><div class="arinfo"><div class="arnome tem">${f.arq.nome}</div><div class="arsub">${isF?'Comprovante':'Atestado'} anexado</div></div><button style="font-size:12px;padding:6px 12px;border:1px solid var(--pb);border-radius:var(--rs);background:var(--pl);color:var(--purple)">Ver</button><button class="btn-delf" onclick="S.faltas.find(x=>x.id==='${f.id}').arq=null;R()">×</button>`:`<span style="font-size:15px;color:var(--ink3)">📎</span><div class="arinfo"><div class="arnome sem">Sem ${isF?'comprovante':'atestado'}</div><div class="arsub">Opcional</div></div><label class="btn-up">${isF?'Anexar':'Atestado'}<input type="file" accept=".pdf,.jpg,.jpeg,.png" onchange="(function(id,inp){const f=inp.files[0];if(f){const r=S.faltas.find(x=>x.id===id);if(r)r.arq={nome:f.name,tp:f.type.includes('pdf')?'pdf':'img'};R();}}('${f.id}',this))"></label>`}</div></div>`;}).join(''):`<div style="font-size:13px;color:var(--ink3);text-align:center;padding:14px 0">Nenhuma ausência registrada</div>`;
+
+  // chip status
+  const chipCls=st==='trab'?'chip-in':st==='int'?'chip-warn':'chip-out';
+  const chipTxt=st==='trab'?'● Em serviço':st==='int'?'⏸ Em intervalo':st==='enc'?'■ Encerrado':'● Fora do serviço';
+
+  // botões de ação
+  const CFG=[
+    {tp:'e', lbl:'Bater entrada',     ico:'▶', cls:'btn-ent', show: st==='fora'},
+    {tp:'i', lbl:'Iniciar intervalo', ico:'⏸', cls:'btn-int', show: st==='trab'},
+    {tp:'r', lbl:'Retornar do intervalo', ico:'▶', cls:'btn-ret', show: st==='int'},
+    {tp:'s', lbl:'Bater saída',       ico:'■', cls:'btn-sai', show: st==='trab'},
+  ];
+  const btns=CFG.filter(c=>c.show).map(c=>
+    `<button class="btp ${c.cls}" onclick="S.regs.push({tp:'${c.tp}',h:now(),ts:Date.now(),l:S.loc||'—',w:S.locErr});${c.tp==='e'?'S.dentro=true;':c.tp==='s'?'S.dentro=false;':''}R()">${c.ico} &nbsp;${c.lbl}</button>`
+  ).join('');
+
+  // timeline de registros
+  const TLCFG={e:{lbl:'Entrada',cls:'pri-e',ico:'▶'},i:{lbl:'Início intervalo',cls:'pri-w',ico:'⏸'},r:{lbl:'Retorno',cls:'pri-e',ico:'▶'},s:{lbl:'Saída',cls:'pri-s',ico:'■'}};
+  const tlRows=S.regs.map((r,i)=>{
+    const c=TLCFG[r.tp];
+    const isLast=i===S.regs.length-1;
+    let durHtml='';
+    if(i>0){
+      const prev=S.regs[i-1];
+      const dur=Math.round((r.ts-prev.ts)/60000);
+      const map={ei:'Trabalhou',ir:'Intervalo de',rs:'Trabalhou mais',es:'Trabalhou'};
+      const key=prev.tp+r.tp;
+      if(map[key])durHtml=`<div style="font-size:11px;color:var(--ink3);font-style:italic;margin-top:2px">← ${map[key]} ${fmtMin(dur)}</div>`;
+    }
+    return`<div style="display:flex;gap:12px;align-items:stretch">
+      <div style="display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0">
+        <div class="prico ${c.cls}" style="flex-shrink:0">${c.ico}</div>
+        ${!isLast?`<div style="flex:1;width:2px;background:var(--bg3);margin:3px auto 0"></div>`:''}
+      </div>
+      <div style="flex:1;padding:2px 0 ${isLast?'4':'14'}px">
+        <div class="prtipo">${c.lbl}</div>
+        <div class="prhora">${r.h}</div>
+        <div class="prloc">📍 ${r.l}${r.w?` <span class="lwarn">Fora da academia</span>`:''}</div>
+        ${durHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  // resumo do dia
+  let resumoHtml='';
+  if(S.regs.length&&(st==='enc'||st==='trab'||st==='int')){
+    const rows=[];
+    if(intMin>0)rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">⏸ Intervalo</span><span style="font-size:13px;font-weight:600;color:#D97706">${fmtMin(intMin)}</span></div>`);
+    rows.push(`<div style="display:flex;justify-content:space-between;align-items:center;padding:${intMin>0?'10':'8'}px 0 2px"><span style="font-size:14px;font-weight:600;color:var(--ink)">${st==='enc'?'✓ Total trabalhado':'⏱ Trabalhado até agora'}</span><span style="font-size:22px;font-weight:500;color:var(--ink)">${fmtMin(trab)}</span></div>`);
+    if(intMin>0)rows.push(`<div style="font-size:11px;color:var(--ink3);padding-bottom:2px">Intervalo descontado automaticamente</div>`);
+    resumoHtml=`<div style="background:var(--bg);border:1px solid var(--bg3);border-radius:var(--rs);padding:12px 14px;margin-top:4px">${rows.join('')}</div>`;
+  }
+
   return`<div class="scroll">
     <div class="card" style="text-align:center;padding:20px 16px">
       <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--ink3);margin-bottom:4px">Ponto eletrônico</div>
       <div style="font-family:'Playfair Display',serif;font-size:19px;font-weight:400;color:var(--ink)">${S.prof.nome}</div>
       <div style="font-size:12px;color:var(--ink3);margin-top:2px">${hojeStr()}</div>
       <div class="preloj" id="reloj">${relogio()}</div>
-      <span class="chip ${S.dentro?'chip-in':S.locErr?'chip-warn':'chip-out'}">${S.dentro?'● Em serviço':'● Fora do serviço'}</span>
+      <span class="chip ${chipCls}">${chipTxt}</span>
     </div>
     <div class="card">
-      <div class="chdr"><div class="ctitle">Registro de hoje</div><span class="chip" style="font-size:11px;padding:3px 10px;${S.dentro?'background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7':'background:var(--bg);color:var(--ink3);border:1px solid var(--bg3)'}">${S.dentro?'Ativo':'Encerrado'}</span></div>
+      <div class="chdr"><div class="ctitle">Registro de hoje</div></div>
       <div class="cbody">
         <div class="locbox" style="${S.locErr?'background:#FFFBEB;border-color:#FCD34D':''}">
           <span>📍</span><span style="flex:1;font-size:13px">${S.locLoad?'<em style="color:var(--ink3)">Obtendo localização…</em>':S.loc||'—'}</span>
           ${S.locErr?`<span class="lwarn">Fora da academia</span>`:''}
         </div>
-        ${!ent?`<button class="btp btn-ent" onclick="S.regs.push({tp:'e',h:now(),l:S.loc||'—',w:S.locErr});S.dentro=true;R()" ${S.locLoad?'disabled':''}>▶ &nbsp;Bater entrada</button>`:''}
-        ${ent&&!sai?`<button class="btp btn-int" onclick="S.regs.push({tp:'i',h:now(),l:S.loc||'—',w:S.locErr});R()" style="margin-bottom:10px">⏸ &nbsp;Iniciar intervalo</button><button class="btp btn-sai" onclick="S.regs.push({tp:'s',h:now(),l:S.loc||'—',w:S.locErr});S.dentro=false;R()">■ &nbsp;Bater saída</button>`:''}
-        ${ent&&sai?`<div style="text-align:center;padding:8px 0;font-size:13px;color:var(--ink3)">Ponto encerrado para hoje.</div>`:''}
-        ${S.regs.map(r=>`<div class="preg"><div class="prico ${r.tp==='e'||r.tp==='r'?'pri-e':r.tp==='i'?'pri-e':r.w?'pri-w':'pri-s'}">${r.tp==='e'||r.tp==='r'?'▶':r.tp==='i'?'⏸':'■'}</div><div class="prinfo"><div class="prtipo">${r.tp==='e'?'Entrada':r.tp==='i'?'Intervalo':r.tp==='r'?'Retorno':'Saída'}</div><div class="prhora">${r.h}</div><div class="prloc">📍 ${r.l}${r.w?` <span class="lwarn">Fora da academia</span>`:''}</div></div></div>`).join('')}
+        ${btns}
+        ${st==='enc'?`<div style="text-align:center;font-size:13px;color:var(--ink3);padding:6px 0">Ponto encerrado para hoje.</div>`:''}
+        ${S.regs.length?`<div style="margin-top:14px">${tlRows}</div>`:''}
+        ${resumoHtml}
       </div>
     </div>
     <div class="card">
