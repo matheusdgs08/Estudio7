@@ -321,8 +321,8 @@ let S={
   mdEdit:false,mdHistAberto:false,mdContratoArq:null,
   dentro:false,regs:[],loc:null,locLoad:false,locErr:false,
   hexp:{},
-  prof:{nome:'Rafael Caires',email:'rafael@estudiosete.com.br',senha:'Prof123'},
-  dados:{nome:'Rafael Caires',rg:'12.345.678-9',cpf:'123.456.789-00',endereco:'Rua Domingos de Morais, 1042 · Vila Mariana · São Paulo',pix:'rafael.caires@gmail.com',
+  prof:{nome:'Rafael Caires',email:'rafael@estudio7.com.br',senha:'Prof123'},
+  dados:{nome:'Rafael Caires',rg:'12.345.678-9',cpf:'123.456.789-00',endereco:'Rua Domingos de Morais, 1042 · Vila Mariana · São Paulo',pix:'rafael@estudio7.com.br',
     horarios:[{dia:'Segunda',hora:'05:45 – 12:30',ativo:true},{dia:'Terça',hora:'05:45 – 12:30',ativo:true},{dia:'Quarta',hora:'05:45 – 12:30',ativo:true},{dia:'Quinta',hora:'05:45 – 12:30',ativo:true},{dia:'Sexta',hora:'05:45 – 12:30',ativo:true},{dia:'Sábado',hora:'Folga',ativo:false},{dia:'Domingo',hora:'Folga',ativo:false}],
     contrato:{vigente:{nome:'contrato_estagio_v3.pdf',vigencia:'01 fev 2026',vencimento:'2026-06-30'},versoes:[{id:'v1',nome:'contrato_estagio_v1.pdf',data:'10 ago 2025',isFinal:false,current:false},{id:'v2',nome:'contrato_estagio_v2.pdf',data:'15 nov 2025',isFinal:false,current:false},{id:'v3',nome:'contrato_estagio_v3.pdf',data:'14 fev 2026',isFinal:false,current:true}]}},
   faltas:[{id:'f1',tipo:'falta',data:'2026-03-25',fmt:'Quarta, 25 mar',motivo:'Consulta médica',status:'conf',arq:{nome:'atestado.pdf',tp:'pdf'}},{id:'f2',tipo:'ferias',dataIni:'2026-04-07',dataFim:'2026-04-18',fmt:'7 abr → 18 abr',dias:12,motivo:'Férias anuais',status:'pend',arq:null},{id:'f3',tipo:'falta',data:'2026-04-01',fmt:'Terça, 1 abr',motivo:'',status:'pend',arq:null}],
@@ -342,7 +342,7 @@ function hs(ex){return ex.sol&&ex.sol.sent;}
 function R(){const root=document.getElementById('root');if(!S.logado){root.innerHTML=rLogin();return;}root.innerHTML=rShell();startRel();}
 function startRel(){clearInterval(window._rt);window._rt=setInterval(()=>{const e=document.getElementById('reloj');if(e)e.textContent=relogio();else clearInterval(window._rt);},1000);}
 
-function rLogin(){return`<div class="lshell"><div class="lbox"><div class="llogo">Estúdio Se7e</div><div class="lsub">App do Professor</div>${S.erro?`<div class="lerr">${S.erro}</div>`:''}<div class="lf"><label class="ll">E-mail</label><input class="li" type="email" placeholder="seu@email.com" value="${S.email}" oninput="S.email=this.value" onkeydown="if(event.key==='Enter')login()"></div><div class="lf"><label class="ll">Senha</label><input class="li" type="password" placeholder="••••••••" value="${S.senha}" oninput="S.senha=this.value" onkeydown="if(event.key==='Enter')login()"></div><button class="btn-lg" onclick="login()">Entrar</button><div class="lhint">Demo: <b>rafael@estudiosete.com.br</b> / <b>Prof123</b></div></div></div>`;}
+function rLogin(){return`<div class="lshell"><div class="lbox"><div class="llogo">Estúdio Se7e</div><div class="lsub">App do Professor</div>${S.erro?`<div class="lerr">${S.erro}</div>`:''}<div class="lf"><label class="ll">E-mail</label><input class="li" type="email" placeholder="seu@email.com" value="${S.email}" oninput="S.email=this.value" onkeydown="if(event.key==='Enter')login()"></div><div class="lf"><label class="ll">Senha</label><input class="li" type="password" placeholder="••••••••" value="${S.senha}" oninput="S.senha=this.value" onkeydown="if(event.key==='Enter')login()"></div><button class="btn-lg" onclick="login()">Entrar</button><div class="lhint">Demo: <b>rafael@estudio7.com.br</b> / <b>Prof123</b></div></div></div>`;}
 function login(){if(S.email===S.prof.email&&S.senha===S.prof.senha){S.logado=true;S.erro='';S.tela='ponto';buscaLoc();R();}else{S.erro='E-mail ou senha incorretos.';R();}}
 function logout(){if(S.dentro){S.regs.push({tp:'s',h:now(),l:S.loc||'—',w:S.locErr});S.dentro=false;}S.logado=false;S.email='';S.senha='';S.regs=[];S.dentro=false;clearInterval(window._rt);R();}
 
