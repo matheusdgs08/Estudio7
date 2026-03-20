@@ -332,6 +332,7 @@ let esboçoAberto={};
 let modal=null;
 let searchQ='';
 let dragState=null;
+let filtro='todos'; // todos | excesso | vencido | contrato
 
 // Grupos musculares com cores
 const GRUPOS_INFO={
@@ -393,7 +394,7 @@ function exNomeExibir(n){return n.replace(/^[A-ZÁÉÍÓÚÃÕÇ]+ - /,'');}
 
 let D={
   alunos:[
-    {id:1,nm:'Ana Paula Tanaka',mat:2660,programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
+    {id:1,nm:'Ana Paula Tanaka',mat:2660,treinos_semana:3,aulas_semana:5,contrato_vence:'2026-04-15',treino_atualizado:'2026-01-10',programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
       {id:'f1',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',
        esboço:[
          {id:'es1',g:'Quadríceps',s:4,r:'12',obs:'Foco em amplitude'},
@@ -432,7 +433,7 @@ let D={
          {id:'e11',tp:'s',n:'ABDOMEN - ABDOMINAL SUPRA',g:'Abdômen',s:3,r:'20',d:30,ca:null,obs:''},
       ]},
     ]}]},
-    {id:2,nm:'Renata Yoshihara',mat:2326,programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
+    {id:2,nm:'Renata Yoshihara',mat:2326,treinos_semana:2,aulas_semana:2,contrato_vence:'2026-03-28',treino_atualizado:'2026-02-20',programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
       {id:'f4',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Aluna prefere aparelhos guiados — evitar livres por enquanto.',esboço:[
         {id:'es9',g:'Quadríceps',s:4,r:'12',obs:''},
         {id:'es10',g:'Posterior',s:3,r:'12',obs:''},
@@ -443,15 +444,15 @@ let D={
         {id:'e14',tp:'s',n:'GLUTEO - ELEVAÇÃO PÉLVICA',g:'Glúteo',s:3,r:'15',d:60,ca:25,obs:''},
       ]},
     ]}]},
-    {id:3,nm:'Fabio Bonomi',mat:2504,programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
+    {id:3,nm:'Fabio Bonomi',mat:2504,treinos_semana:3,aulas_semana:3,contrato_vence:'2026-05-10',treino_atualizado:'2025-12-01',programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
       {id:'f5',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[
         {id:'e15',tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:90,ca:100,obs:''},
         {id:'e16',tp:'s',n:'POSTERIOR - MESA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:30,obs:''},
         {id:'e17',tp:'s',n:'DORSAL - REMADA POLIA ALTA CORDA',g:'Dorsal',s:4,r:'10',d:90,ca:32,obs:''},
       ]},
     ]}]},
-    {id:4,nm:'Mariana Costa',mat:2512,programas:[]},
-    {id:5,nm:'Carlos Mendes',mat:2481,programas:[{id:'p4',nm:'Programa — Março 2026',fichas:[
+    {id:4,nm:'Mariana Costa',mat:2512,treinos_semana:2,aulas_semana:4,contrato_vence:'2026-03-31',treino_atualizado:'2025-11-15',programas:[]},
+    {id:5,nm:'Carlos Mendes',mat:2481,treinos_semana:4,aulas_semana:4,contrato_vence:'2026-06-30',treino_atualizado:'2026-03-01',programas:[{id:'p4',nm:'Programa — Março 2026',fichas:[
       {id:'f6',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Histórico de dor lombar — evitar carga axial pesada.',esboço:[
         {id:'es12',g:'Quadríceps',s:4,r:'10',obs:''},
         {id:'es13',g:'Peitoral',s:4,r:'12',obs:''},
@@ -464,7 +465,7 @@ let D={
         {id:'e21',tp:'s',n:'OMBRO - DESENVOLVIMENTO HALTER',g:'Ombro',s:3,r:'12',d:60,ca:12,obs:''},
       ]},
     ]}]},
-    {id:6,nm:'Lucia Fernandes',mat:2390,programas:[]},
+    {id:6,nm:'Lucia Fernandes',mat:2390,treinos_semana:3,aulas_semana:6,contrato_vence:'2026-04-05',treino_atualizado:'2025-10-20',programas:[]},
   ],
   solicitacoes:[
     {id:'s1',prof:'Rafael Caires',aluno:'Ana Paula Tanaka',mat:2660,tipo:'troca',exAtual:'BICEPS - ROSCA DIRETA BARRA',exSugere:'BICEPS - ROSCA MARTELO',motivo:'Aluna relatou desconforto no pulso. A rosca martelo alivia a tensão.',status:'nova',dt:'Hoje, 08:42'},
@@ -516,16 +517,7 @@ function render(){
 
 function renderTreinos(){
   const alunos=searchQ?D.alunos.filter(a=>a.nm.toLowerCase().includes(searchQ.toLowerCase())):D.alunos;
-  const listHtml=alunos.map(a=>{
-    const tp=a.programas.length>0;const sel=alunoSel&&alunoSel.id===a.id;
-    return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno(${a.id})">
-      <div class="aluno-av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
-      <div class="aluno-info"><div class="aluno-nome">${a.nm}</div><div class="aluno-prog">${tp?getProg(a).nm:'Sem programa'}</div></div>
-      <span style="font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid;flex-shrink:0;background:${tp?'var(--green-l)':'var(--bg2)'};color:${tp?'var(--green)':'var(--ink3)'};border-color:${tp?'var(--green-b)':'var(--bg3)'}">
-        ${tp?getFichas(a).length+' treinos':'—'}
-      </span>
-    </div>`;
-  }).join('');
+
 
   let main='';
   if(!alunoSel){
@@ -535,10 +527,59 @@ function renderTreinos(){
   } else {
     main=renderFichasArea();
   }
+  // filtrar e ordenar alunos
+  const hoje=new Date();hoje.setHours(0,0,0,0);
+  function diasParaContrato(a){if(!a.contrato_vence)return 999;const d=new Date(a.contrato_vence+'T00:00:00');return Math.round((d-hoje)/864e5);}
+  function diasSemTreino(a){if(!a.treino_atualizado)return 0;const d=new Date(a.treino_atualizado+'T00:00:00');return Math.round((hoje-d)/864e5);}
+  function excesso(a){return(a.aulas_semana||0)-(a.treinos_semana||0);}
+  let alunosFiltrados=[...alunos];
+  if(filtro==='excesso_desc') alunosFiltrados.sort((a,b)=>excesso(b)-excesso(a));
+  else if(filtro==='excesso_asc') alunosFiltrados.sort((a,b)=>excesso(a)-excesso(b));
+  else if(filtro==='vencido') alunosFiltrados=alunosFiltrados.filter(a=>diasSemTreino(a)>=60).sort((a,b)=>diasSemTreino(b)-diasSemTreino(a));
+  else if(filtro==='contrato') alunosFiltrados=alunosFiltrados.filter(a=>diasParaContrato(a)<=60).sort((a,b)=>diasParaContrato(a)-diasParaContrato(b));
+
+  const listHtmlFiltrado=alunosFiltrados.map(a=>{
+    const tp=a.programas.length>0;const sel=alunoSel&&alunoSel.id===a.id;
+    const exc=excesso(a);
+    const dsc=diasSemTreino(a);
+    const dct=diasParaContrato(a);
+    let alertas=[];
+    if(exc>0) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">+${exc}✕/sem</span>`);
+    if(dsc>=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">${dsc}d s/ treino</span>`);
+    if(dct<=30) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">Contrato ${dct}d</span>`);
+    else if(dct<=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FFFBEB;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">Contrato ${dct}d</span>`);
+    return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno(${a.id})">
+      <div class="aluno-av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
+      <div class="aluno-info">
+        <div class="aluno-nome">${a.nm}</div>
+        <div class="aluno-prog" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+          ${alertas.join('')}
+          ${!alertas.length?`<span style="font-size:11px;color:var(--ink3)">${tp?getProg(a).nm:'Sem programa'}</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const filtros=[
+    {k:'todos',lbl:'Todos'},
+    {k:'excesso_desc',lbl:'+ Aulas ↓'},
+    {k:'excesso_asc',lbl:'+ Aulas ↑'},
+    {k:'vencido',lbl:'⏰ Treino vencido'},
+    {k:'contrato',lbl:'📅 Contrato vence'},
+  ];
+  const filtrosHtml=filtros.map(f=>`<button onclick="filtro='${f.k}';render()" style="font-size:11px;padding:4px 10px;border-radius:20px;white-space:nowrap;border:1.5px solid;cursor:pointer;transition:all .15s;background:${filtro===f.k?'var(--ink)':'transparent'};color:${filtro===f.k?'var(--wh)':'var(--ink3)'};border-color:${filtro===f.k?'var(--ink)':'var(--bg3)'}">${f.lbl}</button>`).join('');
+
+  const totalFiltrado=alunosFiltrados.length;
+  const totalAlunos=D.alunos.length;
+
   return`<div class="treinos-layout">
     <div class="col-alunos">
-      <div class="ca-header"><input class="ca-search" placeholder="Buscar aluno…" value="${searchQ}" oninput="searchQ=this.value;render()"></div>
-      <div class="alunos-list">${listHtml}</div>
+      <div class="ca-header" style="display:flex;flex-direction:column;gap:8px">
+        <input class="ca-search" placeholder="Buscar aluno…" value="${searchQ}" oninput="searchQ=this.value;render()">
+        <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:2px">${filtrosHtml}</div>
+        ${filtro!=='todos'?`<div style="font-size:11px;color:var(--ink3)">${totalFiltrado} aluno${totalFiltrado!==1?'s':''} encontrado${totalFiltrado!==1?'s':''}</div>`:''}
+      </div>
+      <div class="alunos-list">${listHtmlFiltrado||'<div style="padding:14px;font-size:12px;color:var(--ink3);text-align:center">Nenhum aluno neste filtro</div>'}</div>
     </div>
     <div class="col-prog">${main}</div>
   </div>`;
