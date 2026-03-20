@@ -151,6 +151,10 @@ button{cursor:pointer}
 .esboço-obs-inp:focus{border-color:var(--purple-b)}
 .btn-esboço-del-row{width:24px;height:24px;border-radius:50%;border:none;background:transparent;color:var(--bg3);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .btn-esboço-del-row:hover{background:var(--red-l);color:var(--red)}
+.esboço-num-inp{width:44px;padding:5px 6px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:13px;font-weight:600;text-align:center;outline:none;color:var(--ink);background:var(--bg)}
+.esboço-num-inp:focus{border-color:var(--purple);background:var(--wh)}
+.estimulo-sel{padding:5px 8px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:12px;outline:none;color:var(--ink2);background:var(--bg);appearance:none;cursor:pointer;max-width:130px}
+.estimulo-sel:focus{border-color:var(--purple)}
 .esboço-empty{padding:24px;text-align:center;color:var(--ink3);font-size:13px}
 
 /* EXERCÍCIO CARD */
@@ -397,10 +401,10 @@ let D={
     {id:1,nm:'Ana Paula Tanaka',mat:2660,treinos_semana:3,aulas_semana:5,contrato_vence:'2026-04-15',treino_atualizado:'2026-01-10',programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
       {id:'f1',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',
        esboço:[
-         {id:'es1',g:'Quadríceps',s:4,r:'12',obs:'Foco em amplitude'},
-         {id:'es2',g:'Glúteo',s:3,r:'15',obs:''},
-         {id:'es3',g:'Posterior',s:3,r:'12',obs:'Evitar carga excessiva no stiff'},
-         {id:'es4',g:'Abdômen',s:3,r:'20',obs:''},
+         {id:'es1',g:'Quadríceps',s:4,r:'12',num_ex:2,estimulo:'Rest Pause',obs:'Foco em amplitude'},
+         {id:'es2',g:'Glúteo',s:3,r:'15',num_ex:2,estimulo:'Padrão',obs:''},
+         {id:'es3',g:'Posterior',s:3,r:'12',num_ex:1,estimulo:'Padrão',obs:'Evitar carga excessiva no stiff'},
+         {id:'es4',g:'Abdômen',s:3,r:'20',num_ex:1,estimulo:'Isometria',obs:''},
        ],
        exs:[
          {id:'e1',tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:60,ca:80,obs:''},
@@ -413,10 +417,10 @@ let D={
        ]},
       {id:'f2',cor:'#6D28D9',letra:'B',nm:'Treino B',nota:'Foco em membros superiores. Observar postura no supino — ombro esquerdo fraco.',
        esboço:[
-         {id:'es5',g:'Peitoral',s:4,r:'12',obs:''},
-         {id:'es6',g:'Tríceps',s:3,r:'12',obs:'Dupla com ombro'},
-         {id:'es7',g:'Ombro',s:3,r:'15',obs:''},
-         {id:'es8',g:'Posterior',s:3,r:'15',obs:''},
+         {id:'es5',g:'Peitoral',s:4,r:'12',num_ex:2,estimulo:'Padrão',obs:''},
+         {id:'es6',g:'Tríceps',s:3,r:'12',num_ex:1,estimulo:'Bi-Set',obs:'Dupla com ombro'},
+         {id:'es7',g:'Ombro',s:3,r:'15',num_ex:1,estimulo:'Bi-Set',obs:''},
+         {id:'es8',g:'Posterior',s:3,r:'15',num_ex:1,estimulo:'Padrão',obs:''},
        ],
        exs:[
          {id:'e5',tp:'s',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'Peitoral',s:4,r:'12',d:90,ca:14,obs:''},
@@ -435,9 +439,9 @@ let D={
     ]}]},
     {id:2,nm:'Renata Yoshihara',mat:2326,treinos_semana:2,aulas_semana:2,contrato_vence:'2026-03-28',treino_atualizado:'2026-02-20',programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
       {id:'f4',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Aluna prefere aparelhos guiados — evitar livres por enquanto.',esboço:[
-        {id:'es9',g:'Quadríceps',s:4,r:'12',obs:''},
-        {id:'es10',g:'Posterior',s:3,r:'12',obs:''},
-        {id:'es11',g:'Glúteo',s:3,r:'15',obs:''},
+        {id:'es9',g:'Quadríceps',s:4,r:'12',num_ex:2,estimulo:'Padrão',obs:''},
+        {id:'es10',g:'Posterior',s:3,r:'12',num_ex:1,estimulo:'Padrão',obs:''},
+        {id:'es11',g:'Glúteo',s:3,r:'15',num_ex:1,estimulo:'Drop Set',obs:''},
       ],exs:[
         {id:'e12',tp:'s',n:'QUADRICEPS - HACK SQUAT',g:'Quadríceps',s:4,r:'12',d:60,ca:60,obs:''},
         {id:'e13',tp:'s',n:'POSTERIOR - STIFF',g:'Posterior',s:3,r:'12',d:60,ca:20,obs:''},
@@ -454,8 +458,8 @@ let D={
     {id:4,nm:'Mariana Costa',mat:2512,treinos_semana:2,aulas_semana:4,contrato_vence:'2026-03-31',treino_atualizado:'2025-11-15',programas:[]},
     {id:5,nm:'Carlos Mendes',mat:2481,treinos_semana:4,aulas_semana:4,contrato_vence:'2026-06-30',treino_atualizado:'2026-03-01',programas:[{id:'p4',nm:'Programa — Março 2026',fichas:[
       {id:'f6',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Histórico de dor lombar — evitar carga axial pesada.',esboço:[
-        {id:'es12',g:'Quadríceps',s:4,r:'10',obs:''},
-        {id:'es13',g:'Peitoral',s:4,r:'12',obs:''},
+        {id:'es12',g:'Quadríceps',s:4,r:'10',num_ex:2,estimulo:'Pirâmide',obs:''},
+        {id:'es13',g:'Peitoral',s:4,r:'12',num_ex:2,estimulo:'Padrão',obs:''},
       ],exs:[
         {id:'e18',tp:'s',n:'QUADRICEPS - AGACHAMENTO LIVRE',g:'Quadríceps',s:4,r:'10',d:90,ca:80,obs:''},
         {id:'e19',tp:'s',n:'PEITORAL - SUPINO RETO HALTER',g:'Peitoral',s:4,r:'12',d:90,ca:22,obs:''},
@@ -659,29 +663,43 @@ function renderEsboço(f){
   const rowsHtml=f.esboço&&f.esboço.length?f.esboço.map(e=>{
     const gi=getGrupoInfo(e.g);
     const gruposOpts=gruposDisponiveis.map(g=>`<option value="${g}" ${e.g===g?'selected':''}>${g}</option>`).join('');
-    return`<div class="esboço-row">
-      <span class="esboço-grupo-dot" style="background:${gi.cor};border:1.5px solid ${gi.tc}20"></span>
-      <select class="esboço-grupo-nm" style="border:none;background:transparent;font-size:13px;font-weight:500;color:var(--ink);outline:none;cursor:pointer;appearance:none;padding:0" onchange="e_upd('${f.id}','${e.id}','g',this.value)">
-        ${gruposOpts}
-      </select>
-      <div class="esboço-params">
+    const estimulosOpts=['Padrão','Rest Pause','Drop Set','Bi-Set','Giant Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(e.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('');
+    return`<div class="esboço-row" style="flex-wrap:wrap;gap:6px">
+      <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:200px">
+        <span class="esboço-grupo-dot" style="background:${gi.cor};border:1.5px solid ${gi.tc}40;flex-shrink:0"></span>
+        <select class="esboço-grupo-nm" style="border:none;background:transparent;font-size:13px;font-weight:600;color:var(--ink);outline:none;cursor:pointer;appearance:none;padding:0;min-width:90px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">
+          ${gruposOpts}
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:3px" title="Nº de exercícios para este grupo">
+          <span style="font-size:10px;color:var(--ink3);white-space:nowrap">exs</span>
+          <input class="esboço-num-inp" type="number" min="1" max="8" value="${e.num_ex||1}" oninput="e_upd('${f.id}','${e.id}','num_ex',parseInt(this.value)||1)" title="Quantidade de exercícios para este grupo">
+        </div>
+        <span class="esboço-sep" style="color:var(--bg3)">|</span>
         <input class="esboço-inp" type="number" min="1" max="10" value="${e.s}" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)" title="Séries">
         <span class="esboço-sep">×</span>
-        <input class="esboço-inp" value="${e.r}" oninput="e_upd('${f.id}','${e.id}','r',this.value)" title="Repetições" style="width:60px">
-        <input class="esboço-obs-inp" placeholder="obs…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)">
+        <input class="esboço-inp" value="${e.r}" oninput="e_upd('${f.id}','${e.id}','r',this.value)" title="Repetições" style="width:56px">
+        <span class="esboço-sep" style="color:var(--bg3)">|</span>
+        <select class="estimulo-sel" onchange="e_upd('${f.id}','${e.id}','estimulo',this.value)" title="Estímulo">
+          ${estimulosOpts}
+        </select>
       </div>
-      <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')">×</button>
+      <input class="esboço-obs-inp" placeholder="obs do grupo…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)" style="width:100%;margin-top:2px">
+      <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')" style="margin-left:auto">×</button>
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
 
-  return`<div class="esboço-banner">
-    <div>
-      <div style="font-size:14px">📐</div>
-    </div>
+  return`<div class="esboço-banner" style="cursor:pointer" onclick="esboçoAberto['${f.id}']=!aberto;render()">
+    <div style="font-size:16px">📐</div>
     <div class="esboço-txt">
-      <strong>Esboço da ficha</strong> — planejamento por grupo muscular antes de escolher os exercícios
+      <strong>Esboço da ficha</strong>
+      ${temEsboço?`<span style="font-size:11px;font-weight:400;opacity:.8"> · ${f.esboço.length} grupo${f.esboço.length!==1?'s':''}</span>`:''}
     </div>
-    <button class="btn-esboço-toggle ${aberto?'btn-esboço-on':'btn-esboço-off'}" onclick="esboçoAberto['${f.id}']=!aberto;render()">${aberto?'Fechar':'Ver esboço'}</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      ${temEsboço&&!aberto?`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_ex||1),0)} ex planejados</span>`:''}
+      <span style="font-size:13px;color:var(--purple);transition:transform .2s;display:inline-block;${aberto?'transform:rotate(180deg)':''}">▾</span>
+    </div>
   </div>
   ${aberto?`<div style="margin-bottom:4px">
     <div class="esboço-body">
