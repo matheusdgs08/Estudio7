@@ -356,6 +356,13 @@ const GRUPOS_INFO={
 };
 
 // Exercícios do banco — nome contém o grupo para fácil identificação
+// Contexto de treino baseado em 158k+ fichas reais
+const TREINO_CTX = {
+  grupos_top: {"ABDOMEN": ["ABDOMEN - BOLA - FLEXAO DE TRONCO", "ABDOMEN - PRANCHA DECLINADA - ABDOMINAL CURTO", "ABDOMEN - SOLO - FLEXAO DE TRONCO 90 C BOLA SIMULT", "ABDOMEN - CROSS - PULLEY CRUNCH", "ABDOMEN - SOLO - ABDOMINAL ELEVACAO DE PERNAS", "ABDOMEN - CROSS - OBLIQUOS CROSS"], "ABDUTOR": ["ABDUTOR - CADEIRA ABDUTORA - CADEIRA ABDUTORA", "ABDUTOR - TECNOGYM - ABDUCAO DE QUADRIL", "ABDUTOR - SOLO - ABDUCAO COM CANELEIRA", "ABDUTOR - EM PE - ABDUCAO COM MINIBAND", "ABDUTOR - CROSS - ABDUCAO DE QUADRIL", "ABDUTOR - SOLO - ABDUCAO COM MINIBAND"], "ADUTOR": ["ADUTOR - CADEIRA ADUTORA - CADEIRA ADUTORA", "ADUTOR - TECNOGYM - ADUCAO DE QUADRIL", "ADUTOR - SOLO - ADUCAO DE QUADRIL COM CANELEIRA", "ADUTOR - BANCO 90 - ADUCAO DE QUADRIL COM BOLINHA", "ADUTOR - CADEIRA ADUTORA - CADEIRA ADUTORA ISOMETR"], "AEROBICO": ["AEROBICO - EM PE - POLICHINELO LATERAL", "AEROBICO - EM PE - POLICHINELO FRONTAL", "AEROBICO - EM PE - DRIBBLING ALTERNADO", "AEROBICO - EM PE - CAMINHADA COM JOELHOS ALTOS", "AEROBICO - EM PE - HOPSERLAUF", "AEROBICO - EM PE - SKIPPING 1,2,3"], "AEROBIO": ["AEROBIO - EM PE - TRANSPORT", "AEROBIO - EM PE - ESTEIRA", "AEROBIO - EM PE - KETTLEBELL SWING", "AEROBIO - SENTADO - BIKE HORIZONTAL", "AEROBIO - EM PE - CORDA NAVAL", "AEROBIO - EM PE - JUMP"], "ALONGAMENTO": ["ALONGAMENTO - SOLO - PADRAO 5 MIN", "ALONGAMENTO - SOLO - PADRAO LONGO 10 MIN", "ALONGAMENTO - SOLO - ROLINHO MASSAGEADOR", "ALONGAMENTO - ESPALDAR - ALONGAMENTO COMPLETO", "ALONGAMENTO - PLATAFORMA - CADEIRINHA", "ALONGAMENTO - BANCO 180 - ALONGAR SENTADO"], "ANTEBRACO": ["ANTEBRACO - BANCO 180 - EXTENSAO DO PUNHO C HALTER", "ANTEBRACO - BANCO 180 - FLEXAO DO PUNHO COM HALTER", "ANTEBRACO - EM PE - CARRETEL", "ANTEBRACO - BANCO 180 - FLEXAO DO PUNHO COM BARRA", "ANTEBRACO - BANCO 180 - EXTENSAO DOS PUNHOS BARRA"], "BICEPS": ["BICEPS - BANCO 45 - ROSCA 45 HALTER", "BICEPS - CROSS - ROSCA CROSS BARRA RETA", "BICEPS - EM PE - ROSCA MARTELO COM HALTER", "BICEPS - BANCO 180 - ROSCA CONCENTRADA HALTER", "BICEPS - CROSS - ROSCA MARTELO CORDA", "BICEPS - BANCO SCOTT - HALTER"], "CORE": ["CORE - ELEVACAO PELVICA VERTICAL COM SUPERBAND", "CORE - SOLO - ABDUCAO QUADRIL C/BAND E PES JUNTOS", "CORE - SOLO - PONTE C 1 PERNA ESTENDIDA E ABD BAND", "CORE - STEP - JOELHOS NO STEP ALTERN. FRENTE TRAS"], "DELTOIDE": ["DELTOIDE - EM PE - ELEVACAO LATERAL COM HALTER", "DELTOIDE - EM PE - ELEVACAO FRONTAL COM HALTER", "DELTOIDE - CRUCIFIXO MAQUINA - CRUCIFIXO INVERTIDO", "DELTOIDE - KINESIS - CRUCIFIXO INVERTIDO", "DELTOIDE - BANCO 90 - DESENVOLVIMENTO ARNOLD", "DELTOIDE - BANCO 90 - DESENVOLV COM HALTER SENTADO"], "DELTOIDE- EM PE": ["DELTOIDE- EM PE - ELEVACAO FRONTAL COM HALTER PEG NEUTRA", "DELTOIDE- EM PE - ELEVACAO FRONTAL COM HALTER PEG SUPINADA"], "DORSAL": ["DORSAL - PULLEY - REMADA BAIXA", "DORSAL - CROSS - REMADA POLIA ALTA CORDA COT FECHA", "DORSAL - CROSS - PULL DOWN BARRA", "DORSAL - TECNOGYM - REMADA TECNOGYM", "DORSAL - PULLEY - PULLEY FRENTE", "DORSAL - CROSS - REMADA UNILATERAL"], "DORSAL- ARTICULADA": ["DORSAL- ARTICULADA - PEG NEUTRA UNI"], "EQUILIBRIO": ["EQUILIBRIO - DISC BALL - PROPRIOCEPCAO UNILATERAL", "EQUILIBRIO - BOSU - PROPRIOCEPCAO UNILATERAL", "EQUILIBRIO - DISC BALL - PROPRIOCEPCAO FRENTE/TRAS", "EQUILIBRIO - BOSU - PROP UNI BOSU INVERTIDO"], "ESCAPULA": ["ESCAPULA - SUP BAND - ABDUCAO E ADUCAO", "ESCAPULA - SUP BAND - PARABRISA", "ESCAPULA - CROSS - ADUCAO E ABDUCAO", "ESCAPULA - ELASTICO - ADUCAO E ABDUCAO"], "GLUTEO": ["GLUTEO - TECNOGYM - GLUTEO EXTENDIDO", "GLUTEO - CROSS - GLUTEO EXTENDIDO", "GLUTEO - MAQUINA ELEVACAO PELVICA - ELEVACAO PELVE", "GLUTEO - GRAVITON - EXTENSAO DE QUADRIL", "GLUTEO - EM PE - AGACHAMENTO SUMO COM SUPORTE", "GLUTEO - EM PE - AGACHAMENTO SUMO COM HALTER"], "ILIOPSOAS": ["ILIOPSOAS - KINESIS - CHUTE COM TORNOZELEIRA"], "LOMBAR": ["LOMBAR - SOLO - LOMBAR PONTE ISOMETRIA", "LOMBAR - SOLO - PONTE LOMBAR ISO 1 PERNA ESTENDIDA", "LOMBAR - SOLO - LOMBAR SUPERMAN", "LOMBAR - LOMBAR MAQUINA - LOMBAR NO APARELHO", "LOMBAR - SOLO - LOMBAR SUPERMAN DINAMICO", "LOMBAR - SOLO - LOMBAR PONTE ISO BOLINHA NO ADUTOR"], "MANGUITO": ["MANGUITO - KINESIS - MANGUITO", "MANGUITO - ELASTICO - MANGUITO", "MANGUITO - CROSS - MANGUITO"], "MOBILIDADE": ["MOBILIDADE - SOLO - MOBILIDADE ESCAPULA ROLO ROXO", "MOBILIDADE - SOLO -ESCAPULA - ANTERO POSTERIOR COM ABERTURA DE BRAÇO", "MOBILIDADE - SOLO -QUADRIL - ANTERO POSTERIOR", "MOBILIDADE - SOLO -QUADRIL -CADEIRINHA", "MOBILIDADE - SOLO -QUADRIL - FRONTAL", "MOBILIDADE - ELASTICO - OMBRO - FRENTE TRAS"], "PANTURRILHA": ["PANTURRILHA - PANTURRILHA MAQUINA - PANT. SENTADO", "PANTURRILHA - LEG 180 - PANTURRILHA NO LEG 180", "PANTURRILHA - STEP - PANTURRILHA STEP", "PANTURRILHA - STEP - PANTURRILHA STEP UNILATERAL", "PANTURRILHA - LEG 45 - PANTURRILHA 45º", "PANTURRILHA - LEG 180 - PANTURRILHA NO LEG 180 UNI"], "PEITORAL": ["PEITORAL - BANCO 30 - SUPINO INCLINADO COM HALTER", "PEITORAL - CRUCIFIXO MAQUINA - CRUCIFIXO", "PEITORAL - MAQUINA - SUPINO MAQUINA RETO", "PEITORAL - BANCO 180 - SUPINO RETO COM HALTER", "PEITORAL - CROSS - CROSS OVER POLIA ALTA", "PEITORAL - KINESIS - CRUCIFIXO"], "POSTERIOR DE COXA": ["POSTERIOR DE COXA - CADEIRA FLEXORA - CADEIRA FLEX", "POSTERIOR DE COXA - CROSS - FLEXAO DE JOELHO UNI", "POSTERIOR DE COXA - MESA FLEXORA - MESA FLEXORA", "POSTERIOR DE COXA - BOLA - POSTERIOR NA BOLA", "POSTERIOR DE COXA - CADEIRA FLEXORA - FLEXORA UNI", "POSTERIOR DE COXA - CADEIRA FLEXORA - FLEXORA ALTE"], "QUADRICEPS": ["QUADRICEPS - CADEIRA EXTENSORA - CADEIRA EXTENSORA", "QUADRICEPS - LEG 180 - LEG 180", "QUADRICEPS - LEG 180 - LEG 180 100° A 150°", "QUADRICEPS - CROSS - AGACHAMENTO", "QUADRICEPS - CADEIRA EXTENSORA - EXT 100 A 150", "QUADRICEPS - LEG 45 - LEG 45"], "TIBIAL": ["TIBIAL - BANCO 180 - TIBIAL COM ELASTICO"], "TIBIAL ANTERIOR": ["TIBIAL ANTERIOR - BANCO 180 - TIBIAL BARATINHA", "TIBIAL ANTERIOR - LEG 45 - TIBIAL LEG 45"], "TRACAO": ["TRACAO - SOLO/ESPALDAR - TRACAO DE QUADRIL", "TRACAO - SOLO/ESPALDAR - TRACAO DE CERVICAL"], "TRICEPS": ["TRICEPS - CROSS - TRICEPS PULLEY BARRA RETA", "TRICEPS - MAQUINA - EXTENSION", "TRICEPS - CROSS - TRICEPS CORDA", "TRICEPS - CROSS - FRANCES CORDA POLIA MEDIA", "TRICEPS - BANCO 180 - FRANCES COM HALTER", "TRICEPS - EM PE - TRICEPS COICE COM HALTER"], "TRÍCEPS": ["TRÍCEPS - SMITH - BANCO 180 - TRÍCEPS SUPINADO", "TRÍCEPS - BANCO 180 - TRÍCEPS SUPINADO"]},
+  patterns: {"Definicao|Avancado": {"est": "Rest Pause", "freq": "3 x Semana"}, "Definicao|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "1 Mes|Iniciante": {"est": "Padrao", "freq": "1 x Semana"}, "Fortalecimento|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Perda de Peso|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Fortalecimento|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Hipertrofia Inferior|Intermediario": {"est": "Padrao", "freq": "3 x Semana"}, "Cuidado Ortopedico|Intermediario": {"est": "Padrao", "freq": "3 x Semana"}, "1 Mes|Intermediario": {"est": "Padrao", "freq": "1 x Semana"}, "Gestante|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Hipertrofia Metabolica|Avancado": {"est": "Drop Set", "freq": "3 x Semana"}, "Hipertrofia Tensional|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Hipertrofia Metabolica|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Perda de Peso|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Perda de Peso|Avancado": {"est": "Circuito", "freq": "3 x Semana"}, "Adolescente|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Hipertrofia Superior|Avancado": {"est": "Padrao", "freq": "2 x Semana"}, "Forca|Intermediario": {"est": "3 Idade", "freq": "3 x Semana"}, "Forca|Avancado": {"est": "Drop Set", "freq": "2 x Semana"}, "Hipertrofia Tensional|Intermediario": {"est": "Padrao", "freq": "3 x Semana"}, "Hipertrofia Superior|Iniciante": {"est": "Drop Set", "freq": "2 x Semana"}, "Definicao|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Adolescente|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Hipertrofia Inferior|Avancado": {"est": "Drop Set", "freq": "3 x Semana"}, "Hipertrofia Tensional|Avancado": {"est": "Drop Set", "freq": "3 x Semana"}, "Fortalecimento|Avancado": {"est": "Padrao", "freq": "2 x Semana"}, "Performance Bike|Avancado": {"est": "Padrao", "freq": "2 x Semana"}, "Performance Bike|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Recuperacao|Avancado": {"est": "Padrao", "freq": "2 x Semana"}, "Saude|Intermediario": {"est": "Drop Set", "freq": "1 x Semana"}, "3 Idade|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Performance Corrida|Avancado": {"est": "Padrao", "freq": "2 x Semana"}, "Performance Escalada|Avancado": {"est": "Circuito", "freq": "3 x Semana"}, "Resistencia|Intermediario": {"est": "Padrao", "freq": "3 x Semana"}, "Pre Adolescente|Iniciante": {"est": "Padrao", "freq": "1 x Semana"}, "Hipertrofia Superior|Intermediario": {"est": "Bi Set", "freq": "2 x Semana"}, "Hipertrofia Metabolica|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Gestante|Avancado": {"est": "Padrao", "freq": "3 x Semana"}, "Forca|Iniciante": {"est": "Padrao", "freq": "1 x Semana"}, "Saude|Iniciante": {"est": "Padrao", "freq": "3 x Semana"}, "Pos Parto|Iniciante": {"est": "Padrao", "freq": "4 x Semana"}, "Performance Corrida|Intermediario": {"est": "Padrao", "freq": "2 x Semana"}, "Pos Parto|Intermediario": {"est": "Padrao", "freq": "3 x Semana"}, "Performance Bike|Iniciante": {"est": "Padrao", "freq": "1 x Semana"}, "3 Idade|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Cuidado Ortopedico|Avancado": {"est": "Drop Set", "freq": "2 x Semana"}, "Recuperacao|Iniciante": {"est": "Padrao", "freq": "1 x Semana"}, "Gestante|Iniciante": {"est": "Padrao", "freq": "2 x Semana"}, "Hipertrofia Inferior|Iniciante": {"est": "Padrao", "freq": "3 x Semana"}},
+  restricao_evitar: {"joelho": ["LEG 45", "AGACHAMENTO LIVRE", "AFUNDO", "AVANCO", "PASSADA", "SMITH - AGACH", "CAIXA - SUBIR"], "lombar": ["STIFF", "LEVANTAMENTO TERRA", "AGACHAMENTO LIVRE", "SMITH - AGACH", "CADEIRA FLEXORA - CADEIRA"], "ombro": ["SUPINO LIVRE", "ELEVACAO FRONTAL", "DESENVOLVIMENTO LIVRE", "REMADA ALTA"], "cervical": ["DESENVOLVIMENTO", "REMADA ALTA", "ENCOLHIMENTO"], "punho": ["BARRA RETA", "BARRA W", "FRANCÊS COM BARRA"]},
+  top60: ["ALONGAMENTO - SOLO - PADRAO 5 MIN", "ABDOMEN - BOLA - FLEXAO DE TRONCO", "ABDUTOR - CADEIRA ABDUTORA - CADEIRA ABDUTORA", "POSTERIOR DE COXA - CADEIRA FLEXORA - CADEIRA FLEX", "PANTURRILHA - PANTURRILHA MAQUINA - PANT. SENTADO", "ADUTOR - CADEIRA ADUTORA - CADEIRA ADUTORA", "ABDOMEN - PRANCHA DECLINADA - ABDOMINAL CURTO", "TRICEPS - CROSS - TRICEPS PULLEY BARRA RETA", "ABDOMEN - SOLO - FLEXAO DE TRONCO 90 C BOLA SIMULT", "QUADRICEPS - CADEIRA EXTENSORA - CADEIRA EXTENSORA", "ABDOMEN - CROSS - PULLEY CRUNCH", "POSTERIOR DE COXA - CROSS - FLEXAO DE JOELHO UNI", "TRICEPS - MAQUINA - EXTENSION", "PEITORAL - BANCO 30 - SUPINO INCLINADO COM HALTER", "DORSAL - PULLEY - REMADA BAIXA", "DORSAL - CROSS - REMADA POLIA ALTA CORDA COT FECHA", "QUADRICEPS - LEG 180 - LEG 180", "ABDOMEN - SOLO - ABDOMINAL ELEVACAO DE PERNAS", "GLUTEO - TECNOGYM - GLUTEO EXTENDIDO", "DELTOIDE - EM PE - ELEVACAO LATERAL COM HALTER", "DORSAL - CROSS - PULL DOWN BARRA", "POSTERIOR DE COXA - MESA FLEXORA - MESA FLEXORA", "POSTERIOR DE COXA - BOLA - POSTERIOR NA BOLA", "PANTURRILHA - LEG 180 - PANTURRILHA NO LEG 180", "BICEPS - BANCO 45 - ROSCA 45 HALTER", "QUADRICEPS - LEG 180 - LEG 180 100° A 150°", "PEITORAL - CRUCIFIXO MAQUINA - CRUCIFIXO", "DORSAL - TECNOGYM - REMADA TECNOGYM", "PEITORAL - MAQUINA - SUPINO MAQUINA RETO", "ABDOMEN - CROSS - OBLIQUOS CROSS", "AEROBIO - EM PE - TRANSPORT", "DELTOIDE - EM PE - ELEVACAO FRONTAL COM HALTER", "ALONGAMENTO - SOLO - PADRAO LONGO 10 MIN", "BICEPS - CROSS - ROSCA CROSS BARRA RETA", "PEITORAL - BANCO 180 - SUPINO RETO COM HALTER", "ABDOMEN - SOLO - OBLIQUOS CRUZADO", "LOMBAR - SOLO - LOMBAR PONTE ISOMETRIA", "QUADRICEPS - CROSS - AGACHAMENTO", "LOMBAR - SOLO - PONTE LOMBAR ISO 1 PERNA ESTENDIDA", "MANGUITO - KINESIS - MANGUITO", "QUADRICEPS - CADEIRA EXTENSORA - EXT 100 A 150", "PANTURRILHA - STEP - PANTURRILHA STEP", "DORSAL - PULLEY - PULLEY FRENTE", "GLUTEO - CROSS - GLUTEO EXTENDIDO", "LOMBAR - SOLO - LOMBAR SUPERMAN", "PEITORAL - CROSS - CROSS OVER POLIA ALTA", "ALONGAMENTO - SOLO - ROLINHO MASSAGEADOR", "ABDOMEN - SOLO - PRANCHA ISOMETRICA", "DELTOIDE - CRUCIFIXO MAQUINA - CRUCIFIXO INVERTIDO", "PEITORAL - KINESIS - CRUCIFIXO", "DELTOIDE - KINESIS - CRUCIFIXO INVERTIDO", "ABDOMEN - SOLO - ABDOMINAL DEAD BUG", "DELTOIDE - BANCO 90 - DESENVOLVIMENTO ARNOLD", "DORSAL - CROSS - REMADA UNILATERAL", "ABDOMEN - SOLO - FLEXAO DE TRONCO COM MEDICINIBALL", "TRICEPS - CROSS - TRICEPS CORDA", "ABDOMEN - BOSU - ABDOMEN BOSU", "BICEPS - EM PE - ROSCA MARTELO COM HALTER", "ABDOMEN - KINESIS - OBLIQUOS ROTACAO POLIA MEDIA", "TRICEPS - CROSS - FRANCES CORDA POLIA MEDIA"]
+};
 const EXERCICIOS=[
   {n:'CORE ABDUÇÃO DE QUADRIL COM MINIBAND PERNA ATRÁS',g:'GERAL'},
   {n:'ABDOMEN - BANCO 180 - ABDOMINAL DEAD BUG',g:'ABDOMEN'},
@@ -1704,126 +1711,83 @@ async function gerarTreinoIA(){
   if(!alunoSel)return;
   const a=alunoSel;
   const btn=document.getElementById('btn-gerar-ia');
-  if(btn){btn.disabled=true;btn.textContent='⏳ Gerando...';}
-  const exCatalog=EXERCICIOS.map(e=>e.n).slice(0,250).join(', ');
-  const numFichas=a.freq_semana||2;
+  if(btn){btn.disabled=true;btn.innerHTML='⏳ Gerando...';}
+
+  // Monta contexto inteligente baseado na base real de 158k fichas
+  const objNivel=`${a.objetivo||'Definicao'}|${a.nivel||'Intermediario'}`;
+  const pattern=TREINO_CTX.patterns[objNivel]||{est:'Padrao',freq:'2 x Semana'};
+  const estimuloSugerido=a.estimulo_padrao||pattern.est;
+
+  // Filtra exercícios proibidos por restrição
+  const restricoesLower=(a.restricoes||'').toLowerCase();
+  const exEvitar=[];
+  Object.entries(TREINO_CTX.restricao_evitar).forEach(([r,lista])=>{
+    if(restricoesLower.includes(r)) exEvitar.push(...lista);
+  });
+  const todosProibidos=[...(a.exerc_proibidos||[]),...(a.exerc_nao_quer||[]),...exEvitar];
+
+  // Monta lista de exercícios sugeridos por grupo (top da base real, sem proibidos)
+  const exSugeridos={};
+  Object.entries(TREINO_CTX.grupos_top).forEach(([g,exs])=>{
+    const limpos=exs.filter(e=>!todosProibidos.some(p=>e.toUpperCase().includes(p.toUpperCase())));
+    if(limpos.length) exSugeridos[g]=limpos;
+  });
+
+  const numFichas=Math.min(a.freq_semana||2,5);
   const letras='ABCDE'.slice(0,numFichas);
-  const prompt=`Monte um programa de treino em JSON para:
-Nome: ${a.nm} | Objetivo: ${a.objetivo||'Definicao'} | Nível: ${a.nivel||'Intermediario'} | ${a.freq_semana}x/semana | Estímulo: ${a.estimulo_padrao||'Padrao'}
-Restrições: ${a.restricoes||'Nenhuma'} | Proibidos: ${(a.exerc_proibidos||[]).join(', ')||'Nenhum'} | Não quer: ${(a.exerc_nao_quer||[]).join(', ')||'Nenhum'}
-Descrição: ${a.descricao||''}
-CATÁLOGO (use SOMENTE estes nomes exatos): ${exCatalog}
-REGRAS: crie ${numFichas} fichas (${letras.split('').join(', ')}), 5-7 exercícios cada, use duplas/trios conforme estímulo, nunca use proibidos.
-Responda SOMENTE JSON:
-{"nm":"Programa IA","fichas":[{"letra":"A","nm":"Treino A","nota":"","estimulo":"Padrao","esboço":[{"g":"Quadríceps","s":4,"r":"12","num_singles":1,"num_duplas":1,"num_trios":0,"estimulo":"Padrao","obs":""}],"exs":[{"tp":"s","n":"NOME EXATO","g":"Grupo","s":4,"r":"12","d":60,"ca":null,"obs":""},{"tp":"g","grupo":"dupla","exs":[{"n":"EX1","g":"Grupo","s":3,"r":"12","d":0,"ca":null,"obs":""},{"n":"EX2","g":"Grupo","s":3,"r":"12","d":60,"ca":null,"obs":""}]}]}]}`;
+
+  const prompt=`Você é especialista em personal training do Estúdio Se7e, SP. Monte um programa completo para:
+
+ALUNO: ${a.nm}
+Objetivo: ${a.objetivo||'Definicao'} | Nível: ${a.nivel||'Intermediario'} | ${a.freq_semana}x/semana
+Estímulo recomendado pela base: ${estimuloSugerido}
+Restrições: ${a.restricoes||'Nenhuma'}
+Descrição pessoal: ${a.descricao||''}
+Exercícios PROIBIDOS (nunca usar): ${todosProibidos.join(', ')||'Nenhum'}
+
+EXERCÍCIOS MAIS USADOS NO ESTÚDIO POR GRUPO (baseado em 158.000 fichas reais):
+${Object.entries(exSugeridos).map(([g,exs])=>`${g}: ${exs.join(' | ')}`).join('\n')}
+
+INSTRUÇÕES:
+- Crie exatamente ${numFichas} fichas: ${letras.split('').join(', ')}
+- 5-7 exercícios por ficha
+- Sempre inclua ALONGAMENTO no final de cada ficha
+- Use duplas/trios conforme o estímulo ${estimuloSugerido}
+- Priorize exercícios da lista acima (são os mais usados no estúdio)
+- Nunca inclua exercícios proibidos
+- Para ${a.objetivo||'Definicao'}, distribua grupos musculares de forma equilibrada
+
+Responda SOMENTE com JSON válido:
+{"nm":"Programa IA — ${new Date().toLocaleDateString('pt-BR',{month:'short',year:'numeric'})}","fichas":[{"letra":"A","nm":"Treino A","nota":"observação","estimulo":"${estimuloSugerido}","esboço":[{"g":"Quadríceps","s":4,"r":"12","num_singles":1,"num_duplas":1,"num_trios":0,"estimulo":"${estimuloSugerido}","obs":""}],"exs":[{"tp":"s","n":"NOME EXATO DO EXERCÍCIO","g":"Grupo","s":4,"r":"12","d":60,"ca":null,"obs":""},{"tp":"g","grupo":"dupla","exs":[{"n":"EX1","g":"Grupo","s":3,"r":"12","d":0,"ca":null,"obs":""},{"n":"EX2","g":"Grupo","s":3,"r":"12","d":60,"ca":null,"obs":""}]}]}]}`;
+
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:5000,messages:[{role:'user',content:prompt}]})
+    });
     const data=await resp.json();
     let text=data.content?.[0]?.text||'';
     text=text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
     const prog=JSON.parse(text);
     const cores=['#1E40AF','#6D28D9','#059669','#D97706','#DC2626'];
     prog.id=uid();
-    prog.fichas=prog.fichas.map((f,fi)=>({...f,id:uid(),cor:cores[fi%5],esboço:(f.esboço||[]).map(e=>({...e,id:uid()})),exs:(f.exs||[]).map(e=>e.tp==='g'?{...e,id:uid(),exs:(e.exs||[]).map(ex=>({...ex,id:uid()}))}:{...e,id:uid()})}));
+    prog.fichas=prog.fichas.map((f,fi)=>({
+      ...f,id:uid(),cor:cores[fi%5],
+      esboço:(f.esboço||[]).map(e=>({...e,id:uid()})),
+      exs:(f.exs||[]).map(e=>e.tp==='g'?{...e,id:uid(),exs:(e.exs||[]).map(ex=>({...ex,id:uid()}))}:{...e,id:uid()})
+    }));
     a.programas.unshift(prog);
     fichaAtiva=0;
-    if(btn){btn.disabled=false;btn.textContent='✨ Gerar com IA';}
+    if(btn){btn.disabled=false;btn.innerHTML='✨ Gerar com IA';}
     render();
   }catch(err){
-    alert('Erro ao gerar: '+err.message);
-    if(btn){btn.disabled=false;btn.textContent='✨ Gerar com IA';}
-  }
-}
-
-async function gerarTreinoIA(){
-  if(!alunoSel)return;
-  const a=alunoSel;
-  const btn=document.getElementById('btn-gerar-ia');
-  if(btn){btn.disabled=true;btn.textContent='⏳ Gerando...';}
-  
-  // Pega os 80 exercícios mais relevantes do catálogo (evita token overflow)
-  const exCatalog=EXERCICIOS.slice(0,300).map(e=>e.n).join(', ');
-  
-  const prompt=`Você é especialista em personal training. Monte um programa de treino para este aluno.
-
-ALUNO: ${a.nm}
-Objetivo: ${a.objetivo||'Definicao'}
-Nível: ${a.nivel||'Intermediario'}
-Frequência: ${a.freq_semana}x por semana
-Estímulo padrão: ${a.estimulo_padrao||'Padrao'}
-Restrições: ${a.restricoes||'Nenhuma'}
-Descrição: ${a.descricao||''}
-Exercícios PROIBIDOS: ${(a.exerc_proibidos||[]).join(', ')||'Nenhum'}
-Exercícios que não quer fazer: ${(a.exerc_nao_quer||[]).join(', ')||'Nenhum'}
-
-CATÁLOGO DISPONÍVEL (use SOMENTE exercícios desta lista):
-${exCatalog}
-
-REGRAS:
-- Crie ${a.freq_semana} fichas (Treino A, B${a.freq_semana>2?', C':''}${a.freq_semana>3?', D':''}${a.freq_semana>4?', E':''})
-- Cada ficha deve ter 4-7 exercícios
-- Use duplas (bi-set) e trios quando indicado pelo estímulo
-- Nunca use exercícios proibidos ou que o aluno não quer
-- Adapte às restrições físicas
-
-Responda SOMENTE com JSON válido neste formato exato:
-{
-  "nm": "Programa — ${new Date().toLocaleDateString('pt-BR',{month:'short',year:'numeric'})}",
-  "fichas": [
-    {
-      "letra": "A",
-      "nm": "Treino A",
-      "nota": "observação do treino",
-      "estimulo": "Padrão",
-      "esboço": [{"g":"Quadríceps","s":4,"r":"12","num_singles":1,"num_duplas":1,"num_trios":0,"estimulo":"Rest Pause","obs":""}],
-      "exs": [
-        {"tp":"s","n":"NOME EXATO DO EXERCÍCIO","g":"Grupo","s":4,"r":"12","d":60,"ca":null,"obs":""},
-        {"tp":"g","grupo":"dupla","exs":[
-          {"n":"EXERCÍCIO 1","g":"Grupo","s":3,"r":"12","d":0,"ca":null,"obs":""},
-          {"n":"EXERCÍCIO 2","g":"Grupo","s":3,"r":"12","d":60,"ca":null,"obs":""}
-        ]}
-      ]
-    }
-  ]
-}`;
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:4000,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    const data = await resp.json();
-    let text = data.content?.[0]?.text||'';
-    // Strip markdown if present
-    text = text.replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
-    const prog = JSON.parse(text);
-    
-    // Add IDs to all elements
-    const addIds = (fichas) => fichas.map(f=>({
-      ...f, id:uid(), cor:['#1E40AF','#6D28D9','#059669','#D97706','#DC2626'][fichas.indexOf(f)%5],
-      esboço:(f.esboço||[]).map(e=>({...e,id:uid()})),
-      exs:(f.exs||[]).map(e=>e.tp==='g'?{...e,id:uid(),exs:e.exs.map(ex=>({...ex,id:uid()}))}:{...e,id:uid()})
-    }));
-    
-    prog.id=uid();
-    prog.fichas=addIds(prog.fichas);
-    a.programas.unshift(prog);
-    fichaAtiva=0;
-    
-    if(btn){btn.disabled=false;btn.textContent='✨ Gerar com IA';}
-    render();
-    
-  } catch(err) {
     console.error(err);
-    alert('Erro ao gerar treino: '+err.message);
-    if(btn){btn.disabled=false;btn.textContent='✨ Gerar com IA';}
+    alert('Erro ao gerar treino com IA: '+err.message);
+    if(btn){btn.disabled=false;btn.innerHTML='✨ Gerar com IA';}
   }
 }
+
 function addFicha(){if(!alunoSel)return;const f=getFichas(alunoSel);const letras='ABCDE',cores=['#1E40AF','#6D28D9','#059669','#D97706','#DC2626'];const i=f.length;f.push({id:uid(),cor:cores[i%5],letra:letras[i%5],nm:`Treino ${letras[i%5]}`,nota:'',esboço:[],exs:[]});fichaAtiva=i;compareMode=false;render();}
 function pedirDelFicha(fichaId){modal={type:'del-ficha',fichaId};renderModal();}
 function confirmarDelFicha(){
