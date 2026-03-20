@@ -1114,6 +1114,8 @@ function render(){
   } else if(modulo==='catalogo'){
     acts.innerHTML=`<button class="btn-secondary" onclick="addExercicioCatalogo()">+ Exercício</button>`;
   } else acts.innerHTML='';
+  const _listEl=document.querySelector('.alunos-list');
+  const _listScroll=_listEl?_listEl.scrollTop:0;
   document.getElementById('content').innerHTML=
     modulo==='treinos'?renderTreinos():
     modulo==='fila'?renderFila():
@@ -1122,6 +1124,11 @@ function render(){
     modulo==='historico'?renderHistorico():
     `<div class="empty-state"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div></div>`;
   setupDragDrop();
+  const _newListEl=document.querySelector('.alunos-list');
+  if(_newListEl&&_listScroll)_newListEl.scrollTop=_listScroll;
+  // Also scroll selected aluno into view
+  const _selEl=document.querySelector('.aluno-item.sel');
+  if(_selEl&&_listScroll===0)_selEl.scrollIntoView({block:'nearest'});
 }
 
 // ── HELPERS: PENDENTE / HISTÓRICO / AUTO-SAVE ──
@@ -1266,7 +1273,7 @@ function renderTreinos(){
     }
     if(dct<=30) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;white-space:nowrap">📅 Contrato ${dct}d</span>`);
     else if(dct<=60) alertas.push(`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FFFBEB;color:#92400E;border:1px solid #FCD34D;white-space:nowrap">📅 Contrato ${dct}d</span>`);
-    return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno('${a.id}')">
+    return`<div class="aluno-item ${sel?'sel':''}" data-id="${a.id}" onclick="selecionarAluno('${a.id}')">
       <div class="aluno-av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
       <div class="aluno-info">
         <div class="aluno-nome">${a.nm}</div>
@@ -1674,24 +1681,59 @@ function setupDragDrop(){
 
 // ── ACTIONS ──
 function selecionarAluno(id){
+  const prev=alunoSel;
   alunoSel=D.alunos.find(a=>a.id===id);
   fichaAtiva=0;compareMode=false;compareFichas=[];
-  if(alunoSel){
-    mergeAluno(alunoSel);
-    // If fichas.js not loaded yet, wait for it
+  if(!alunoSel){render();return;}
+
+  mergeAluno(alunoSel);
+
+  // Update selected highlight on list without full re-render
+  if(prev&&prev.id!==id){
+    document.querySelectorAll('.aluno-item.sel').forEach(el=>el.classList.remove('sel'));
+    const newSel=document.querySelector('.aluno-item[data-id="'+id+'"]');
+    if(newSel){
+      newSel.classList.add('sel');
+      newSel.scrollIntoView({block:'nearest'});
+    }
+  }
+
+  // Only re-render the main panel (col-prog), not the full page
+  const colProg=document.querySelector('.col-prog');
+  if(colProg){
+    let main='';
+    if(getFichas(alunoSel).length===0){
+      main=`<div class="empty-state"><div class="empty-ico">📋</div><div class="empty-title">Sem programa</div><div class="empty-sub">${alunoSel.nm.split(' ')[0]} ainda não tem programa.</div><button class="btn-primary" onclick="novoPrograma()" style="margin-top:8px">+ Criar programa</button></div>`;
+    } else {
+      main=renderFichasArea();
+    }
+    colProg.innerHTML=main;
+    setupDragDrop();
+    // Update toolbar buttons
+    const acts=document.getElementById('tb-actions');
+    if(acts){
+      if(getFichas(alunoSel).length>1){
+        acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
+      } else {
+        acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
+      }
+    }
+    autoSave();
+
+    // If fichas.js not loaded yet, wait
     if(!window.FICHAS_DATA){
-      render(); // render without fichas first
       const check=setInterval(()=>{
         if(window.FICHAS_DATA){
           clearInterval(check);
           mergeAluno(alunoSel);
-          render();
+          const cp=document.querySelector('.col-prog');
+          if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
         }
       },200);
-      return;
     }
+  } else {
+    render();
   }
-  render();
 }
 function toggleCompare(){compareMode=!compareMode;compareFichas=compareMode?[0,Math.min(1,getFichas(alunoSel).length-1)]:[];render();}
 function toggleCompareFicha(idx){compareFichas=compareFichas.includes(idx)?compareFichas.filter(i=>i!==idx):[...compareFichas,idx];render();}
@@ -2159,6 +2201,8 @@ function renderCatalogo(){
 function toggleExCatalogo(nome){
   if(EXERCICIOS_INATIVOS.has(nome))EXERCICIOS_INATIVOS.delete(nome);
   else EXERCICIOS_INATIVOS.add(nome);
+  const _listEl=document.querySelector('.alunos-list');
+  const _listScroll=_listEl?_listEl.scrollTop:0;
   document.getElementById('content').innerHTML=renderCatalogo();
   setupDragDrop();
 }
@@ -2172,6 +2216,8 @@ function addExercicioCatalogo(){
   if(EXERCICIOS.find(e=>e.n===n)){alert('Exercício já existe no catálogo.');return;}
   EXERCICIOS.push({n,g});
   EXERCICIOS.sort((a,b)=>a.g.localeCompare(b.g)||a.n.localeCompare(b.n));
+  const _listEl=document.querySelector('.alunos-list');
+  const _listScroll=_listEl?_listEl.scrollTop:0;
   document.getElementById('content').innerHTML=renderCatalogo();
   setupDragDrop();
 }
