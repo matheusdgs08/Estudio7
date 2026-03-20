@@ -357,6 +357,14 @@ let modal=null;
 let searchQ='';
 let dragState=null;
 let filtro='todos'; // todos | excesso | vencido | contrato
+let catalogoBusca='';
+let catalogoFiltroGrupo='';
+let catalogoModalEx=null;
+const EXERCICIOS_INATIVOS=new Set(JSON.parse(localStorage.getItem('se7e_inativos')||'[]'));
+let catalogoBusca='';
+let catalogoFiltroGrupo='';
+let catalogoModalEx=null; // {n,g,isNew}
+const EXERCICIOS_INATIVOS=new Set(JSON.parse(localStorage.getItem('se7e_inativos')||'[]'));
 
 // Grupos musculares com cores
 const GRUPOS_INFO={
@@ -2250,62 +2258,124 @@ function salvarEx(){
 // ── CATÁLOGO DE EXERCÍCIOS ──
 function renderCatalogo(){
   const grupos=[...new Set(EXERCICIOS.map(e=>e.g))].sort();
+  const q=catalogoBusca.toLowerCase();
   const filtrados=EXERCICIOS.filter(e=>{
-    const bOk=!catalogoBusca||e.n.toLowerCase().includes(catalogoBusca.toLowerCase());
+    const bOk=!q||e.n.toLowerCase().includes(q);
     const gOk=!catalogoFiltroGrupo||e.g===catalogoFiltroGrupo;
     return bOk&&gOk;
   });
   const ativos=filtrados.filter(e=>!EXERCICIOS_INATIVOS.has(e.n));
   const inativos=filtrados.filter(e=>EXERCICIOS_INATIVOS.has(e.n));
-  const grupoOpts=`<option value="">Todos os grupos</option>`+grupos.map(g=>`<option value="${g}" ${catalogoFiltroGrupo===g?'selected':''}>${g}</option>`).join('');
-  const rows=e=>e.map(ex=>{
+  const grupoOpts='<option value="">Todos os grupos</option>'+grupos.map(g=>`<option value="${g}" ${catalogoFiltroGrupo===g?'selected':''}>${g}</option>`).join('');
+
+  const row=(ex)=>{
     const off=EXERCICIOS_INATIVOS.has(ex.n);
     const gi=getGrupoInfo(ex.g);
-    return`<div class="cat-row ${off?'inativo':''}">
-      <span class="cat-grupo-tag" style="background:${gi.cor}22;color:${gi.tc};border:1px solid ${gi.cor}55">${ex.g}</span>
-      <span class="cat-nome" title="${ex.n}">${ex.n}</span>
-      <button class="btn-cat-toggle ${off?'btn-cat-off':'btn-cat-on'}" onclick="toggleExCatalogo('${ex.n.replace(/'/g,"\\'")}')">
-        ${off?'Reativar':'Desativar'}
-      </button>
+    const isCustom=!ex._fromDB; // exercícios adicionados manualmente podem ser deletados
+    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--bg3);${off?'opacity:.45':''}">
+      <span style="font-size:9px;padding:2px 8px;border-radius:20px;font-weight:600;background:${gi.cor}33;color:${gi.tc};border:1px solid ${gi.cor}66;white-space:nowrap;flex-shrink:0">${ex.g||'—'}</span>
+      <span style="flex:1;font-size:12px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${ex.n}">${ex.n}</span>
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button title="Editar" style="padding:3px 8px;border:1px solid var(--bg3);border-radius:6px;background:var(--bg);font-size:11px;cursor:pointer;color:var(--ink3)" onclick="catalogoModalEx={n:'${ex.n.replace(/'/g,"\\'")}'.toUpperCase(),_orig:'${ex.n.replace(/'/g,"\\'")}',g:'${(ex.g||'').replace(/'/g,"\\'")}',isNew:false};renderCatModal()">✏️</button>
+        <button title="${off?'Reativar':'Desativar'}" style="padding:3px 8px;border:1px solid ${off?'var(--green-b)':'#FECACA'};border-radius:6px;background:${off?'var(--green-l)':'#FEF2F2'};font-size:11px;cursor:pointer;color:${off?'var(--green)':'#991B1B'}" onclick="toggleExCatalogo('${ex.n.replace(/'/g,"\\'")}')">
+          ${off?'↑ Reativar':'⊘ Desativar'}
+        </button>
+      </div>
     </div>`;
-  }).join('');
-  return`<div style="padding:20px 24px;max-width:900px">
-    <div class="cat-filters">
-      <input class="cat-search" placeholder="Buscar exercício…" value="${catalogoBusca}" oninput="catalogoBusca=this.value;document.getElementById('content').innerHTML=renderCatalogo();setupDragDrop()">
-      <select class="cat-grupo-sel" onchange="catalogoFiltroGrupo=this.value;document.getElementById('content').innerHTML=renderCatalogo();setupDragDrop()">${grupoOpts}</select>
-      <span class="cat-count">${ativos.length} ativos · ${EXERCICIOS_INATIVOS.size} desativados</span>
+  };
+
+  const activeHtml = ativos.length
+    ? `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden">${ativos.map(row).join('')}</div>`
+    : `<div style="text-align:center;padding:24px;color:var(--ink3);font-size:13px">Nenhum exercício encontrado</div>`;
+
+  const inativoHtml = inativos.length ? `<div style="margin-top:16px">
+    <div style="font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding:0 2px">⊘ Desativados (${inativos.length}) — não aparecem na busca</div>
+    <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden">${inativos.map(row).join('')}</div>
+  </div>` : '';
+
+  return`<div style="padding:16px 20px;max-width:860px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input class="ca-search" style="flex:2;min-width:180px" placeholder="Buscar exercício…" value="${catalogoBusca}" oninput="catalogoBusca=this.value;document.getElementById('content').innerHTML=renderCatalogo()">
+      <select class="ca-search" style="flex:1;min-width:130px;height:36px" onchange="catalogoFiltroGrupo=this.value;document.getElementById('content').innerHTML=renderCatalogo()">${grupoOpts}</select>
+      <span style="font-size:12px;color:var(--ink3);align-self:center;white-space:nowrap">${ativos.length} ativos · ${EXERCICIOS_INATIVOS.size} desativados</span>
     </div>
-    ${ativos.length?`<div class="cat-grid">${rows(ativos)}</div>`:''}
-    ${inativos.length?`<div style="margin-top:16px">
-      <div style="font-size:12px;font-weight:600;color:var(--ink3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px">Desativados (${inativos.length})</div>
-      <div class="cat-grid">${rows(inativos)}</div>
-    </div>`:''}
-  </div>`;
-}
-function toggleExCatalogo(nome){
-  if(EXERCICIOS_INATIVOS.has(nome))EXERCICIOS_INATIVOS.delete(nome);
-  else EXERCICIOS_INATIVOS.add(nome);
-  const _listEl=document.querySelector('.alunos-list');
-  const _listScroll=_listEl?_listEl.scrollTop:0;
-  document.getElementById('content').innerHTML=renderCatalogo();
-  setupDragDrop();
-}
-function addExercicioCatalogo(){
-  const nome=prompt('Nome do novo exercício (ex: QUADRICEPS - NOVO EXERCÍCIO):');
-  if(!nome||!nome.trim())return;
-  const grupo=prompt('Grupo muscular:');
-  if(!grupo||!grupo.trim())return;
-  const n=nome.trim().toUpperCase();
-  const g=grupo.trim();
-  if(EXERCICIOS.find(e=>e.n===n)){alert('Exercício já existe no catálogo.');return;}
-  EXERCICIOS.push({n,g});
-  EXERCICIOS.sort((a,b)=>a.g.localeCompare(b.g)||a.n.localeCompare(b.n));
-  const _listEl=document.querySelector('.alunos-list');
-  const _listScroll=_listEl?_listEl.scrollTop:0;
-  document.getElementById('content').innerHTML=renderCatalogo();
-  setupDragDrop();
+    ${activeHtml}
+    ${inativoHtml}
+  </div>
+  `;
 }
 
+function renderCatModal(){
+  const ex=catalogoModalEx||{n:'',g:'',isNew:true};
+  const grupos=[...new Set(EXERCICIOS.map(e=>e.g))].sort();
+  const grupoOpts=grupos.map(g=>`<option value="${g}" ${ex.g===g?'selected':''}>${g}</option>`).join('');
+  const isNew=ex.isNew;
+  const root=document.getElementById('modal-root');
+  if(!root)return'';
+  root.innerHTML=`<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg')){catalogoModalEx=null;document.getElementById('modal-root').innerHTML='';document.getElementById('content').innerHTML=renderCatalogo()}">
+    <div class="modal-box" onclick="event.stopPropagation()" style="max-width:420px">
+      <div class="modal-handle"></div>
+      <div class="modal-hdr">
+        <div class="modal-title">${isNew?'Novo exercício':'Editar exercício'}</div>
+        <button class="modal-close" onclick="catalogoModalEx=null;document.getElementById('modal-root').innerHTML='';document.getElementById('content').innerHTML=renderCatalogo()">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px">
+        <div class="mf"><label class="ml">Nome do exercício</label>
+          <input class="mi" id="cat-nome-inp" value="${ex.n}" placeholder="GRUPO - APARELHO - EXERCÍCIO" oninput="catalogoModalEx.n=this.value.toUpperCase()">
+        </div>
+        <div class="mf"><label class="ml">Grupo muscular</label>
+          <select class="mi" style="height:38px" onchange="catalogoModalEx.g=this.value">
+            <option value="">— Selecionar —</option>
+            ${grupoOpts}
+          </select>
+        </div>
+        <div class="mf"><label class="ml">Ou grupo novo</label>
+          <input class="mi" placeholder="Ex: ANTEBRAÇO" oninput="catalogoModalEx.g=this.value.toUpperCase()">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal-can" onclick="catalogoModalEx=null;document.getElementById('modal-root').innerHTML='';document.getElementById('content').innerHTML=renderCatalogo()">Cancelar</button>
+        <button class="btn-modal-ok" onclick="salvarExCatalogo()">
+          ${isNew?'Adicionar ao catálogo':'Salvar alteração'}
+        </button>
+      </div>
+    </div>
+  </div>`;
+  return'';
+}
+
+function salvarExCatalogo(){
+  const ex=catalogoModalEx;
+  if(!ex||!ex.n.trim()||!ex.g.trim()){alert('Preencha nome e grupo.');return;}
+  const n=ex.n.trim().toUpperCase();
+  const g=ex.g.trim().toUpperCase();
+  if(ex.isNew){
+    if(EXERCICIOS.find(e=>e.n===n)){alert('Exercício já existe no catálogo.');return;}
+    EXERCICIOS.push({n,g});
+    EXERCICIOS.sort((a,b)=>a.g.localeCompare(b.g)||a.n.localeCompare(b.n));
+  } else {
+    // Editar — atualiza nome e grupo
+    const idx=EXERCICIOS.findIndex(e=>e.n===ex._orig||e.n===ex.n);
+    if(idx>=0){EXERCICIOS[idx]={n,g};}
+  }
+  // Persist inativos
+  localStorage.setItem('se7e_inativos',JSON.stringify([...EXERCICIOS_INATIVOS]));
+  catalogoModalEx=null;
+  document.getElementById('modal-root').innerHTML='';
+  document.getElementById('content').innerHTML=renderCatalogo();
+}
+
+function toggleExCatalogo(nome){
+  if(EXERCICIOS_INATIVOS.has(nome)) EXERCICIOS_INATIVOS.delete(nome);
+  else EXERCICIOS_INATIVOS.add(nome);
+  localStorage.setItem('se7e_inativos',JSON.stringify([...EXERCICIOS_INATIVOS]));
+  document.getElementById('content').innerHTML=renderCatalogo();
+}
+
+function addExercicioCatalogo(){
+  catalogoModalEx={n:'',g:'',isNew:true};
+  renderCatModal();
+}
 
 // ═══════════════════════════════════════════════════════
 // MÓDULO: PENDENTES — esboço feito, ficha incompleta
