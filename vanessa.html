@@ -1310,6 +1310,81 @@ function renderTreinos(){
   </div>`;
 }
 
+// ── CABEÇALHO EDITÁVEL DO PROGRAMA ──
+function renderCabecalhoPrograma(){
+  if(!alunoSel)return'';
+  const a=alunoSel;
+  const prog=getProg(a);
+  if(!prog)return'';
+  const ed=prog._editandoCabec||false;
+
+  if(!ed){
+    const restricoes=a.restricoes||'';
+    const proib=(a.exerc_proibidos||[]);
+    return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);padding:10px 14px;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:150px">
+        <div style="font-size:11px;font-weight:600;color:var(--ink2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="background:var(--bg);border:1px solid var(--bg3);border-radius:20px;padding:2px 10px">${a.objetivo||'—'}</span>
+          <span style="background:var(--bg);border:1px solid var(--bg3);border-radius:20px;padding:2px 10px">${a.nivel||'—'}</span>
+          <span style="background:var(--bg);border:1px solid var(--bg3);border-radius:20px;padding:2px 10px">${a.freq_semana||'—'}×/sem</span>
+          <span style="background:var(--bg);border:1px solid var(--bg3);border-radius:20px;padding:2px 10px">${a.estimulo_padrao||'Padrão'}</span>
+        </div>
+        ${restricoes?`<div style="font-size:11px;color:#B45309;margin-top:4px">⚠️ ${restricoes}</div>`:''}
+        ${proib.length?`<div style="font-size:11px;color:#991B1B;margin-top:2px">⛔ Proibidos: ${proib.map(e=>e.split(' - ').slice(-1)[0]).join(', ')}</div>`:''}
+        ${a.descricao?`<div style="font-size:11px;color:var(--ink3);margin-top:4px">📝 ${a.descricao}</div>`:''}
+      </div>
+      <button onclick="editarCabecalho()" style="font-size:11px;padding:4px 12px;border:1px solid var(--bg3);border-radius:8px;background:var(--bg);color:var(--ink3);cursor:pointer;flex-shrink:0">✏️ Editar</button>
+    </div>`;
+  }
+
+  // Modo edição
+  const objOpts=['Definicao','Hipertrofia Tensional','Hipertrofia Metabolica','Hipertrofia Inferior','Hipertrofia Superior','Fortalecimento','Perda de Peso','Reabilitacao','Cuidado Ortopedico','3 Idade','Adolescente','Gestante','Pos Parto','Performance Corrida','Performance Bike','Resistencia'].map(o=>`<option value="${o}" ${(a.objetivo||'')==o?'selected':''}>${o}</option>`).join('');
+  const nivOpts=['Iniciante','Intermediario','Avancado'].map(n=>`<option value="${n}" ${(a.nivel||'')==n?'selected':''}>${n}</option>`).join('');
+  const estOpts=['Padrao','Rest Pause','Drop Set','Bi Set','Circuito'].map(e=>`<option value="${e}" ${(a.estimulo_padrao||'')==e?'selected':''}>${e}</option>`).join('');
+
+  return`<div style="background:#FAFAF8;border:1.5px solid var(--purple-b);border-radius:var(--r);padding:12px 14px;margin-bottom:4px;display:flex;flex-direction:column;gap:10px">
+    <div style="font-size:12px;font-weight:600;color:var(--purple)">✏️ Editar cabeçalho do programa</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:110px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Objetivo</label>
+        <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.objetivo=this.value">${objOpts}</select></div>
+      <div style="flex:1;min-width:100px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Nível</label>
+        <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.nivel=this.value">${nivOpts}</select></div>
+      <div style="flex:1;min-width:80px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Freq/sem</label>
+        <input class="mi" type="number" min="1" max="7" value="${a.freq_semana||2}" style="height:34px;font-size:12px" onchange="alunoSel.freq_semana=parseInt(this.value)||2"></div>
+      <div style="flex:1;min-width:110px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Estímulo geral</label>
+        <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.estimulo_padrao=this.value">${estOpts}</select></div>
+    </div>
+    <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Restrições</label>
+      <input class="mi" style="height:34px;font-size:12px" value="${a.restricoes||''}" placeholder="Joelho: Desgaste · Lombar: Hernia…" onchange="alunoSel.restricoes=this.value"></div>
+    <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Descrição / Observações</label>
+      <input class="mi" style="height:34px;font-size:12px" value="${a.descricao||''}" placeholder="Observações gerais sobre o aluno…" onchange="alunoSel.descricao=this.value"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="salvarCabecalho()" style="flex:1;padding:8px;background:var(--purple);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">✓ Salvar</button>
+      <button onclick="cancelarCabecalho()" style="padding:8px 16px;background:none;border:1px solid var(--bg3);border-radius:8px;font-size:13px;color:var(--ink3);cursor:pointer">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+function editarCabecalho(){
+  const prog=getProg(alunoSel);
+  if(prog){prog._editandoCabec=true;}
+  const cp=document.querySelector('.col-prog');
+  if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
+}
+function salvarCabecalho(){
+  const prog=getProg(alunoSel);
+  if(prog){prog._editandoCabec=false;}
+  autoSave();
+  const cp=document.querySelector('.col-prog');
+  if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
+}
+function cancelarCabecalho(){
+  const prog=getProg(alunoSel);
+  if(prog){prog._editandoCabec=false;}
+  const cp=document.querySelector('.col-prog');
+  if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
+}
+
 function renderFichasArea(){
   const fs=getFichas(alunoSel);
   const tabsHtml=fs.map((f,i)=>{
@@ -1355,7 +1430,9 @@ function renderFichasArea(){
       </div>
     </div>`;
   }
-  return`<div class="fichas-tabs">${tabsHtml}<button class="btn-add-ficha" onclick="addFicha()" title="Nova ficha">+</button></div>${body}`;
+  return`<div class="fichas-tabs">${tabsHtml}<button class="btn-add-ficha" onclick="addFicha()" title="Nova ficha">+</button></div>
+  ${renderCabecalhoPrograma()}
+  ${body}`;
 }
 
 // ── NOTA INTERNA ──
@@ -1410,7 +1487,7 @@ function calcMatch(f){
   // Compara com o planejado no esboço
   let totalPlanejado=0, totalOk=0;
   const detalhes=f.esboço.map(es=>{
-    const planejado=(es.num_singles||0)+(es.num_duplas||0)*2+(es.num_trios||0)*3||(es.num_ex||1);
+    const planejado=(es.num_singles!=null||(es.num_duplas!=null)||(es.num_trios!=null))?((es.num_singles||0)+(es.num_duplas||0)*2+(es.num_trios||0)*3)||1:(es.num_ex||1);
     totalPlanejado+=planejado;
     // match por grupo (case insensitive partial)
     const gKey=es.g.toLowerCase();
@@ -1429,79 +1506,62 @@ function calcMatch(f){
 function renderEsboço(f){
   const aberto=sketchOpen[f.id]!==false;
   const temEsboço=f.esboço&&f.esboço.length>0;
-  const gruposDisponiveis=Object.keys(GRUPOS_INFO);
   const match=calcMatch(f);
   const pct=match?match.pct:0;
   const is100=pct===100;
   const barColor=pct===100?'var(--green)':pct>=70?'#D97706':'var(--purple)';
+  const gruposDisponiveis=Object.keys(GRUPOS_INFO);
 
   const rowsHtml=f.esboço&&f.esboço.length?f.esboço.map(e=>{
     const gi=getGrupoInfo(e.g);
     const gruposOpts=gruposDisponiveis.map(g=>`<option value="${g}" ${e.g===g?'selected':''}>${g}</option>`).join('');
     const estimulosOpts=['Padrão','Rest Pause','Drop Set','Bi-Set','Giant Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(e.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('');
-    const equipOpts=['Qualquer','Máquinas','Pesos livres','Cabos/Cross','Funcional'].map(s=>`<option value="${s}" ${(e.equip||'Qualquer')===s?'selected':''}>${s}</option>`).join('');
     const mdet=match?match.detalhes.find(d=>d.g===e.g):null;
-    const grupoOk=mdet&&mdet.real>=mdet.planejado;
-    const grupoPartial=mdet&&mdet.real>0&&mdet.real<mdet.planejado;
-    const hasExs=f.exs.length>0;
-    const statusDot=hasExs?(grupoOk?`<span title="${mdet.real}/${mdet.planejado} ✓" style="font-size:12px">✅</span>`:grupoPartial?`<span title="${mdet.real}/${mdet.planejado}" style="font-size:12px">🟡</span>`:`<span title="0 de ${(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||e.num_ex||1}" style="font-size:12px">⭕</span>`):'';
+    const statusDot=f.exs.length>0?(mdet&&mdet.real>=mdet.planejado?`<span style="font-size:12px">✅</span>`:(mdet&&mdet.real>0?`<span style="font-size:12px">🟡</span>`:`<span style="font-size:12px">⭕</span>`)):'';
+    const qtd=(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1);
 
-    // Stats from real data for this group
-    const refGroup=alunoSel&&window.CARGA_REF?Object.entries(window.CARGA_REF).filter(([n])=>n.startsWith(e.g)).slice(0,1):[];
-    const cargaHint=refGroup.length?` · ref ${refGroup[0][1]}kg`:'';
-
-    return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
-      <!-- Linha 1: grupo + status + equip -->
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="width:10px;height:10px;border-radius:50%;background:${gi.cor};flex-shrink:0"></span>
-        <select style="border:none;background:transparent;font-size:13px;font-weight:700;color:var(--ink);outline:none;cursor:pointer;appearance:none;flex:1;min-width:80px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">${gruposOpts}</select>
-        ${statusDot}
-        <select class="esboço-eq-sel" onchange="e_upd('${f.id}','${e.id}','equip',this.value)" title="Equipamento preferido">${equipOpts}</select>
-        <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')">×</button>
+    return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <!-- grupo -->
+      <span style="width:9px;height:9px;border-radius:50%;background:${gi.cor};flex-shrink:0"></span>
+      <select style="border:none;background:transparent;font-size:13px;font-weight:700;color:var(--ink);outline:none;cursor:pointer;appearance:none;flex:1;min-width:90px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">${gruposOpts}</select>
+      ${statusDot}
+      <!-- qtd exercícios -->
+      <div style="display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:3px 8px" title="Qtd de exercícios">
+        <input type="number" min="1" max="10" value="${qtd}" style="width:26px;border:none;background:transparent;font-size:13px;font-weight:700;color:var(--ink);outline:none;padding:0;text-align:center" oninput="e_upd('${f.id}','${e.id}','num_ex',parseInt(this.value)||1)">
+        <span style="font-size:10px;color:var(--ink3)">ex</span>
       </div>
-      <!-- Linha 2: estrutura (1x/2x/3x) -->
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span style="font-size:10px;color:var(--ink3);font-weight:500">Estrutura:</span>
-        <span class="esboço-param-blk" title="Individuais">1×<input type="number" min="0" max="6" value="${e.num_singles||0}" oninput="e_upd('${f.id}','${e.id}','num_singles',parseInt(this.value)||0)"></span>
-        <span class="esboço-param-blk azul" title="Duplas (bi-set)">2×<input type="number" min="0" max="4" value="${e.num_duplas||0}" oninput="e_upd('${f.id}','${e.id}','num_duplas',parseInt(this.value)||0)"></span>
-        <span class="esboço-param-blk roxo" title="Trios (tri-set)">3×<input type="number" min="0" max="3" value="${e.num_trios||0}" oninput="e_upd('${f.id}','${e.id}','num_trios',parseInt(this.value)||0)"></span>
-        <span style="color:var(--bg3);font-size:11px">|</span>
-        <span style="font-size:10px;color:var(--ink3);font-weight:500">Vol:</span>
-        <span class="esboço-param-blk" title="Séries"><input type="number" min="1" max="10" value="${e.s||3}" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)">s</span>
-        <span style="font-size:11px;color:var(--ink3)">×</span>
-        <span class="esboço-param-blk" title="Repetições"><input value="${e.r||'12'}" oninput="e_upd('${f.id}','${e.id}','r',this.value)" style="width:36px">rep</span>
-        <span style="color:var(--bg3);font-size:11px">|</span>
-        <span class="esboço-param-blk" title="Pausa (segundos)"><input type="number" min="0" max="300" step="15" value="${e.pausa||60}" oninput="e_upd('${f.id}','${e.id}','pausa',parseInt(this.value)||60)" style="width:32px">s⏱</span>
+      <!-- série × rep -->
+      <div style="display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:3px 7px">
+        <input type="number" min="1" max="10" value="${e.s||3}" style="width:22px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)">
+        <span style="font-size:10px;color:var(--ink3)">s×</span>
+        <input value="${e.r||'12'}" style="width:32px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center" oninput="e_upd('${f.id}','${e.id}','r',this.value)">
+        <span style="font-size:10px;color:var(--ink3)">rep</span>
       </div>
-      <!-- Linha 3: estímulo + obs -->
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-        <span style="font-size:10px;color:var(--ink3);font-weight:500">Estímulo:</span>
-        <select class="estimulo-sel" onchange="e_upd('${f.id}','${e.id}','estimulo',this.value)">${estimulosOpts}</select>
-        ${cargaHint?`<span style="font-size:10px;color:var(--ink3);background:var(--bg);padding:2px 7px;border-radius:20px;border:1px solid var(--bg3)">${cargaHint.trim()}</span>`:''}
+      <!-- descanso -->
+      <div style="display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:3px 7px" title="Descanso (s)">
+        <input type="number" min="0" max="300" step="15" value="${e.pausa||60}" style="width:28px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center" oninput="e_upd('${f.id}','${e.id}','pausa',parseInt(this.value)||60)">
+        <span style="font-size:10px;color:var(--ink3)">s⏱</span>
       </div>
-      <input class="esboço-obs-inp" placeholder="observação para este grupo…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)">
+      <!-- estímulo -->
+      <select style="border:1px solid var(--bg3);background:var(--bg);border-radius:6px;font-size:11px;color:var(--ink2);padding:4px 6px;outline:none;cursor:pointer" onchange="e_upd('${f.id}','${e.id}','estimulo',this.value)">${estimulosOpts}</select>
+      <!-- obs -->
+      <input style="flex:1;min-width:80px;padding:4px 8px;border:1px solid var(--bg3);border-radius:6px;font-size:11px;color:var(--ink2);background:var(--bg);outline:none" placeholder="obs…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)">
+      <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')">×</button>
     </div>`;
-  }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
+  }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar.</div>`;
 
-  const matchBadge=temEsboço?`
-    <div style="display:flex;align-items:center;gap:6px">
-      ${f.exs.length>0?`<div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
-      </div>
+  const totalPlan=temEsboço?f.esboço.reduce((a,e)=>a+((e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1)),0):0;
+  const matchBadge=temEsboço?`<div style="display:flex;align-items:center;gap:6px">
+    ${f.exs.length>0?`<div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div></div>
       <span style="font-size:11px;font-weight:700;color:${is100?'#059669':pct>=70?'#D97706':'var(--purple)'}">${is100?'✓ 100%':pct+'%'}</span>`
-      :`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1),0)} ex planejados</span>`}
-    </div>`:'' ;
+      :`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${totalPlan} ex planejados</span>`}
+  </div>`:'';
 
   return`<div class="esboço-banner" style="cursor:pointer" onclick="toggleSketch('${f.id}')">
     <div style="font-size:16px">${is100&&f.exs.length>0?'✅':'📐'}</div>
-    <div class="esboço-txt">
-      <strong>Esboço da ficha</strong>
-      ${temEsboço?`<span style="font-size:11px;font-weight:400;opacity:.8"> · ${f.esboço.length} grupo${f.esboço.length!==1?'s':''}</span>`:''}
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
-      ${matchBadge}
-      <span style="font-size:13px;color:var(--purple);transition:transform .2s;display:inline-block;${aberto?'transform:rotate(180deg)':''}">▾</span>
-    </div>
+    <div class="esboço-txt"><strong>Esboço</strong>${temEsboço?`<span style="font-size:11px;font-weight:400;opacity:.8"> · ${f.esboço.length} grupo${f.esboço.length!==1?'s':''}</span>`:''}</div>
+    <div style="display:flex;align-items:center;gap:8px">${matchBadge}<span style="font-size:13px;color:var(--purple);transition:transform .2s;display:inline-block;${aberto?'transform:rotate(180deg)':''}">▾</span></div>
   </div>
   ${aberto?`<div style="margin-bottom:4px">
     <div class="esboço-body">
@@ -1509,7 +1569,7 @@ function renderEsboço(f){
         <span class="esboço-hdr-txt">📐 Planejamento por grupo muscular</span>
         <button class="btn-add-grupo-esboço" onclick="e_add('${f.id}')">+ Grupo</button>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;padding:8px 12px">${rowsHtml}</div>
+      <div style="display:flex;flex-direction:column;gap:5px;padding:8px 12px">${rowsHtml}</div>
     </div>
     ${temEsboço?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:0 2px">
       <div style="flex:1;height:1px;background:var(--bg3)"></div>
@@ -2062,9 +2122,27 @@ function renderModal(){
         <div id="m-ex-warn" style="display:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r?'block':'none';})()};padding:9px 14px;border-radius:8px;font-size:12px;font-weight:500;border:1px solid;margin-top:-4px;background:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r&&r.tipo==='proibido'?'#FEF2F2':'#FFFBEB';})()};border-color:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r&&r.tipo==='proibido'?'#FECACA':'#FCD34D';})()};color:${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r&&r.tipo==='proibido'?'#991B1B':'#92400E';})()}">${(()=>{const r=alunoSel?getExRestrictions(ex.n):null;return r?r.msg:'';})()}</div>
         <div class="params-row">
           <div class="mf"><label class="ml">Séries</label><input class="mi" type="number" min="1" max="10" value="${ex.s}" oninput="modal.ex.s=parseInt(this.value)||4"></div>
-          <div class="mf"><label class="ml">Reps</label><input class="mi" value="${ex.r}" oninput="modal.ex.r=this.value" placeholder="12 ou 10-12"></div>
+          <div class="mf"><label class="ml">Reps${ex.tempo?'/Tempo':''}</label><input class="mi" value="${ex.r}" oninput="modal.ex.r=this.value" placeholder="${ex.tempo?'30s / 1min':'12 ou 10-12'}"></div>
           <div class="mf"><label class="ml">Descanso (s)</label><input class="mi" type="number" min="0" step="15" value="${ex.d||0}" oninput="modal.ex.d=parseInt(this.value)||0"></div>
-          <div class="mf"><label class="ml">Carga (kg)</label><input class="mi" type="number" step="0.5" placeholder="—" value="${ex.ca!=null?ex.ca:''}" oninput="modal.ex.ca=this.value?parseFloat(this.value):null"></div>
+          <div class="mf" style="${ex.tempo?'opacity:.35;pointer-events:none':''}"><label class="ml">Carga (kg)</label><input class="mi" type="number" step="0.5" placeholder="${window.CARGA_REF&&window.CARGA_REF[ex.n]?'ref: '+window.CARGA_REF[ex.n]+'kg':'—'}" value="${ex.ca!=null?ex.ca:''}" oninput="modal.ex.ca=this.value?parseFloat(this.value):null"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px">
+          <div class="mf" style="flex:1;min-width:120px">
+            <label class="ml">Estímulo</label>
+            <select class="mi" style="height:38px" oninput="modal.ex.estimulo=this.value">
+              ${['Padrão','Rest Pause','Drop Set','Bi-Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(ex.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div class="mf" style="flex:1;min-width:120px">
+            <label class="ml">Máquina / Aparelho</label>
+            <input class="mi" placeholder="Ex: Matrix, Tecnogym, Kinesis…" value="${ex.maquina||''}" oninput="modal.ex.maquina=this.value">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--ink2)">
+            <input type="checkbox" ${ex.tempo?'checked':''} onchange="modal.ex.tempo=this.checked;renderModal()" style="width:14px;height:14px;cursor:pointer">
+            Exercício por tempo (sem carga)
+          </label>
         </div>
         <div class="mf"><label class="ml">Observação</label>
           <input class="mi" placeholder="Ex: prefere amplitude parcial…" value="${ex.obs||''}" oninput="modal.ex.obs=this.value">
