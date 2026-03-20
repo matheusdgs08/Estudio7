@@ -1271,21 +1271,65 @@ function renderNotaInterna(f){
 }
 
 // ── ESBOÇO ──
+function calcMatch(f){
+  if(!f.esboço||!f.esboço.length) return null;
+  // Conta exercícios reais na ficha por grupo muscular
+  const real={};
+  f.exs.forEach(e=>{
+    if(e.tp==='s'){
+      const g=e.g||'?';
+      real[g]=(real[g]||0)+1;
+    } else if(e.tp==='g'||e.exs){
+      (e.exs||[]).forEach(ex=>{
+        const g=ex.g||'?';
+        real[g]=(real[g]||0)+1;
+      });
+    }
+  });
+  // Compara com o planejado no esboço
+  let totalPlanejado=0, totalOk=0;
+  const detalhes=f.esboço.map(es=>{
+    const planejado=es.num_ex||1;
+    totalPlanejado+=planejado;
+    // match por grupo (case insensitive partial)
+    const gKey=es.g.toLowerCase();
+    let realCount=0;
+    Object.entries(real).forEach(([rg,cnt])=>{
+      if(rg.toLowerCase().includes(gKey)||gKey.includes(rg.toLowerCase())) realCount+=cnt;
+    });
+    const ok=Math.min(realCount,planejado);
+    totalOk+=ok;
+    return{g:es.g,planejado,real:realCount,ok};
+  });
+  const pct=totalPlanejado>0?Math.round(totalOk/totalPlanejado*100):0;
+  return{pct,detalhes,totalPlanejado,totalOk};
+}
+
 function renderEsboço(f){
   const aberto=sketchOpen[f.id]!==false;
   const temEsboço=f.esboço&&f.esboço.length>0;
   const gruposDisponiveis=Object.keys(GRUPOS_INFO);
+  const match=calcMatch(f);
+  const pct=match?match.pct:0;
+  const is100=pct===100;
+  const barColor=pct===100?'var(--green)':pct>=70?'#D97706':'var(--purple)';
 
   const rowsHtml=f.esboço&&f.esboço.length?f.esboço.map(e=>{
     const gi=getGrupoInfo(e.g);
     const gruposOpts=gruposDisponiveis.map(g=>`<option value="${g}" ${e.g===g?'selected':''}>${g}</option>`).join('');
     const estimulosOpts=['Padrão','Rest Pause','Drop Set','Bi-Set','Giant Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(e.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('');
+    const mdet=match?match.detalhes.find(d=>d.g===e.g):null;
+    const grupoOk=mdet&&mdet.real>=mdet.planejado;
+    const grupoPartial=mdet&&mdet.real>0&&mdet.real<mdet.planejado;
+    const hasExs=f.exs.length>0;
+    const statusDot=hasExs?(grupoOk?`<span title="${mdet.real}/${mdet.planejado} ex ✓" style="font-size:13px;line-height:1">✅</span>`:grupoPartial?`<span title="${mdet.real}/${mdet.planejado} ex" style="font-size:13px;line-height:1">🟡</span>`:`<span title="0/${e.num_ex||1} ex" style="font-size:13px;line-height:1">⭕</span>`):'';
     return`<div class="esboço-row" style="flex-wrap:wrap;gap:6px">
       <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:200px">
         <span class="esboço-grupo-dot" style="background:${gi.cor};border:1.5px solid ${gi.tc}40;flex-shrink:0"></span>
         <select class="esboço-grupo-nm" style="border:none;background:transparent;font-size:13px;font-weight:600;color:var(--ink);outline:none;cursor:pointer;appearance:none;padding:0;min-width:90px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">
           ${gruposOpts}
         </select>
+        ${statusDot}
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:3px" title="Nº de exercícios para este grupo">
@@ -1306,14 +1350,23 @@ function renderEsboço(f){
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
 
+  const matchBadge=temEsboço&&f.exs.length>0?`
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
+      </div>
+      <span style="font-size:11px;font-weight:700;color:${is100?'#059669':pct>=70?'#D97706':'var(--purple)'}">${is100?'✓ 100%':pct+'%'}</span>
+    </div>`:
+    temEsboço&&!aberto?`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_ex||1),0)} ex planejados</span>`:'';
+
   return`<div class="esboço-banner" style="cursor:pointer" onclick="toggleSketch('${f.id}')">
-    <div style="font-size:16px">📐</div>
+    <div style="font-size:16px">${is100&&f.exs.length>0?'✅':'📐'}</div>
     <div class="esboço-txt">
       <strong>Esboço da ficha</strong>
       ${temEsboço?`<span style="font-size:11px;font-weight:400;opacity:.8"> · ${f.esboço.length} grupo${f.esboço.length!==1?'s':''}</span>`:''}
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      ${temEsboço&&!aberto?`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_ex||1),0)} ex planejados</span>`:''}
+      ${matchBadge}
       <span style="font-size:13px;color:var(--purple);transition:transform .2s;display:inline-block;${aberto?'transform:rotate(180deg)':''}">▾</span>
     </div>
   </div>
