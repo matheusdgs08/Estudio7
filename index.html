@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#FAF8F4">
-<title>Estúdio Se7e — Professor</title>
+<title>Estudio 7 — Professor</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -424,7 +424,7 @@ function R(){
 }
 function startRel(){clearInterval(window._rt);window._rt=setInterval(()=>{const e=document.getElementById('reloj');if(e)e.textContent=relogio();else clearInterval(window._rt);},1000);}
 
-function rLogin(){return`<div class="lshell"><div class="lbox"><div class="llogo">Estúdio Se7e</div><div class="lsub">App do Professor</div>${S.erro?`<div class="lerr">${S.erro}</div>`:''}<div class="lf"><label class="ll">E-mail</label><input class="li" type="email" autocomplete="email" placeholder="seu@estudio7.com.br" value="${S.email}" oninput="S.email=this.value" onkeydown="if(event.key==='Enter')login()"></div><div class="lf"><label class="ll">Senha</label><input class="li" type="password" autocomplete="current-password" placeholder="••••••••" value="${S.senha}" oninput="S.senha=this.value" onkeydown="if(event.key==='Enter')login()"></div><button class="btn-lg" onclick="login()">Entrar</button><div class="lhint">Demo:<br><b>rafael@estudio7.com.br</b><br><b>Prof123</b></div></div></div>`;}
+function rLogin(){return`<div class="lshell"><div class="lbox"><div class="llogo">Estudio 7</div><div class="lsub">App do Professor</div>${S.erro?`<div class="lerr">${S.erro}</div>`:''}<div class="lf"><label class="ll">E-mail</label><input class="li" type="email" autocomplete="email" placeholder="seu@estudio7.com.br" value="${S.email}" oninput="S.email=this.value" onkeydown="if(event.key==='Enter')login()"></div><div class="lf"><label class="ll">Senha</label><input class="li" type="password" autocomplete="current-password" placeholder="••••••••" value="${S.senha}" oninput="S.senha=this.value" onkeydown="if(event.key==='Enter')login()"></div><button class="btn-lg" onclick="login()">Entrar</button><div class="lhint">Demo:<br><b>rafael@estudio7.com.br</b><br><b>Prof123</b></div></div></div>`;}
 
 function login(){if(S.email===S.prof.email&&S.senha===S.prof.senha){S.logado=true;S.erro='';S.tela='ponto';buscaLoc();R();}else{S.erro='E-mail ou senha incorretos.';R();}}
 function logout(){if(S.dentro){S.regs.push({tp:'s',h:now(),l:S.loc||'—',w:S.locErr});S.dentro=false;}S.logado=false;S.email='';S.senha='';S.regs=[];S.dentro=false;clearInterval(window._rt);R();}
@@ -436,7 +436,7 @@ function rShell(){
   if(S.rel)return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">${rRel()}${S.mex?rModalEx():''}</div>`;
   return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
     <div class="topbar">
-      <div class="tlogo">Estúdio Se7e</div>
+      <div class="tlogo">Estudio 7</div>
       <div style="display:flex;align-items:center;gap:8px">
         <div class="tav">RC</div>
         <button class="btn-out" onclick="logout()">Sair</button>
