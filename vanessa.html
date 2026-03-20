@@ -93,9 +93,9 @@ button{cursor:pointer}
 .ficha-tab.comparing{color:var(--blue);border-bottom:2.5px solid var(--blue)}
 
 /* botão de remover ficha — aparece no hover da tab */
-.tab-del{display:none;position:absolute;top:6px;right:2px;width:16px;height:16px;border-radius:50%;background:var(--bg3);border:none;font-size:10px;color:var(--ink3);align-items:center;justify-content:center;line-height:1;z-index:2}
-.ficha-tab:hover .tab-del{display:flex}
-.tab-del:hover{background:var(--red-l);color:var(--red)}
+.tab-del{display:flex;position:relative;margin-left:5px;width:18px;height:18px;border-radius:50%;background:transparent;border:1px solid transparent;font-size:13px;color:var(--ink3);align-items:center;justify-content:center;line-height:1;z-index:2;opacity:.5;flex-shrink:0;transition:all .15s}
+.ficha-tab:hover .tab-del,.ficha-tab.on .tab-del{opacity:1}
+.tab-del:hover{background:var(--red-l);color:var(--red);border-color:var(--red-b);opacity:1}
 
 .btn-add-ficha{margin-left:auto;padding:0 10px;font-size:22px;color:var(--ink3);background:none;border:none;cursor:pointer;flex-shrink:0;line-height:1}
 .btn-add-ficha:hover{color:var(--gold)}
@@ -727,14 +727,19 @@ function renderModal(){
   // CONFIRMAR REMOÇÃO DE FICHA
   if(modal.type==='del-ficha'){
     const ficha=getFichas(alunoSel).find(f=>f.id===modal.fichaId);
+    const numExs=ficha?ficha.exs.reduce((a,e)=>a+(e.tp==='s'?1:e.exs.length),0):0;
     r.innerHTML=`<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
       <div class="confirm-box" onclick="event.stopPropagation()">
         <div class="confirm-ico">🗑</div>
         <div class="confirm-title">Remover ${ficha?ficha.nm:'esta ficha'}?</div>
-        <div class="confirm-sub">Todos os exercícios desta ficha serão removidos permanentemente. Esta ação não pode ser desfeita.</div>
+        <div style="background:var(--red-l);border:1.5px solid var(--red-b);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:#991B1B;line-height:1.6;text-align:left">
+          <strong>⚠ Esta ação é permanente e não pode ser desfeita.</strong><br>
+          ${numExs>0?`Serão removidos permanentemente <strong>${numExs} exercício${numExs!==1?'s':''}</strong> desta ficha.`:'A ficha está vazia e será removida.'}
+        </div>
+        <div class="confirm-sub">Após clicar em <strong>Remover</strong>, não há como recuperar os dados.</div>
         <div class="confirm-btns">
           <button class="btn-confirm-can" onclick="fecharModal()">Cancelar</button>
-          <button class="btn-confirm-del" onclick="confirmarDelFicha()">Remover ficha</button>
+          <button class="btn-confirm-del" onclick="confirmarDelFicha()">Remover definitivamente</button>
         </div>
       </div>
     </div>`;
