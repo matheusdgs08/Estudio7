@@ -396,7 +396,19 @@ let S={
     {id:2,nm:'Renata Yoshihara',mat:2326,h:'06:00',tr:'Treino B',sq:2,done:false,rest:'',obs_p:'',cont:false,cmot:'',curg:'normal',ti:{nm:'Treino B',st:'Padrão',at:'05:55',bl:[{tp:'s',ex:{id:'b1',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'peitoral',s:'4',r:'12',d:'90',ca:'14',cn:'14',obs:'',pref:'',sol:null}},{tp:'g',lb:'Dupla',exs:[{id:'b2',n:'TRICEPS - PULLEY BARRA RETA',g:'triceps',s:'3',r:'12',d:'0',ca:'18',cn:'18',obs:'',pref:'',sol:null},{id:'b3',n:'OMBRO - ELEVAÇÃO LATERAL',g:'ombro',s:'3',r:'15',d:'60',ca:'5',cn:'5',obs:'',pref:'Prefere executar sentada',sol:null}]},{tp:'s',ex:{id:'b4',n:'POSTERIOR - CADEIRA FLEXORA',g:'posterior',s:'3',r:'15',d:'60',ca:'25',cn:'25',obs:'',pref:'',sol:null}}]}},
     {id:3,nm:'Fabio Bonomi',mat:2504,h:'07:00',tr:'Treino A',sq:1,done:false,rest:'',obs_p:'',cont:false,cmot:'',curg:'normal',ti:{nm:'Treino A',st:'Padrão',at:'06:55',bl:[{tp:'s',ex:{id:'c1',n:'QUADRICEPS - LEG PRESS 45',g:'quadriceps',s:'4',r:'12',d:'90',ca:'100',cn:'100',obs:'',pref:'',sol:null}},{tp:'s',ex:{id:'c2',n:'GLUTEO - MESA FLEXORA',g:'gluteo',s:'3',r:'15',d:'60',ca:'30',cn:'30',obs:'',pref:'',sol:null}}]}}
   ],
-  hist:[{data:'Quinta, 12 mar',al:[{nm:'Carlos Mendes',mat:2481,h:'06:00',tr:'Treino C',done:true},{nm:'Lucia Fernandes',mat:2390,h:'06:00',tr:'Treino A',done:true}],pt:{e:'05:52',s:'12:18',t:'6h 26min'}},{data:'Quarta, 11 mar',al:[{nm:'Ana Paula Tanaka',mat:2660,h:'06:00',tr:'Treino B',done:true},{nm:'Renata Yoshihara',mat:2326,h:'07:00',tr:'Treino A',done:true}],pt:{e:'05:48',s:'11:55',t:'6h 07min'}}]
+  histTab:'aulas',
+  hist:[
+    {data:'Quinta, 12 mar',diaSemana:'Qui',al:[{nm:'Carlos Mendes',mat:2481,h:'06:00',tr:'Treino C',done:true},{nm:'Lucia Fernandes',mat:2390,h:'06:00',tr:'Treino A',done:true}],
+     pt:{regs:[{tp:'e',h:'05:52',lbl:'Entrada'},{tp:'i',h:'09:15',lbl:'Início intervalo'},{tp:'r',h:'09:57',lbl:'Retorno'},{tp:'s',h:'12:18',lbl:'Saída'}],total:'6h 26min',intervalo:'42min',trab_liquido:'5h 44min'}},
+    {data:'Quarta, 11 mar',diaSemana:'Qua',al:[{nm:'Ana Paula Tanaka',mat:2660,h:'06:00',tr:'Treino B',done:true},{nm:'Renata Yoshihara',mat:2326,h:'07:00',tr:'Treino A',done:true}],
+     pt:{regs:[{tp:'e',h:'05:48',lbl:'Entrada'},{tp:'i',h:'09:05',lbl:'Início intervalo'},{tp:'r',h:'09:40',lbl:'Retorno'},{tp:'s',h:'11:55',lbl:'Saída'}],total:'6h 07min',intervalo:'35min',trab_liquido:'5h 32min'}},
+    {data:'Terça, 10 mar',diaSemana:'Ter',al:[{nm:'Fabio Bonomi',mat:2504,h:'06:00',tr:'Treino A',done:true},{nm:'Mariana Costa',mat:2512,h:'07:00',tr:'Treino B',done:true}],
+     pt:{regs:[{tp:'e',h:'05:50',lbl:'Entrada'},{tp:'i',h:'09:10',lbl:'Início intervalo'},{tp:'r',h:'09:45',lbl:'Retorno'},{tp:'s',h:'12:05',lbl:'Saída'}],total:'6h 15min',intervalo:'35min',trab_liquido:'5h 40min'}},
+    {data:'Segunda, 09 mar',diaSemana:'Seg',al:[{nm:'Carlos Mendes',mat:2481,h:'06:00',tr:'Treino B',done:true}],
+     pt:{regs:[{tp:'e',h:'05:55',lbl:'Entrada'},{tp:'s',h:'12:10',lbl:'Saída'}],total:'6h 15min',intervalo:null,trab_liquido:'6h 15min'}},
+    {data:'Sexta, 07 mar',diaSemana:'Sex',al:[{nm:'Renata Yoshihara',mat:2326,h:'06:00',tr:'Treino C',done:true},{nm:'Paulo Tanaka',mat:2490,h:'07:00',tr:'Treino A',done:false}],
+     pt:{regs:[{tp:'e',h:'05:45',lbl:'Entrada'},{tp:'i',h:'09:00',lbl:'Início intervalo'},{tp:'r',h:'09:50',lbl:'Retorno'},{tp:'s',h:'12:00',lbl:'Saída'}],total:'6h 15min',intervalo:'50min',trab_liquido:'5h 25min'}},
+  ]
 };
 
 function gex(a){const r=[];a.ti.bl.forEach(b=>{if(b.tp==='s')r.push(b.ex);else b.exs.forEach(e=>r.push(e));});return r;}
@@ -563,8 +575,91 @@ function rRel(){const a=S.rel;const ti=a.ti;let n=0;const tot=ti.bl.reduce((acc,
 
 function rModalEx(){const a=S.rel;if(!a)return'';const ex=fex(a,S.mex);if(!ex)return'';const isd=ex.ca==='—';const ch=!isd&&ex.cn!==ex.ca;let sh='';if(hs(ex)){sh=`<div class="solsent">✓ Solicitação (${ex.sol.tipo}) enviada</div>`;}else if(S.sf){const itr=S.sf.tipo==='troca';sh=`<div class="solfrm"><div style="font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:8px">${itr?'Trocar exercício':'Remover exercício'}</div>${itr?`<input class="solinp" placeholder="Exercício sugerido…" oninput="S.sf.sugestao=this.value" value="${S.sf.sugestao||''}">`:''}<textarea class="mta2" rows="3" placeholder="Motivo…" onchange="S.sf.motivo=this.value">${S.sf.motivo||''}</textarea><div class="solacts"><button class="btn-solenv" onclick="const e=fex(S.rel,S.mex);if(e&&S.sf){e.sol={...S.sf,sent:true};S.sf=null;R();}">Enviar para Vanessa</button><button class="btn-solcan" onclick="S.sf=null;R()">Cancelar</button></div></div>`;}else{sh=`<div class="solbtns"><button class="solbtn sb-tr" onclick="S.sf={tipo:'troca',sugestao:'',motivo:''};R()">↔ Trocar exercício</button><button class="solbtn sb-rm" onclick="S.sf={tipo:'remover',sugestao:'',motivo:''};R()">✕ Solicitar remoção</button></div>`;}return`<div class="mexovl" onclick="if(event.target.classList.contains('mexovl')){S.mex=null;S.sf=null;R();}"><div class="mexbox" onclick="event.stopPropagation()"><div style="padding:10px 0 0"><div class="mhandle"></div></div><div class="mexhdr"><div><div class="mextitle">${ex.n}</div><div class="mexsub">${ex.g} · ${ex.s}×${ex.r}${ex.d!=='0'?' · '+ex.d+'s':''}</div></div><button class="mexclose" onclick="S.mex=null;S.sf=null;R()">✕</button></div><div class="mexbody">${ex.pref?`<div class="pfbox"><span style="font-size:14px;color:var(--gold)">★</span><span>${ex.pref}</span></div>`:''} ${!isd?`<div class="mexsec"><div class="mexlbl">Carga</div><div class="crow"><div class="cf"><div class="cfl">Anterior</div><div class="cfs">${ex.ca}</div></div><div class="cfa">→</div><div class="cf"><div class="cfl">Nova</div><input class="cfi ${ch?'ch':''}" value="${ex.cn}" inputmode="decimal" onchange="const e=fex(S.rel,S.mex);if(e){e.cn=stripKg(this.value);this.classList.toggle('ch',e.cn!==e.ca);}"></div>${ch?`<div style="font-size:13px;color:#059669;align-self:flex-end;padding-bottom:8px">✓</div>`:''}</div></div>`:`<div style="font-size:13px;color:var(--ink3);font-style:italic">Sem carga registrada.</div>`}<div class="mexsec"><div class="mexlbl">Observação</div><textarea class="mta2" rows="3" placeholder="Algo específico desta aula…" onchange="const e=fex(S.rel,S.mex);if(e)e.obs=this.value">${ex.obs}</textarea></div><div class="mexsec"><div class="mexlbl">Solicitações</div>${sh}</div></div><div class="mexfoot"><button class="btn-conc" onclick="S.mex=null;S.sf=null;R()">Concluído</button></div></div></div>`;}
 
-function rHist(){return`<div><div class="ph"><div class="peyebrow">Professor · Rafael Caires</div><div class="ptitle">Histórico</div><div class="psub">Relatórios e pontos anteriores</div></div><div class="scroll">${S.hist.map((d,i)=>{const op=S.hexp[i]!==false;const p=d.al.filter(a=>!a.done).length;return`<div class="hday"><div class="hdhdr" onclick="S.hexp[${i}]=S.hexp[${i}]===false;R()"><div><div class="hddata">${d.data}</div><div class="hdsub">${d.al.length} aulas · ponto ${d.pt.e}–${d.pt.s} (${d.pt.t})</div></div><div style="display:flex;align-items:center;gap:6px">${p?`<span class="sb sb-p">${p} pend.</span>`:`<span class="sb sb-d">✓ Completo</span>`}<span style="font-size:16px;color:var(--bg3);${op?'display:inline-block;transform:rotate(90deg)':''}">›</span></div></div>${op?`<div class="hdbody">${d.al.map(a=>`<div class="haula"><div class="haav ${avc(a.nm)}">${ini(a.nm)}</div><div class="hainfo"><div class="hanome">${a.nm}</div><div class="hameta">${a.h} · ${a.tr}</div></div><span class="hast ${a.done?'hast-ok':'hast-p'}">${a.done?'✓ Feito':'Pendente'}</span></div>`).join('')}</div>`:''}</div>`;}).join('')}</div></div>`;}
+function rHist(){
+  const tab=S.histTab||'aulas';
+  // Resumo da semana (ponto)
+  const totalMin=S.hist.filter(d=>d.pt).reduce((acc,d)=>{
+    const [h,m]=d.pt.trab_liquido.replace('h ','h').replace('min','').split('h');
+    return acc+(parseInt(h)*60+parseInt(m||0));
+  },0);
+  const hS=Math.floor(totalMin/60),mS=totalMin%60;
+  const semanaStr=`${hS}h ${String(mS).padStart(2,'0')}min`;
 
+  const DOTCLS={e:'pri-e',i:'pri-w',r:'pri-e',s:'pri-s'};
+  const DOTICO={e:'▶',i:'⏸',r:'▶',s:'■'};
+
+  const diasHtml=S.hist.map((d,i)=>{
+    const op=S.hexp[i]!==false;
+    const pAulas=d.al.filter(a=>!a.done).length;
+
+    const aulasBody=`<div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px">
+      ${d.al.map(a=>`<div class="haula"><div class="haav ${avc(a.nm)}">${ini(a.nm)}</div>
+        <div class="hainfo"><div class="hanome">${a.nm}</div><div class="hameta">${a.h} · ${a.tr}</div></div>
+        <span class="hast ${a.done?'hast-ok':'hast-p'}">${a.done?'✓ Feito':'Pendente'}</span>
+      </div>`).join('')}
+    </div>`;
+
+    const ptRegsHtml=d.pt.regs.map((r,ri)=>{
+      const isLast=ri===d.pt.regs.length-1;
+      return`<div style="display:flex;gap:10px;align-items:stretch">
+        <div style="display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0">
+          <div class="prico ${DOTCLS[r.tp]}" style="width:28px;height:28px;font-size:12px;flex-shrink:0">${DOTICO[r.tp]}</div>
+          ${!isLast?`<div style="flex:1;width:2px;background:var(--bg3);margin:2px auto 0"></div>`:''}
+        </div>
+        <div style="flex:1;padding:2px 0 ${isLast?'2':'12'}px">
+          <div style="font-size:11px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">${r.lbl}</div>
+          <div style="font-size:15px;font-weight:600;color:var(--ink);margin-top:1px">${r.h}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const pontoBody=`<div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+      ${ptRegsHtml}
+      <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:var(--rs);padding:10px 14px;display:flex;flex-direction:column;gap:6px;margin-top:2px">
+        ${d.pt.intervalo?`<div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;color:var(--ink3)">⏸ Intervalo</span>
+          <span style="font-size:13px;font-weight:600;color:#D97706">${d.pt.intervalo}</span>
+        </div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;${d.pt.intervalo?'border-top:1px solid var(--bg3);padding-top:6px':''}">
+          <span style="font-size:14px;font-weight:600;color:var(--ink)">✓ Total trabalhado</span>
+          <span style="font-size:18px;font-weight:500;color:var(--ink)">${d.pt.trab_liquido}</span>
+        </div>
+      </div>
+    </div>`;
+
+    return`<div class="hday">
+      <div class="hdhdr" onclick="S.hexp[${i}]=S.hexp[${i}]===false;R()">
+        <div>
+          <div class="hddata">${d.data}</div>
+          <div class="hdsub">${d.al.length} aula${d.al.length>1?'s':''} · ${d.pt.trab_liquido} trabalhados</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${tab==='aulas'?(pAulas?`<span class="sb sb-p">${pAulas} pend.</span>`:`<span class="sb sb-d">✓ OK</span>`):
+            `<span style="font-size:13px;font-weight:600;color:var(--green)">${d.pt.trab_liquido}</span>`}
+          <span style="font-size:16px;color:var(--bg3);${op?'display:inline-block;transform:rotate(90deg)':''}">›</span>
+        </div>
+      </div>
+      ${op?(tab==='aulas'?aulasBody:pontoBody):''}
+    </div>`;
+  }).join('');
+
+  return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+    <div class="ph">
+      <div class="peyebrow">Professor · Rafael Caires</div>
+      <div class="ptitle">Histórico</div>
+    </div>
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:10px 16px;display:flex;gap:8px;flex-shrink:0">
+      <button onclick="S.histTab='aulas';R()" style="flex:1;padding:9px;border-radius:var(--rs);font-size:13px;font-weight:${tab==='aulas'?'600':'400'};border:${tab==='aulas'?'2px solid var(--ink)':'1.5px solid var(--bg3)'};background:${tab==='aulas'?'var(--ink)':'transparent'};color:${tab==='aulas'?'var(--wh)':'var(--ink3)'}">📋 Aulas</button>
+      <button onclick="S.histTab='ponto';R()" style="flex:1;padding:9px;border-radius:var(--rs);font-size:13px;font-weight:${tab==='ponto'?'600':'400'};border:${tab==='ponto'?'2px solid var(--ink)':'1.5px solid var(--bg3)'};background:${tab==='ponto'?'var(--ink)':'transparent'};color:${tab==='ponto'?'var(--wh)':'var(--ink3)'}">⏱ Ponto</button>
+    </div>
+    ${tab==='ponto'?`<div style="background:var(--gold-l);border-bottom:1px solid rgba(184,151,90,.2);padding:10px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div style="font-size:12px;color:var(--gold-d);font-weight:600">Semana atual · Total líquido</div>
+      <div style="font-size:18px;font-weight:600;color:var(--gold-d)">${semanaStr}</div>
+    </div>`:''}
+    <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch">
+      <div class="scroll">${diasHtml}</div>
+    </div>
+  </div>`;}
 function rMeusDados(){const d=S.dados;const dv=diasParaVencer(d.contrato.vigente.vencimento);const vCls=dv<=30?'vc-r':dv<=60?'vc-w':'vc-ok';const vTxt=dv<=30?`⚠ Vence em <b>${dv} dias</b> — renove urgente!`:dv<=60?`⚠ Vence em <b>${dv} dias</b> — fique atento.`:`✓ Vigente por mais <b>${dv} dias</b>`;function fld(lb,val,k){if(S.mdEdit)return`<div class="fld"><div class="flbl">${lb}</div><input class="finp" value="${val}" onchange="S.dados['${k}']=this.value"></div>`;return`<div class="fld"><div class="flbl">${lb}</div><div class="fval">${val}</div></div>`;}const vsHtml=d.contrato.versoes.map((v,i)=>`<div class="hvrow ${v.isFinal?'final':''}"><span style="font-size:16px">📄</span><div class="hvinfo"><div class="hvnome">${v.nome}</div><div class="hvmeta">Enviado em ${v.data}</div></div><span class="hvbdg ${v.isFinal?'hvb-ok':'hvb-v'}">${v.isFinal?'✓ Final':v.current?'Atual':'v'+(i+1)}</span><button style="font-size:12px;padding:4px 10px;border-radius:20px;border:1px solid var(--bg3);background:transparent;color:var(--ink3)">Ver</button></div>`).join('');return`<div style="display:flex;flex-direction:column;height:100%;overflow:hidden"><div class="mdhdr"><button class="btn-bk" onclick="">←</button><div class="mdtitle">Meus dados</div><button class="btn-edit ${S.mdEdit?'on':''}" onclick="S.mdEdit=!S.mdEdit;R()">${S.mdEdit?'Salvar':'Editar'}</button></div><div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"><div class="scroll"><div class="card"><div class="chdr"><div class="ctitle">👤 Dados pessoais</div></div><div class="cbody" style="display:flex;flex-direction:column;gap:12px">${fld('Nome completo',d.nome,'nome')}<div class="fldrow">${fld('RG',d.rg,'rg')}${fld('CPF',d.cpf,'cpf')}</div>${fld('Endereço',d.endereco,'endereco')}${fld('Chave PIX',d.pix,'pix')}${S.mdEdit?`<div style="font-size:12px;color:var(--ink3);background:var(--bg);border-radius:var(--rs);padding:10px 12px;line-height:1.5">💡 Alterações são revisadas pelo admin antes de serem aplicadas.</div>`:''}</div></div><div class="card"><div class="chdr"><div class="ctitle">🕐 Horário de trabalho</div><span style="font-size:12px;color:var(--ink3)">Definido pela gestão</span></div><div class="cbody" style="display:flex;flex-direction:column;gap:6px">${d.horarios.map(h=>`<div class="htag"><span class="hdia">${h.dia}</span><span class="hhora">${h.hora}</span><span class="hbdg ${h.ativo?'hb-ok':'hb-f'}">${h.ativo?'✓':'Folga'}</span></div>`).join('')}</div></div><div class="card"><div class="chdr"><div class="ctitle">📋 Contrato de estágio ${dv<=60?`<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;${dv<=30?'background:#FEF2F2;color:#991B1B;border:1px solid #FECACA':'background:#FFFBEB;color:#92400E;border:1px solid #FCD34D'}">${dv<=30?'Urgente':'Atenção'}</span>`:''}</div></div><div class="cbody" style="display:flex;flex-direction:column;gap:12px"><div class="venc-chip ${vCls}">${vTxt}</div><div><div class="flbl" style="margin-bottom:6px">Contrato vigente</div><div class="cv-box"><span style="font-size:22px">📄</span><div class="cv-info"><div class="cv-nome">${d.contrato.vigente.nome}</div><div class="cv-meta">Vigência: ${d.contrato.vigente.vigencia} · Vence: ${new Date(d.contrato.vigente.vencimento+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div></div><button style="font-size:12px;padding:6px 14px;border:1px solid var(--bg3);border-radius:20px;background:transparent;color:var(--ink2)">Ver</button></div></div><div><div class="flbl" style="margin-bottom:6px">Enviar nova versão</div><label class="uzone-mini ${S.mdContratoArq?'tem':''}"><div style="font-size:${S.mdContratoArq?'13':'20'}px;margin-bottom:4px">${S.mdContratoArq?`📄 ${S.mdContratoArq.nome}`:'📎'}</div>${S.mdContratoArq?`<div style="font-size:12px;color:var(--gold-d)">Pronto para enviar</div>`:`<div style="font-size:13px;font-weight:600;color:var(--ink2)">Selecionar arquivo PDF</div><div style="font-size:12px;color:var(--ink3);margin-top:2px">Nova versão do contrato</div>`}<input type="file" accept=".pdf" onchange="const f=this.files[0];if(f){S.mdContratoArq={nome:f.name};R();}"></label>${S.mdContratoArq?`<button class="btn-env" onclick="(function(){const n=S.dados.contrato.versoes.length+1;const hj=new Date().toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});S.dados.contrato.versoes.forEach(v=>v.current=false);S.dados.contrato.versoes.push({id:'v'+n,nome:S.mdContratoArq.nome,data:hj,isFinal:false,current:true});S.dados.contrato.vigente.nome=S.mdContratoArq.nome;S.mdContratoArq=null;R();})()" >Enviar nova versão</button>`:''}</div><div><div style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0" onclick="S.mdHistAberto=!S.mdHistAberto;R()"><span style="font-size:14px;color:var(--ink3);${S.mdHistAberto?'display:inline-block;transform:rotate(90deg)':''}">›</span><span style="font-size:13px;color:var(--ink3)">Histórico de versões (${d.contrato.versoes.length})</span></div>${S.mdHistAberto?`<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${vsHtml}</div>`:''}</div></div></div></div></div></div>`;}
 
 S.hist.forEach((_,i)=>S.hexp[i]=false);
