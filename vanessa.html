@@ -1122,6 +1122,7 @@ function render(){
     modulo==='catalogo'?renderCatalogo():
     modulo==='pendentes'?renderPendentes():
     modulo==='historico'?renderHistorico():
+    modulo==='avaliacao'?renderAvaliacao():
     `<div class="empty-state"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div></div>`;
   setupDragDrop();
   const _newListEl=document.querySelector('.alunos-list');
@@ -2443,6 +2444,381 @@ function verFichaHistorico(alunoId,progId,fichaId){
     const tmp=a.programas[0];a.programas[0]=a.programas[progIdx];a.programas[progIdx]=tmp;
   }
   setMod('treinos',document.querySelector('.sb-item'));
+}
+
+
+// ══════════════════════════════════════════════════════════
+// MÓDULO AVALIAÇÃO FÍSICA
+// ══════════════════════════════════════════════════════════
+let avalAluno = null;          // aluno selecionado na avaliação
+let avalTab = 'lista';         // lista | form | anamnese | historico
+let avalForm = {};             // formulário ativo
+let avalAnamForm = {};         // anamnese ativa
+
+function initAvalForm(){
+  return {
+    id: uid(), data: new Date().toISOString().slice(0,10),
+    peso: '', altura: '', imc: '',
+    // Dobras 7 (protocolo Pollock)
+    peitoral:'', abdominal:'', coxa:'', triceps:'', subescapular:'', suprailiaca:'', axilar:'',
+    // Circunferências
+    cintura:'', quadril:'', braco:'', coxa_circ:'',
+    // Resultado calculado
+    gord_pct:'', massa_gorda:'', massa_magra:'',
+    objetivo_aval: '', obs_aval: ''
+  };
+}
+
+function calcIMC(peso, altura){
+  const p=parseFloat(peso), h=parseFloat(altura)/100;
+  if(!p||!h) return '';
+  return (p/(h*h)).toFixed(1);
+}
+
+function calcPollock7(dobras, idade, genero){
+  // Pollock 7 dobras
+  const {peitoral=0,abdominal=0,coxa=0,triceps=0,subescapular=0,suprailiaca=0,axilar=0} = dobras;
+  const soma = [peitoral,abdominal,coxa,triceps,subescapular,suprailiaca,axilar].map(Number).reduce((a,b)=>a+b,0);
+  if(!soma) return null;
+  const id=parseInt(idade)||30;
+  let dc;
+  if(genero==='Feminino'){
+    dc = 1.097 - (0.00046971*soma) + (0.00000056*soma*soma) - (0.00012828*id);
+  } else {
+    dc = 1.112 - (0.00043499*soma) + (0.00000055*soma*soma) - (0.00028826*id);
+  }
+  const gord = ((4.95/dc)-4.5)*100;
+  return Math.max(3, Math.min(50, gord)).toFixed(1);
+}
+
+function renderAvaliacao(){
+  if(avalTab==='form')   return renderAvalForm();
+  if(avalTab==='anamnese') return renderAnamneseForm();
+  if(avalTab==='historico') return renderAvalHistorico();
+  return renderAvalLista();
+}
+
+// ── Lista de alunos para avaliação ──
+function renderAvalLista(){
+  const busca = (document.getElementById('av-busca')||{}).value||'';
+  const alunos = D.alunos.filter(a=>!busca||a.nm.toLowerCase().includes(busca.toLowerCase()));
+
+  const cards = alunos.map(a=>{
+    const avals = (a.avaliacoes||[]);
+    const ultima = avals.length ? avals[avals.length-1] : null;
+    const diasSem = ultima ? Math.round((Date.now()-new Date(ultima.data))/864e5) : null;
+    const alerta = diasSem===null ? '⚠️ Sem avaliação' : diasSem>90 ? `🔴 ${diasSem}d sem avaliar` : diasSem>60 ? `🟡 ${diasSem}d` : `✅ ${diasSem}d`;
+    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="avalAluno=D.alunos.find(a=>a.id==='${a.id}');avalTab='form';avalForm=initAvalForm();render()">
+      <div style="${avStyle(a.nm)};width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">${ini(a.nm)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--ink)">${a.nm}</div>
+        <div style="font-size:11px;color:var(--ink3)">mat. ${a.mat}${a.objetivo?' · '+a.objetivo:''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <span style="font-size:11px">${alerta}</span>
+        ${avals.length?`<span style="font-size:10px;color:var(--ink3)">${avals.length} aval.</span>`:''}
+      </div>
+      <span style="color:var(--ink3)">›</span>
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="padding:14px 20px;background:var(--wh);border-bottom:1px solid var(--bg3);flex-shrink:0">
+      <input id="av-busca" class="ca-search" placeholder="Buscar aluno…" oninput="render()">
+    </div>
+    <div style="padding:14px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1">${cards}</div>
+  </div>`;
+}
+
+// ── Formulário de avaliação ──
+function renderAvalForm(){
+  const a = avalAluno;
+  if(!a) return renderAvalLista();
+  const f = avalForm;
+  const idade = a.idade || 30;
+  const genero = a.genero || 'Feminino';
+
+  // Calcular IMC e gordura automaticamente
+  f.imc = calcIMC(f.peso, f.altura);
+  const gordPct = calcPollock7({
+    peitoral:f.peitoral, abdominal:f.abdominal, coxa:f.coxa,
+    triceps:f.triceps, subescapular:f.subescapular, suprailiaca:f.suprailiaca, axilar:f.axilar
+  }, idade, genero);
+  if(gordPct && f.peso){
+    f.gord_pct = gordPct;
+    f.massa_gorda = (parseFloat(f.peso)*parseFloat(gordPct)/100).toFixed(1);
+    f.massa_magra = (parseFloat(f.peso)-parseFloat(f.massa_gorda)).toFixed(1);
+  }
+
+  const inp = (campo, label, unit='kg', type='number', step='0.1') =>
+    `<div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${label}</label>
+      <div style="display:flex;align-items:center;gap:4px;background:var(--bg);border:1.5px solid var(--bg3);border-radius:8px;padding:6px 10px">
+        <input type="${type}" step="${step}" value="${f[campo]||''}" style="flex:1;border:none;background:transparent;font-size:15px;font-weight:600;color:var(--ink);outline:none;width:50px" oninput="avalForm['${campo}']=this.value;render()">
+        <span style="font-size:12px;color:var(--ink3);flex-shrink:0">${unit}</span>
+      </div>
+    </div>`;
+
+  const resultado = gordPct ? `
+    <div style="background:linear-gradient(135deg,#1E40AF,#6D28D9);border-radius:12px;padding:16px;color:#fff;margin-top:4px">
+      <div style="font-size:11px;opacity:.75;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Resultado Pollock 7 dobras</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div><div style="font-size:26px;font-weight:700">${gordPct}%</div><div style="font-size:11px;opacity:.8">Gordura</div></div>
+        ${f.massa_gorda?`<div><div style="font-size:26px;font-weight:700">${f.massa_gorda}kg</div><div style="font-size:11px;opacity:.8">Massa gorda</div></div>`:''}
+        ${f.massa_magra?`<div><div style="font-size:26px;font-weight:700">${f.massa_magra}kg</div><div style="font-size:11px;opacity:.8">Massa magra</div></div>`:''}
+        ${f.imc?`<div><div style="font-size:26px;font-weight:700">${f.imc}</div><div style="font-size:11px;opacity:.8">IMC</div></div>`:''}
+      </div>
+    </div>` : '';
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="avalTab='lista';avalAluno=null;render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3);padding:0 4px">←</button>
+      <div style="${avStyle(a.nm)};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0">${ini(a.nm)}</div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600">${a.nm}</div><div style="font-size:11px;color:var(--ink3)">Nova avaliação · ${new Date(f.data).toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+      ${(a.avaliacoes||[]).length?`<button onclick="avalTab='historico';render()" style="font-size:11px;padding:5px 12px;border:1px solid var(--bg3);border-radius:8px;background:var(--bg);color:var(--ink3);cursor:pointer">📊 Histórico</button>`:''}
+    </div>
+
+    <div style="padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px">
+      <!-- Data -->
+      <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Data</label>
+        <input type="date" value="${f.data}" class="mi" style="margin-top:4px" oninput="avalForm.data=this.value"></div>
+
+      <!-- Medidas básicas -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px">📏 Medidas básicas</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('peso','Peso','kg')}
+          ${inp('altura','Altura','cm','number','1')}
+        </div>
+        ${f.imc?`<div style="margin-top:6px;padding:6px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--ink2)">IMC: <strong>${f.imc}</strong></div>`:''}
+      </div>
+
+      <!-- Dobras 7 -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px">📐 Dobras cutâneas — Pollock 7</div>
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">Preencha as que usar. Deixe zero as que não medir.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('peitoral','Peitoral','mm')}
+          ${inp('abdominal','Abdominal','mm')}
+          ${inp('coxa','Coxa','mm')}
+          ${inp('triceps','Tríceps','mm')}
+          ${inp('subescapular','Subescapular','mm')}
+          ${inp('suprailiaca','Supra-ilíaca','mm')}
+          ${inp('axilar','Axilar média','mm')}
+        </div>
+      </div>
+
+      ${resultado}
+
+      <!-- Circunferências -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px">📏 Circunferências</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('cintura','Cintura','cm')}
+          ${inp('quadril','Quadril','cm')}
+          ${inp('braco','Braço','cm')}
+          ${inp('coxa_circ','Coxa','cm')}
+        </div>
+      </div>
+
+      <!-- Objetivo da avaliação -->
+      <div>
+        <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Objetivo desta avaliação</label>
+        <input class="mi" style="margin-top:4px" placeholder="Ex: Acompanhar emagrecimento pós-gravidez…" value="${f.objetivo_aval||''}" oninput="avalForm.objetivo_aval=this.value">
+      </div>
+
+      <!-- Observações -->
+      <div>
+        <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Observações gerais</label>
+        <textarea class="nota-textarea" style="margin-top:4px" rows="3" placeholder="Dicas de alimentação, histórico, combinados…" oninput="avalForm.obs_aval=this.value">${f.obs_aval||''}</textarea>
+      </div>
+
+      <!-- Anamnese -->
+      <div style="background:var(--amber-l,#FFFBEB);border:1px solid var(--amber-b,#FCD34D);border-radius:10px;padding:12px 14px;cursor:pointer" onclick="avalTab='anamnese';avalAnamForm={...(avalAluno.anamnese||{})};render()">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#92400E">📋 Anamnese do aluno</div>
+            <div style="font-size:11px;color:#B45309;margin-top:2px">Histórico de atividade física, saúde, rotina</div>
+          </div>
+          <span style="color:#B45309">›</span>
+        </div>
+        ${a.anamnese?`<div style="font-size:11px;color:#92400E;margin-top:6px">✓ Preenchida · última atualização disponível</div>`:`<div style="font-size:11px;color:#B45309;margin-top:6px">Ainda não preenchida — toque para preencher</div>`}
+      </div>
+
+      <!-- Botões -->
+      <div style="display:flex;gap:8px;padding-bottom:20px">
+        <button onclick="salvarAvaliacao()" style="flex:1;padding:12px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">✓ Salvar avaliação</button>
+        <button onclick="gerarPDFAvaliacao()" style="padding:12px 16px;background:var(--bg);border:1.5px solid var(--bg3);border-radius:10px;font-size:13px;color:var(--ink2);cursor:pointer">📄 PDF</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Anamnese ──
+function renderAnamneseForm(){
+  const a = avalAluno;
+  const f = avalAnamForm;
+  const inp2 = (campo, label, ph) =>
+    `<div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${label}</label>
+      <input class="mi" style="font-size:13px" placeholder="${ph||''}" value="${f[campo]||''}" oninput="avalAnamForm['${campo}']=this.value">
+    </div>`;
+  const ta = (campo, label, ph) =>
+    `<div style="display:flex;flex-direction:column;gap:4px">
+      <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${label}</label>
+      <textarea class="nota-textarea" rows="3" placeholder="${ph||''}" oninput="avalAnamForm['${campo}']=this.value">${f[campo]||''}</textarea>
+    </div>`;
+
+  // Organização semanal — grade de 7 dias
+  const dias = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const semana = f.semana || dias.reduce((o,d)=>({...o,[d]:''}),{});
+  const gradeHtml = dias.map(d=>`
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <div style="font-size:10px;font-weight:700;color:var(--ink3);text-align:center">${d}</div>
+      <input style="width:100%;padding:5px 6px;border:1.5px solid var(--bg3);border-radius:6px;font-size:11px;text-align:center;outline:none;color:var(--ink);background:var(--bg)" 
+        placeholder="—" value="${semana[d]||''}" 
+        oninput="if(!avalAnamForm.semana)avalAnamForm.semana={};avalAnamForm.semana['${d}']=this.value">
+    </div>`).join('');
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="avalTab='form';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3);padding:0 4px">←</button>
+      <div><div style="font-size:14px;font-weight:600">Anamnese — ${a.nm.split(' ')[0]}</div><div style="font-size:11px;color:var(--ink3)">Histórico e organização de vida fitness</div></div>
+    </div>
+    <div style="padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
+
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px;padding-bottom:4px;border-bottom:1px solid var(--bg3)">OBJETIVO E HISTÓRICO</div>
+      ${inp2('objetivo_vida','Objetivo de vida fitness','Ex: Emagrecer, hipertrofiar, correr 5km…')}
+      ${inp2('profissao','Profissão','Ex: Trabalha sentado 8h/dia…')}
+      ${ta('historico_af','Histórico de atividade física','Ex: Fez musculação por 2 anos, parou por lesão…')}
+      ${inp2('af_atual','Atividade física atual (além do estúdio)','Ex: Pilates terça e quinta')}
+
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px;padding:8px 0 4px;border-bottom:1px solid var(--bg3)">SAÚDE</div>
+      ${ta('saude_obs','Observações de saúde (uso interno)','Ex: Ansiedade, medicamento, insônia, bipolaridade…')}
+      ${inp2('sono','Qualidade do sono','Ex: Dorme mal, insônia, 5h/noite…')}
+      ${inp2('alimentacao','Alimentação geral','Ex: Come pouco, compulsão noturna, faz jejum…')}
+
+      <div style="font-size:11px;font-weight:600;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px;padding:8px 0 4px;border-bottom:1px solid var(--bg3)">📅 ORGANIZAÇÃO SEMANAL</div>
+      <div style="font-size:11px;color:var(--ink3)">Atividades fitness da pessoa durante a semana</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${gradeHtml}</div>
+
+      ${ta('combinados','Combinados / metas','Ex: 3x na semana no estúdio + 2 caminhadas…')}
+      ${ta('obs_interna','Observações internas (só Vanessa)','Notas pessoais sobre o aluno…')}
+
+      <div style="display:flex;gap:8px;padding-bottom:20px">
+        <button onclick="avalAluno.anamnese={...avalAnamForm};autoSave();avalTab='form';render()" style="flex:1;padding:12px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">✓ Salvar anamnese</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Histórico de avaliações ──
+function renderAvalHistorico(){
+  const a = avalAluno;
+  const avals = (a.avaliacoes||[]).slice().reverse();
+  if(!avals.length) return `<div class="empty-state"><div class="empty-ico">📊</div><div class="empty-title">Sem avaliações</div></div>`;
+
+  const cards = avals.map((av,i)=>{
+    const isFirst = i===0;
+    const prev = avals[i+1];
+    const delta = prev&&av.gord_pct&&prev.gord_pct ? (parseFloat(av.gord_pct)-parseFloat(prev.gord_pct)).toFixed(1) : null;
+    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden">
+      <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${new Date(av.data+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div>
+          ${av.objetivo_aval?`<div style="font-size:11px;color:var(--ink3);margin-top:2px">${av.objetivo_aval}</div>`:''}
+        </div>
+        ${av.gord_pct?`<div style="text-align:right"><div style="font-size:20px;font-weight:700;color:var(--purple)">${av.gord_pct}%</div><div style="font-size:10px;color:var(--ink3)">gordura</div></div>`:''}
+        ${delta?`<div style="font-size:12px;font-weight:600;color:${parseFloat(delta)<0?'var(--green)':'#DC2626'}">${parseFloat(delta)<0?'▼':'▲'}${Math.abs(delta)}%</div>`:''}
+      </div>
+      <div style="border-top:1px solid var(--bg3);padding:8px 14px;display:flex;gap:16px;flex-wrap:wrap;background:var(--bg)">
+        ${av.peso?`<span style="font-size:12px;color:var(--ink2)">⚖️ ${av.peso}kg</span>`:''}
+        ${av.imc?`<span style="font-size:12px;color:var(--ink2)">IMC ${av.imc}</span>`:''}
+        ${av.massa_magra?`<span style="font-size:12px;color:var(--ink2)">💪 ${av.massa_magra}kg magra</span>`:''}
+        ${av.cintura?`<span style="font-size:12px;color:var(--ink2)">📏 Cintura ${av.cintura}cm</span>`:''}
+      </div>
+      ${av.obs_aval?`<div style="padding:8px 14px;border-top:1px solid var(--bg3);font-size:12px;color:var(--ink3)">📝 ${av.obs_aval}</div>`:''}
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="avalTab='form';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3);padding:0 4px">←</button>
+      <div><div style="font-size:14px;font-weight:600">Histórico — ${a.nm.split(' ')[0]}</div><div style="font-size:11px;color:var(--ink3)">${avals.length} avaliação${avals.length!==1?'s':''}</div></div>
+    </div>
+    <div style="padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px">${cards}</div>
+  </div>`;
+}
+
+// ── Salvar avaliação ──
+function salvarAvaliacao(){
+  if(!avalAluno) return;
+  const f = avalForm;
+  if(!f.peso && !f.gord_pct) { alert('Preencha pelo menos peso ou dobras.'); return; }
+  if(!avalAluno.avaliacoes) avalAluno.avaliacoes = [];
+  avalAluno.avaliacoes.push({...f, id: uid()});
+  autoSave();
+  avalTab = 'historico';
+  render();
+}
+
+// ── Gerar PDF ──
+function gerarPDFAvaliacao(){
+  const a = avalAluno;
+  const f = avalForm;
+  const data = new Date(f.data+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Avaliação Física — ${a.nm}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1C1916;padding:32px;max-width:680px;margin:0 auto;font-size:14px}
+    h1{font-size:22px;font-weight:700;color:#1C1916;margin-bottom:4px}
+    .sub{font-size:13px;color:#6B5E52;margin-bottom:24px}
+    .sec{margin-bottom:20px}
+    .sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#8A8278;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #E8E3DC}
+    .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .card{background:#F5F0E8;border-radius:8px;padding:10px 14px}
+    .card-val{font-size:22px;font-weight:700;color:#1C1916}
+    .card-lbl{font-size:10px;color:#8A8278;text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+    .result-box{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;border-radius:10px;padding:16px;margin-bottom:20px}
+    .result-box .card{background:rgba(255,255,255,.15);color:#fff}
+    .result-box .card-val{color:#fff}
+    .result-box .card-lbl{color:rgba(255,255,255,.7)}
+    .obs{background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400E}
+    @media print{body{padding:16px}}
+  </style></head><body>
+  <h1>Avaliação Física</h1>
+  <div class="sub">${a.nm} · mat. ${a.mat} · ${data}</div>
+  ${f.gord_pct?`<div class="result-box"><div style="font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Resultado</div>
+    <div class="grid">
+      <div class="card"><div class="card-val">${f.gord_pct}%</div><div class="card-lbl">Gordura</div></div>
+      ${f.massa_gorda?`<div class="card"><div class="card-val">${f.massa_gorda}kg</div><div class="card-lbl">Massa gorda</div></div>`:''}
+      ${f.massa_magra?`<div class="card"><div class="card-val">${f.massa_magra}kg</div><div class="card-lbl">Massa magra</div></div>`:''}
+      ${f.imc?`<div class="card"><div class="card-val">${f.imc}</div><div class="card-lbl">IMC</div></div>`:''}
+    </div></div>`:''}
+  <div class="sec"><div class="sec-title">Medidas básicas</div>
+    <div class="grid">
+      ${f.peso?`<div class="card"><div class="card-val">${f.peso}kg</div><div class="card-lbl">Peso</div></div>`:''}
+      ${f.altura?`<div class="card"><div class="card-val">${f.altura}cm</div><div class="card-lbl">Altura</div></div>`:''}
+      ${f.imc?`<div class="card"><div class="card-val">${f.imc}</div><div class="card-lbl">IMC</div></div>`:''}
+    </div></div>
+  ${(f.cintura||f.quadril||f.braco)?`<div class="sec"><div class="sec-title">Circunferências</div>
+    <div class="grid">
+      ${f.cintura?`<div class="card"><div class="card-val">${f.cintura}cm</div><div class="card-lbl">Cintura</div></div>`:''}
+      ${f.quadril?`<div class="card"><div class="card-val">${f.quadril}cm</div><div class="card-lbl">Quadril</div></div>`:''}
+      ${f.braco?`<div class="card"><div class="card-val">${f.braco}cm</div><div class="card-lbl">Braço</div></div>`:''}
+      ${f.coxa_circ?`<div class="card"><div class="card-val">${f.coxa_circ}cm</div><div class="card-lbl">Coxa</div></div>`:''}
+    </div></div>`:''}
+  ${f.objetivo_aval?`<div class="sec"><div class="sec-title">Objetivo desta avaliação</div><p>${f.objetivo_aval}</p></div>`:''}
+  ${f.obs_aval?`<div class="obs">${f.obs_aval}</div>`:''}
+  <div style="margin-top:32px;padding-top:16px;border-top:1px solid #E8E3DC;font-size:11px;color:#8A8278;display:flex;justify-content:space-between">
+    <span>Estúdio Se7e · Vila Mariana, SP</span><span>${data}</span>
+  </div></body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(),500);
 }
 
 function renderFila(){
