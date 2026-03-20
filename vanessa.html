@@ -699,7 +699,7 @@ function renderEsboço(f){
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
 
-  return`<div class="esboço-banner" style="cursor:pointer" onclick="esboçoAberto['${f.id}']=!aberto;render()">
+  return`<div class="esboço-banner" style="cursor:pointer" onclick="esboçoAberto['${f.id}']=esboçoAberto['${f.id}']===false?true:false;render()">
     <div style="font-size:16px">📐</div>
     <div class="esboço-txt">
       <strong>Esboço da ficha</strong>
