@@ -1059,11 +1059,14 @@ function mergeAluno(a){
   const mat=String(a.mat);
   const fichasData=window.FICHAS_DATA[mat];
   if(!fichasData||!fichasData.length) return;
-  // Only inject if current first programa has empty fichas
+  // Sempre usa dados reais do CSV no programa atual (mais confiáveis)
+  // Mas só se não foi editado manualmente (checa flag)
   const prog=a.programas[0];
-  if(prog&&(!prog.fichas||prog.fichas.length===0)){
+  if(!prog) return;
+  if(!prog._mergedFromCSV){
     prog.fichas=fichasData;
-    prog.nm=prog.nm||'Programa Atual';
+    prog.nm=prog.data_inicio?prog.nm:'Programa Atual';
+    prog._mergedFromCSV=true;
   }
 }
 
