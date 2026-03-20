@@ -10,8 +10,27 @@ const ROUTES = {
   '/coordenacao': 'vanessa.html',
 };
 
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css',
+  '.json': 'application/json',
+};
+
 http.createServer((req, res) => {
   const url = req.url.split('?')[0];
+  // Static JS/CSS files
+  const ext = path.extname(url);
+  if (ext && MIME[ext]) {
+    const filePath = path.join(__dirname, url.slice(1));
+    fs.readFile(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Not found'); return; }
+      res.writeHead(200, { 'Content-Type': MIME[ext], 'Cache-Control': 'public, max-age=3600' });
+      res.end(data);
+    });
+    return;
+  }
+  // HTML routes
   const file = ROUTES[url] || (url.endsWith('.html') ? url.slice(1) : null);
   if (!file) { res.writeHead(302, { Location: '/' }); res.end(); return; }
   const filePath = path.join(__dirname, file);
