@@ -149,6 +149,22 @@ button{cursor:pointer}
 .esboço-sep{font-size:13px;color:var(--ink3);font-weight:500}
 .esboço-obs-inp{flex:1;padding:5px 10px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:12px;outline:none;color:var(--ink2);background:var(--bg)}
 .esboço-obs-inp:focus{border-color:var(--purple-b)}
+.esboço-param-blk{display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:3px 7px;font-size:10px;color:var(--ink3)}
+.esboço-param-blk input{width:28px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center}
+.esboço-param-blk.azul{background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF}
+.esboço-param-blk.azul input{color:#1E40AF}
+.esboço-param-blk.roxo{background:#F5F3FF;border-color:#C4B5FD;color:#6D28D9}
+.esboço-param-blk.roxo input{color:#6D28D9}
+.esboço-eq-sel{border:1px solid var(--bg3);background:var(--bg);border-radius:6px;font-size:10px;color:var(--ink3);padding:3px 5px;outline:none;cursor:pointer;max-width:90px}
+.swap-badge{font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:20px;padding:1px 7px;font-weight:600;flex-shrink:0}
+.esboço-param-blk{display:flex;align-items:center;gap:3px;background:var(--bg);border:1px solid var(--bg3);border-radius:6px;padding:3px 7px;font-size:10px;color:var(--ink3)}
+.esboço-param-blk input{width:28px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center}
+.esboço-param-blk.azul{background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF}
+.esboço-param-blk.azul input{color:#1E40AF}
+.esboço-param-blk.roxo{background:#F5F3FF;border-color:#C4B5FD;color:#6D28D9}
+.esboço-param-blk.roxo input{color:#6D28D9}
+.esboço-eq-sel{border:1px solid var(--bg3);background:var(--bg);border-radius:6px;font-size:10px;color:var(--ink3);padding:3px 5px;outline:none;cursor:pointer}
+.swap-badge{font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:20px;padding:1px 7px;font-weight:600;flex-shrink:0}
 .btn-esboço-del-row{width:24px;height:24px;border-radius:50%;border:none;background:transparent;color:var(--bg3);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .btn-esboço-del-row:hover{background:var(--red-l);color:var(--red)}
 .esboço-num-inp{width:44px;padding:5px 6px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:13px;font-weight:600;text-align:center;outline:none;color:var(--ink);background:var(--bg)}
@@ -1123,6 +1139,62 @@ function autoSave(){
 
 
 // ── PENDENTE / HISTÓRICO / AUTO-SAVE ──
+
+// ══════════════════════════════════════════════════════
+// SISTEMA DE APRENDIZADO — rastreia trocas e alimenta o modelo
+// ══════════════════════════════════════════════════════
+let SWAP_LOG = JSON.parse(localStorage.getItem('se7e_swaps')||'[]');
+
+function registrarTroca(original, substituto, motivo, aluno){
+  const swap = {
+    ts: Date.now(),
+    original,
+    substituto,
+    motivo: motivo||'',
+    mat: aluno?.mat||'',
+    obj: aluno?.objetivo||'',
+    nivel: aluno?.nivel||'',
+    restricoes: aluno?.restricoes||''
+  };
+  SWAP_LOG.push(swap);
+  // Manter últimos 500
+  if(SWAP_LOG.length > 500) SWAP_LOG = SWAP_LOG.slice(-500);
+  try { localStorage.setItem('se7e_swaps', JSON.stringify(SWAP_LOG)); } catch(e){}
+  atualizarContextoTrocas();
+  console.log('🔄 Troca registrada:', original, '→', substituto);
+}
+
+function registrarRemocao(exercicio, motivo, aluno){
+  registrarTroca(exercicio, '__removido__', motivo||'removido', aluno);
+}
+
+function atualizarContextoTrocas(){
+  // Constrói mapa de substituições: original → {sub, count}
+  const subMap = {};
+  const rmMap = {};
+  SWAP_LOG.forEach(s => {
+    if(s.substituto === '__removido__'){
+      if(!rmMap[s.original]) rmMap[s.original] = 0;
+      rmMap[s.original]++;
+    } else {
+      if(!subMap[s.original]) subMap[s.original] = {};
+      if(!subMap[s.original][s.substituto]) subMap[s.original][s.substituto] = 0;
+      subMap[s.original][s.substituto]++;
+    }
+  });
+  window.SWAP_CONTEXT = { subMap, rmMap, total: SWAP_LOG.length };
+}
+
+function getSwapSugestoes(nomeEx){
+  if(!window.SWAP_CONTEXT?.subMap) return [];
+  const subs = window.SWAP_CONTEXT.subMap[nomeEx];
+  if(!subs) return [];
+  return Object.entries(subs).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([sub,n])=>({sub,n}));
+}
+
+// Inicializar contexto na carga
+atualizarContextoTrocas();
+
 function isPendente(a){
   const p=getProg(a);if(!p)return false;
   return p.fichas.some(f=>f.esboço&&f.esboço.length>0&&(!f.exs||f.exs.length===0));
@@ -1357,48 +1429,58 @@ function renderEsboço(f){
     const gi=getGrupoInfo(e.g);
     const gruposOpts=gruposDisponiveis.map(g=>`<option value="${g}" ${e.g===g?'selected':''}>${g}</option>`).join('');
     const estimulosOpts=['Padrão','Rest Pause','Drop Set','Bi-Set','Giant Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(e.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('');
+    const equipOpts=['Qualquer','Máquinas','Pesos livres','Cabos/Cross','Funcional'].map(s=>`<option value="${s}" ${(e.equip||'Qualquer')===s?'selected':''}>${s}</option>`).join('');
     const mdet=match?match.detalhes.find(d=>d.g===e.g):null;
     const grupoOk=mdet&&mdet.real>=mdet.planejado;
     const grupoPartial=mdet&&mdet.real>0&&mdet.real<mdet.planejado;
     const hasExs=f.exs.length>0;
-    const statusDot=hasExs?(grupoOk?`<span title="${mdet.real}/${mdet.planejado} ex ✓" style="font-size:13px;line-height:1">✅</span>`:grupoPartial?`<span title="${mdet.real}/${mdet.planejado} ex" style="font-size:13px;line-height:1">🟡</span>`:`<span title="0/${e.num_ex||1} ex" style="font-size:13px;line-height:1">⭕</span>`):'';
-    return`<div class="esboço-row" style="flex-wrap:wrap;gap:6px">
-      <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:200px">
-        <span class="esboço-grupo-dot" style="background:${gi.cor};border:1.5px solid ${gi.tc}40;flex-shrink:0"></span>
-        <select class="esboço-grupo-nm" style="border:none;background:transparent;font-size:13px;font-weight:600;color:var(--ink);outline:none;cursor:pointer;appearance:none;padding:0;min-width:90px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">
-          ${gruposOpts}
-        </select>
+    const statusDot=hasExs?(grupoOk?`<span title="${mdet.real}/${mdet.planejado} ✓" style="font-size:12px">✅</span>`:grupoPartial?`<span title="${mdet.real}/${mdet.planejado}" style="font-size:12px">🟡</span>`:`<span title="0 de ${(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||e.num_ex||1}" style="font-size:12px">⭕</span>`):'';
+
+    // Stats from real data for this group
+    const refGroup=alunoSel&&window.CARGA_REF?Object.entries(window.CARGA_REF).filter(([n])=>n.startsWith(e.g)).slice(0,1):[];
+    const cargaHint=refGroup.length?` · ref ${refGroup[0][1]}kg`:'';
+
+    return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+      <!-- Linha 1: grupo + status + equip -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="width:10px;height:10px;border-radius:50%;background:${gi.cor};flex-shrink:0"></span>
+        <select style="border:none;background:transparent;font-size:13px;font-weight:700;color:var(--ink);outline:none;cursor:pointer;appearance:none;flex:1;min-width:80px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">${gruposOpts}</select>
         ${statusDot}
+        <select class="esboço-eq-sel" onchange="e_upd('${f.id}','${e.id}','equip',this.value)" title="Equipamento preferido">${equipOpts}</select>
+        <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')">×</button>
       </div>
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:4px" title="Estrutura de exercícios">
-          <span style="font-size:9px;color:var(--ink3);white-space:nowrap;background:var(--bg);padding:2px 5px;border-radius:4px;border:1px solid var(--bg3)" title="Exercícios individuais">1×<input type="number" min="0" max="6" value="${e.num_singles||0}" oninput="e_upd('${f.id}','${e.id}','num_singles',parseInt(this.value)||0)" style="width:26px;border:none;background:transparent;font-size:12px;font-weight:600;color:var(--ink);outline:none;padding:0;text-align:center"></span>
-          <span style="font-size:9px;color:#1E40AF;white-space:nowrap;background:#EFF6FF;padding:2px 5px;border-radius:4px;border:1px solid #BFDBFE" title="Duplas (bi-set)">2×<input type="number" min="0" max="4" value="${e.num_duplas||0}" oninput="e_upd('${f.id}','${e.id}','num_duplas',parseInt(this.value)||0)" style="width:26px;border:none;background:transparent;font-size:12px;font-weight:600;color:#1E40AF;outline:none;padding:0;text-align:center"></span>
-          <span style="font-size:9px;color:#6D28D9;white-space:nowrap;background:#F5F3FF;padding:2px 5px;border-radius:4px;border:1px solid #C4B5FD" title="Trios (tri-set)">3×<input type="number" min="0" max="3" value="${e.num_trios||0}" oninput="e_upd('${f.id}','${e.id}','num_trios',parseInt(this.value)||0)" style="width:26px;border:none;background:transparent;font-size:12px;font-weight:600;color:#6D28D9;outline:none;padding:0;text-align:center"></span>
-        </div>
-        <span class="esboço-sep" style="color:var(--bg3)">|</span>
-        <input class="esboço-inp" type="number" min="1" max="10" value="${e.s}" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)" title="Séries">
-        <span class="esboço-sep">×</span>
-        <input class="esboço-inp" value="${e.r}" oninput="e_upd('${f.id}','${e.id}','r',this.value)" title="Repetições" style="width:56px">
-        <span class="esboço-sep" style="color:var(--bg3)">|</span>
-        <select class="estimulo-sel" onchange="e_upd('${f.id}','${e.id}','estimulo',this.value)" title="Estímulo">
-          ${estimulosOpts}
-        </select>
+      <!-- Linha 2: estrutura (1x/2x/3x) -->
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--ink3);font-weight:500">Estrutura:</span>
+        <span class="esboço-param-blk" title="Individuais">1×<input type="number" min="0" max="6" value="${e.num_singles||0}" oninput="e_upd('${f.id}','${e.id}','num_singles',parseInt(this.value)||0)"></span>
+        <span class="esboço-param-blk azul" title="Duplas (bi-set)">2×<input type="number" min="0" max="4" value="${e.num_duplas||0}" oninput="e_upd('${f.id}','${e.id}','num_duplas',parseInt(this.value)||0)"></span>
+        <span class="esboço-param-blk roxo" title="Trios (tri-set)">3×<input type="number" min="0" max="3" value="${e.num_trios||0}" oninput="e_upd('${f.id}','${e.id}','num_trios',parseInt(this.value)||0)"></span>
+        <span style="color:var(--bg3);font-size:11px">|</span>
+        <span style="font-size:10px;color:var(--ink3);font-weight:500">Vol:</span>
+        <span class="esboço-param-blk" title="Séries"><input type="number" min="1" max="10" value="${e.s||3}" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)">s</span>
+        <span style="font-size:11px;color:var(--ink3)">×</span>
+        <span class="esboço-param-blk" title="Repetições"><input value="${e.r||'12'}" oninput="e_upd('${f.id}','${e.id}','r',this.value)" style="width:36px">rep</span>
+        <span style="color:var(--bg3);font-size:11px">|</span>
+        <span class="esboço-param-blk" title="Pausa (segundos)"><input type="number" min="0" max="300" step="15" value="${e.pausa||60}" oninput="e_upd('${f.id}','${e.id}','pausa',parseInt(this.value)||60)" style="width:32px">s⏱</span>
       </div>
-      <input class="esboço-obs-inp" placeholder="obs do grupo…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)" style="width:100%;margin-top:2px">
-      <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')" style="margin-left:auto">×</button>
+      <!-- Linha 3: estímulo + obs -->
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--ink3);font-weight:500">Estímulo:</span>
+        <select class="estimulo-sel" onchange="e_upd('${f.id}','${e.id}','estimulo',this.value)">${estimulosOpts}</select>
+        ${cargaHint?`<span style="font-size:10px;color:var(--ink3);background:var(--bg);padding:2px 7px;border-radius:20px;border:1px solid var(--bg3)">${cargaHint.trim()}</span>`:''}
+      </div>
+      <input class="esboço-obs-inp" placeholder="observação para este grupo…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)">
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
 
-  // Barra de match — sempre visível no banner (aberto ou fechado)
   const matchBadge=temEsboço?`
     <div style="display:flex;align-items:center;gap:6px">
       ${f.exs.length>0?`<div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
       </div>
-      <span style="font-size:11px;font-weight:700;color:${is100?'#059669':pct>=70?'#D97706':'var(--purple)'}">${is100?'✓ 100%':pct+'%'}</span>
-      `:`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_ex||1),0)} ex planejados</span>`}
-    </div>`:''  ;
+      <span style="font-size:11px;font-weight:700;color:${is100?'#059669':pct>=70?'#D97706':'var(--purple)'}">${is100?'✓ 100%':pct+'%'}</span>`
+      :`<span style="font-size:11px;color:var(--purple);background:rgba(109,40,217,.1);padding:2px 8px;border-radius:20px">${f.esboço.reduce((a,e)=>a+(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1),0)} ex planejados</span>`}
+    </div>`:'' ;
 
   return`<div class="esboço-banner" style="cursor:pointer" onclick="toggleSketch('${f.id}')">
     <div style="font-size:16px">${is100&&f.exs.length>0?'✅':'📐'}</div>
@@ -1414,17 +1496,17 @@ function renderEsboço(f){
   ${aberto?`<div style="margin-bottom:4px">
     <div class="esboço-body">
       <div class="esboço-hdr">
-        <span class="esboço-hdr-txt">📐 Volume planejado por grupo</span>
+        <span class="esboço-hdr-txt">📐 Planejamento por grupo muscular</span>
         <button class="btn-add-grupo-esboço" onclick="e_add('${f.id}')">+ Grupo</button>
       </div>
-      ${rowsHtml}
+      <div style="display:flex;flex-direction:column;gap:6px;padding:8px 12px">${rowsHtml}</div>
     </div>
     ${temEsboço?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:0 2px">
       <div style="flex:1;height:1px;background:var(--bg3)"></div>
-      <span style="font-size:11px;color:var(--ink3)">esboço pronto? monte a ficha abaixo</span>
+      <span style="font-size:11px;color:var(--ink3)">monte a ficha abaixo ↓</span>
       <div style="flex:1;height:1px;background:var(--bg3)"></div>
-    </div>`:''}
-  </div>`:''}`;
+    </div>`:``}
+  </div>`:''}`  ;
 }
 
 function e_upd(fichaId,esId,campo,val){
@@ -1778,6 +1860,14 @@ REGRAS:
 - Siga o foco: ${focoMap[qRespostas.foco]||qRespostas.foco}
 - Intensidade: ${intensidadeMap[qRespostas.intensidade]||qRespostas.intensidade}
 
+${window.SWAP_CONTEXT&&window.SWAP_CONTEXT.total>0?`
+APRENDIZADO DO MODELO (trocas registradas pelos professores):
+${Object.entries(window.SWAP_CONTEXT.subMap||{}).slice(0,8).map(([orig,subs])=>{
+  const top=Object.entries(subs).sort((a,b)=>b[1]-a[1])[0];
+  return top?orig.split(' - ').slice(-1)[0]+' → '+top[0].split(' - ').slice(-1)[0]+' ('+top[1]+'x)':'';
+}).filter(Boolean).join(' | ')}
+`:''}
+${window.SWAP_CONTEXT&&window.SWAP_CONTEXT.total>0?`APRENDIZADO: ${Object.entries(window.SWAP_CONTEXT.subMap||{}).slice(0,6).map(([o,s])=>{const t=Object.entries(s).sort((a,b)=>b[1]-a[1])[0];return t?o.split(' - ').slice(-1)[0]+' → '+t[0].split(' - ').slice(-1)[0]+'('+t[1]+'x)':''}).filter(Boolean).join(', ')}`:''}
 Responda SOMENTE com JSON:
 {"nm":"Programa IA","fichas":[{"letra":"A","nm":"Treino A","nota":"","estimulo":"${estimuloSugerido}","esboço":[{"g":"Quadríceps","s":4,"r":"12","num_singles":1,"num_duplas":1,"num_trios":0,"estimulo":"${estimuloSugerido}","obs":""}],"exs":[{"tp":"s","n":"NOME EXATO","g":"Grupo","s":4,"r":"12","d":60,"ca":null,"obs":""},{"tp":"g","grupo":"dupla","exs":[{"n":"EX1","g":"Grupo","s":3,"r":"12","d":0,"ca":null,"obs":""},{"n":"EX2","g":"Grupo","s":3,"r":"12","d":60,"ca":null,"obs":""}]}]}]}`;
 
@@ -1823,7 +1913,15 @@ function addGrupo(fichaId,tipo){
   f.exs.push({id:uid(),tp:'g',grupo:tipo,exs:Array.from({length:num},(_,i)=>({id:uid(),n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:3,r:'12',d:i===num-1?60:0,ca:null,obs:''}))});
   render();
 }
-function delEx(fichaId,exId){const f=getFichas(alunoSel).find(f=>f.id===fichaId);if(f)f.exs=f.exs.filter(e=>e.id!==exId);render();}
+function delEx(fichaId,exId){
+  const f=getFichas(alunoSel).find(f=>f.id===fichaId);
+  if(f){
+    const ex=f.exs.find(e=>e.id===exId);
+    if(ex&&ex.n) registrarRemocao(ex.n,'removido da ficha',alunoSel);
+    f.exs=f.exs.filter(e=>e.id!==exId);
+  }
+  render();
+}
 function delExGrupo(fichaId,grupoId,exId){const f=getFichas(alunoSel).find(f=>f.id===fichaId);if(!f)return;const g=f.exs.find(e=>e.id===grupoId);if(!g)return;g.exs=g.exs.filter(e=>e.id!==exId);if(!g.exs.length)f.exs=f.exs.filter(e=>e.id!==grupoId);render();}
 function aprovarSol(id){D.solicitacoes.find(s=>s.id===id).status='aprovada';render();}
 function rejeitarSol(id){D.solicitacoes.find(s=>s.id===id).status='rejeitada';render();}
@@ -1919,14 +2017,24 @@ function modalBuscaEx(q){
   const ql=q.toLowerCase();
   const matches=EXERCICIOS.filter(e=>e.n.toLowerCase().includes(ql)&&!EXERCICIOS_INATIVOS.has(e.n)).slice(0,12);
   if(!matches.length){dd.style.display='none';return;}
+  // Sugestões de troca (o que outros professores usaram no lugar deste exercício)
+  const swapSugs=matches.flatMap(e=>{
+    const sugs=getSwapSugestoes(e.n);
+    return sugs.map(s=>({n:s.sub,g:EXERCICIOS.find(x=>x.n===s.sub)?.g||'',_swap:true,_from:e.n,_cnt:s.n}));
+  }).filter(s=>s.n&&!matches.find(m=>m.n===s.n)).slice(0,3);
+  const allResults=[...matches,...swapSugs].slice(0,14);
+
   dd.style.display='block';
-  dd.innerHTML=matches.map((e,i)=>`<div
+  dd.innerHTML=allResults.map((e,i)=>`<div
     style="padding:9px 14px;cursor:pointer;border-bottom:1px solid #F5F0E8;font-size:12px"
     onmousedown="modalSelecionarEx('${e.n.replace(/'/g,"\\'")}','${(e.g||'').replace(/'/g,"\\'")}');document.getElementById('m-ex-dd').style.display='none'"
     onmouseover="this.style.background='#F5EFE4'"
     onmouseout="this.style.background='transparent'">
-    <div style="font-weight:500;color:#1C1916">${e.n}</div>
-    <div style="font-size:10px;color:#8A8278;margin-top:2px">${e.g||''}</div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="font-weight:500;color:#1C1916;flex:1">${e.n}</span>
+      ${e._swap?`<span style="font-size:9px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;border-radius:20px;padding:1px 6px">↔ ${e._cnt}x</span>`:''}
+    </div>
+    <div style="font-size:10px;color:#8A8278;margin-top:1px">${e._swap?`substituto de ${e._from.split(' - ').slice(-1)[0]}`:e.g||''}</div>
   </div>`).join('');
 }
 function modalSelecionarEx(nome,grupo){
@@ -1974,10 +2082,18 @@ function salvarEx(){
   if(restr&&restr.tipo==='nao_quer'){if(!confirm(restr.msg+'\n\nDeseja adicionar mesmo assim?'))return;}
   if(modal.type==='ex'){
     const f=modal.ficha;const idx=f.exs.findIndex(e=>e.id===ex.id);
-    if(idx>=0)f.exs[idx]={...f.exs[idx],...ex};else f.exs.push({...ex,tp:'s'});
+    if(idx>=0){
+      const original=f.exs[idx].n;
+      if(original&&original!==ex.n) registrarTroca(original,ex.n,'troca manual',alunoSel);
+      f.exs[idx]={...f.exs[idx],...ex};
+    } else f.exs.push({...ex,tp:'s'});
   } else if(modal.type==='ex-grupo'){
     const g=modal.grupo;const idx=g.exs.findIndex(e=>e.id===ex.id);
-    if(idx>=0)g.exs[idx]={...g.exs[idx],...ex};
+    if(idx>=0){
+      const original=g.exs[idx].n;
+      if(original&&original!==ex.n) registrarTroca(original,ex.n,'troca manual',alunoSel);
+      g.exs[idx]={...g.exs[idx],...ex};
+    }
   }
   fecharModal();render();
 }
