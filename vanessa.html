@@ -303,12 +303,15 @@ button{cursor:pointer}
       <button class="sb-item on" onclick="setMod('treinos',this)"><span class="sb-ico">💪</span> Fichas de treino</button>
       <button class="sb-item" onclick="setMod('fila',this)"><span class="sb-ico">📥</span> Solicitações<span class="sb-badge" id="badge-fila">3</span></button>
       <button class="sb-item" onclick="setMod('catalogo',this)"><span class="sb-ico">📚</span> Catálogo de exercícios</button>
+      <button class="sb-item" onclick="setMod('pendentes',this)"><span class="sb-ico">⏳</span> Pendentes<span class="sb-badge" id="badge-pendentes" style="background:rgba(217,119,6,.35);color:#FCD34D">0</span></button>
       <div class="sb-section">Alunos</div>
       <button class="sb-item" onclick="setMod('avaliacao',this)"><span class="sb-ico">📊</span> Avaliação física</button>
       <button class="sb-item" onclick="setMod('evolucao',this)"><span class="sb-ico">📈</span> Evolução</button>
     </nav>
     <div class="sb-bottom"><button class="btn-logout-sb">✕ &nbsp;Sair</button></div>
   </div>
+
+  <div id="save-indicator" style="position:fixed;bottom:16px;right:16px;background:#059669;color:#fff;font-size:12px;font-weight:500;padding:6px 14px;border-radius:20px;opacity:0;transition:opacity .4s;z-index:999;pointer-events:none">✓ Salvo</div>
 
   <div class="main">
     <div class="topbar" id="topbar">
@@ -1236,7 +1239,13 @@ function setMod(m,el){
 
 function toggleSketch(id){sketchOpen[id]=sketchOpen[id]!==false?false:true;render();}
 function render(){
-  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho']};
+  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],pendentes:['Esboços pendentes','Fichas com cabeçalho feito — aguardando exercícios'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho'],historico:['Histórico de treinos','Programas anteriores do aluno']};
+  // Badge pendentes
+  const nPend=countPendentes();
+  const bpend=document.getElementById('badge-pendentes');
+  if(bpend){bpend.textContent=nPend;bpend.style.display=nPend?'':'none';}
+  // Auto-save
+  autoSave();
   const [tt,ts]=titles[modulo]||['',''];
   document.getElementById('tb-title').textContent=tt;
   document.getElementById('tb-sub').textContent=ts;
@@ -1247,7 +1256,7 @@ function render(){
   if(modulo==='treinos'&&alunoSel&&getFichas(alunoSel).length>1){
     acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="gerarTreinoIA()">✨ Gerar com IA</button>`;
   } else if(modulo==='treinos'&&alunoSel){
-    acts.innerHTML=`<button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="gerarTreinoIA()">✨ Gerar com IA</button>`;
+    acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="gerarTreinoIA()">✨ Gerar com IA</button>`;
   } else if(modulo==='treinos'){
     acts.innerHTML=`<button class="btn-secondary" onclick="novoPrograma()">+ Programa</button>`;
   } else if(modulo==='fila'){
@@ -1259,8 +1268,54 @@ function render(){
     modulo==='treinos'?renderTreinos():
     modulo==='fila'?renderFila():
     modulo==='catalogo'?renderCatalogo():
+    modulo==='pendentes'?renderPendentes():
+    modulo==='historico'?renderHistorico():
     `<div class="empty-state"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div></div>`;
   setupDragDrop();
+}
+
+// ── HELPERS: PENDENTE / HISTÓRICO / AUTO-SAVE ──
+function isPendente(a){
+  // Aluno tem esboço preenchido em alguma ficha mas sem exercícios reais
+  const p=getProg(a);
+  if(!p)return false;
+  return p.fichas.some(f=>f.esboço&&f.esboço.length>0&&(!f.exs||f.exs.length===0));
+}
+function countPendentes(){return D.alunos.filter(isPendente).length;}
+
+function autoSave(){
+  try{
+    const snap={alunos:D.alunos.map(a=>({id:a.id,programas:a.programas}))};
+    localStorage.setItem('se7e_programas',JSON.stringify(snap));
+  }catch(e){}
+}
+
+
+// ── PENDENTE / HISTÓRICO / AUTO-SAVE ──
+function isPendente(a){
+  const p=getProg(a);if(!p)return false;
+  return p.fichas.some(f=>f.esboço&&f.esboço.length>0&&(!f.exs||f.exs.length===0));
+}
+function countPendentes(){return D.alunos.filter(isPendente).length;}
+function autoSave(){
+  try{
+    const snap={ts:Date.now(),alunos:D.alunos.map(a=>({id:a.id,programas:a.programas}))};
+    localStorage.setItem('se7e_programas',JSON.stringify(snap));
+    const el=document.getElementById('save-indicator');
+    if(el){el.style.opacity='1';setTimeout(()=>el.style.opacity='0',1500);}
+  }catch(e){}
+}
+function loadSaved(){
+  try{
+    const saved=localStorage.getItem('se7e_programas');
+    if(!saved)return;
+    const snap=JSON.parse(saved);
+    (snap.alunos||[]).forEach(sa=>{
+      const a=D.alunos.find(x=>x.id===sa.id);
+      if(a&&sa.programas&&sa.programas.length)a.programas=sa.programas;
+    });
+    console.log('✅ Programas restaurados do localStorage');
+  }catch(e){console.error('loadSaved:',e);}
 }
 
 function renderTreinos(){
@@ -1705,7 +1760,20 @@ function setupDragDrop(){
 function selecionarAluno(id){alunoSel=D.alunos.find(a=>a.id===id);fichaAtiva=0;compareMode=false;compareFichas=[];render();}
 function toggleCompare(){compareMode=!compareMode;compareFichas=compareMode?[0,Math.min(1,getFichas(alunoSel).length-1)]:[];render();}
 function toggleCompareFicha(idx){compareFichas=compareFichas.includes(idx)?compareFichas.filter(i=>i!==idx):[...compareFichas,idx];render();}
-function novoPrograma(){if(!alunoSel)return;alunoSel.programas.unshift({id:uid(),nm:'Novo Programa',fichas:[{id:uid(),cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[]}]});fichaAtiva=0;render();}
+function novoPrograma(){
+  if(!alunoSel)return;
+  // Fecha programa anterior (define data_fim se não tiver)
+  const hoje=new Date().toISOString().slice(0,10);
+  if(alunoSel.programas.length>0&&!alunoSel.programas[0].data_fim){
+    alunoSel.programas[0].data_fim=hoje;
+  }
+  alunoSel.programas.unshift({
+    id:uid(),nm:'Novo Programa',
+    data_inicio:hoje,data_fim:null,
+    fichas:[{id:uid(),cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[]}]
+  });
+  fichaAtiva=0;render();
+}
 
 async function gerarTreinoIA(){
   if(!alunoSel)return;
@@ -2010,6 +2078,146 @@ function addExercicioCatalogo(){
   setupDragDrop();
 }
 
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO: PENDENTES — esboço feito, ficha incompleta
+// ═══════════════════════════════════════════════════════
+function renderPendentes(){
+  const pendentes=D.alunos.filter(isPendente);
+  if(!pendentes.length){
+    return`<div class="empty-state"><div class="empty-ico">✅</div><div class="empty-title">Nenhum pendente</div><div class="empty-sub">Todos os alunos com esboço já têm fichas montadas.</div></div>`;
+  }
+  const cards=pendentes.map(a=>{
+    const p=getProg(a);
+    const fichasPend=p.fichas.filter(f=>f.esboço&&f.esboço.length>0&&(!f.exs||f.exs.length===0));
+    const totalGrupos=fichasPend.reduce((s,f)=>s+f.esboço.length,0);
+    const totalExPlan=fichasPend.reduce((s,f)=>s+f.esboço.reduce((ss,e)=>(ss+(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1)),0),0);
+    return`<div class="acard" style="cursor:pointer" onclick="selecionarAluno('${a.id}');setMod('treinos',document.querySelector('.sb-item'))">
+      <div class="av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
+      <div class="ainfo">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <span style="font-size:13px;font-weight:600;color:var(--ink)">${a.nm}</span>
+          <span style="font-size:10px;background:#FFFBEB;color:#92400E;border:1px solid #FCD34D;padding:2px 8px;border-radius:20px;font-weight:500">⏳ Pendente</span>
+        </div>
+        <div style="font-size:11px;color:var(--ink3)">mat. ${a.mat} · ${a.objetivo||''} · ${a.nivel||''}</div>
+        <div style="font-size:11px;color:var(--purple);margin-top:4px">
+          ${fichasPend.length} ficha${fichasPend.length!==1?'s':''} com esboço · ${totalGrupos} grupos · ${totalExPlan} exercícios planejados
+        </div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">
+          ${fichasPend.map(f=>`<span style="background:var(--purple-l);color:var(--purple);padding:1px 7px;border-radius:20px;margin-right:4px">${f.letra} — ${f.esboço.map(e=>e.g).join(', ')}</span>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <button style="font-size:11px;padding:5px 12px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:500" onclick="event.stopPropagation();selecionarAluno('${a.id}');setMod('treinos',document.querySelector('.sb-item'))">Montar ficha →</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return`<div style="display:flex;flex-direction:column;flex:1">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:16px 24px;flex-shrink:0">
+      <div style="font-size:11px;color:var(--ink3);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">⏳ Aguardando montagem</div>
+      <div style="font-size:20px;font-weight:600;color:var(--ink)">${pendentes.length} aluno${pendentes.length!==1?'s':''} com esboço pendente</div>
+      <div style="font-size:12px;color:var(--ink3);margin-top:2px">Cabeçalho salvo — ainda sem exercícios na ficha</div>
+    </div>
+    <div style="padding:16px 24px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1">${cards}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// MÓDULO: HISTÓRICO — todos os programas do aluno
+// ═══════════════════════════════════════════════════════
+let histAluno=null;
+let histProgramaOpen=null;
+
+function abrirHistorico(alunoId){
+  histAluno=D.alunos.find(a=>a.id===alunoId);
+  histProgramaOpen=null;
+  setMod('historico',null);
+}
+
+function renderHistorico(){
+  if(!histAluno){
+    return`<div class="empty-state"><div class="empty-ico">📅</div><div class="empty-title">Selecione um aluno</div><div class="empty-sub">Acesse o histórico a partir da ficha do aluno.</div></div>`;
+  }
+  const a=histAluno;
+  const progs=a.programas||[];
+
+  const cards=progs.map((p,pi)=>{
+    const isOpen=histProgramaOpen===p.id;
+    const fichas=p.fichas||[];
+    const totalEx=fichas.reduce((s,f)=>s+countExs(f),0);
+    const status=pi===0&&!p.data_fim?'ativo':pi===0?'encerrado':'anterior';
+    const statusBg=status==='ativo'?'#ECFDF5':status==='encerrado'?'#FEF2F2':'#F3F4F6';
+    const statusTc=status==='ativo'?'#065F46':status==='encerrado'?'#991B1B':'#6B7280';
+    const statusLabel=status==='ativo'?'✓ Ativo':status==='encerrado'?'Encerrado':'Anterior';
+    const vigencia=p.data_inicio?`${p.data_inicio}${p.data_fim?' → '+p.data_fim:' → hoje'}`:'Sem data';
+
+    const fichasHtml=isOpen?fichas.map(f=>{
+      const exsCount=countExs(f);
+      const temEsboço=f.esboço&&f.esboço.length>0;
+      const isPend=temEsboço&&exsCount===0;
+      return`<div style="border:1px solid var(--bg3);border-radius:8px;margin-top:6px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg)">
+          <div style="width:22px;height:22px;border-radius:50%;background:${f.cor||'#1E40AF'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0">${f.letra}</div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:var(--ink)">${f.nm}</div>
+            <div style="font-size:10px;color:var(--ink3)">${exsCount} exercícios${isPend?' · <span style="color:#D97706">⏳ esboço pendente</span>':''}</div>
+          </div>
+          ${exsCount>0?`<button style="font-size:10px;padding:3px 10px;border:1px solid var(--bg3);background:var(--wh);border-radius:6px;cursor:pointer;color:var(--ink3)" onclick="verFichaHistorico('${a.id}','${p.id}','${f.id}')">Ver ficha</button>`:''}
+        </div>
+        ${isOpen&&exsCount>0?`<div style="padding:6px 14px 10px;background:var(--wh)">
+          ${(f.exs||[]).map(e=>{
+            if(e.tp==='s') return`<div style="font-size:11px;color:var(--ink2);padding:2px 0;border-bottom:1px solid var(--bg)">· ${e.n} <span style="color:var(--ink3)">${e.s}×${e.r}</span></div>`;
+            return`<div style="font-size:11px;color:#1E40AF;padding:2px 0;border-bottom:1px solid var(--bg)">[${e.grupo}] ${(e.exs||[]).map(x=>x.n).join(' + ')}</div>`;
+          }).join('')}
+        </div>`:''}
+      </div>`;
+    }).join(''):'';
+
+    return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" onclick="histProgramaOpen=histProgramaOpen==='${p.id}'?null:'${p.id}';setMod('historico',null)">
+        <div style="width:36px;height:36px;border-radius:8px;background:${statusBg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${status==='ativo'?'💪':status==='encerrado'?'📁':'📋'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--ink)">${p.nm||'Programa'}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${vigencia} · ${fichas.length} ficha${fichas.length!==1?'s':''} · ${totalEx} exercícios</div>
+        </div>
+        <span style="font-size:10px;padding:2px 10px;border-radius:20px;font-weight:500;background:${statusBg};color:${statusTc}">${statusLabel}</span>
+        <span style="color:var(--ink3);font-size:13px;transition:transform .2s;${isOpen?'transform:rotate(180deg)':''}">▾</span>
+      </div>
+      ${isOpen?`<div style="padding:0 16px 14px;border-top:1px solid var(--bg3)">${fichasHtml}</div>`:''}
+    </div>`;
+  }).join('');
+
+  return`<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+      <button onclick="setMod('treinos',document.querySelector('.sb-item'))" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:15px;padding:4px 8px">←</button>
+      <div class="av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
+      <div>
+        <div style="font-size:15px;font-weight:600;color:var(--ink)">${a.nm}</div>
+        <div style="font-size:11px;color:var(--ink3)">mat. ${a.mat} · ${progs.length} programa${progs.length!==1?'s':''}</div>
+      </div>
+    </div>
+    <div style="padding:16px 24px;overflow-y:auto;flex:1">${progs.length?cards:`<div class="empty-state"><div class="empty-ico">📋</div><div class="empty-title">Sem programas</div></div>`}</div>
+  </div>`;
+}
+
+function verFichaHistorico(alunoId,progId,fichaId){
+  // Navega para o treino do aluno naquela ficha
+  const a=D.alunos.find(x=>x.id===alunoId);
+  if(!a)return;
+  const progIdx=a.programas.findIndex(p=>p.id===progId);
+  if(progIdx<0)return;
+  // Move programa para frente temporariamente (read-only view seria ideal, por ora navega diretamente)
+  selecionarAluno(alunoId);
+  const fichaIdx=(a.programas[progIdx].fichas||[]).findIndex(f=>f.id===fichaId);
+  fichaAtiva=Math.max(0,fichaIdx);
+  // Se não é o programa atual, troca temporariamente
+  if(progIdx!==0){
+    const tmp=a.programas[0];a.programas[0]=a.programas[progIdx];a.programas[progIdx]=tmp;
+  }
+  setMod('treinos',document.querySelector('.sb-item'));
+}
+
 function renderFila(){
   const novas=D.solicitacoes.filter(s=>s.status==='nova');
   const hist=D.solicitacoes.filter(s=>s.status!=='nova');
@@ -2040,6 +2248,7 @@ function renderFila(){
   </div>`;
 }
 
+loadSaved();
 alunoSel=D.alunos[0];
 if(D.alunos[0]?.programas?.[0]?.fichas?.[0]?.id)
   sketchOpen[D.alunos[0].programas[0].fichas[0].id]=true;
