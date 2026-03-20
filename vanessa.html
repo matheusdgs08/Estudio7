@@ -2,262 +2,313 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FAF8F4">
 <title>Estúdio Se7e — Coordenação</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
   --gold:#B8975A;--gold-l:#F5EFE4;--gold-d:#8B6B35;
   --ink:#1C1916;--ink2:#4A453F;--ink3:#8A8278;
   --bg:#FAF8F4;--bg2:#F0EDE8;--bg3:#E2DDD6;--wh:#FFFFFF;
-  --r:8px;--rs:6px;
+  --r:12px;--rs:8px;
   --green:#059669;--green-l:#ECFDF5;--green-b:#6EE7B7;
   --red:#DC2626;--red-l:#FEF2F2;--red-b:#FECACA;
   --blue:#1E40AF;--blue-l:#EFF6FF;--blue-b:#BFDBFE;
   --purple:#6D28D9;--purple-l:#F5F3FF;--purple-b:#C4B5FD;
   --amber:#D97706;--amber-l:#FFFBEB;--amber-b:#FCD34D;
-  --sidebar:230px;--col-alunos:240px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --sidebar:260px;
 }
-html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:13px;overflow:hidden}
-input,select,button,textarea{font-family:'DM Sans',sans-serif;font-size:13px}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font-size:14px;overflow:hidden}
+input,select,button,textarea{font-family:'DM Sans',sans-serif}
 button{cursor:pointer}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:var(--ink3)}
+.app{display:flex;height:100vh;height:-webkit-fill-available;padding-top:var(--safe-top)}
 
-/* ── APP SHELL ── */
-.app{display:flex;height:100vh;background:var(--bg)}
-
-/* ── SIDEBAR ── */
-.sidebar{width:var(--sidebar);background:var(--ink);display:flex;flex-direction:column;flex-shrink:0}
-.sb-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-brand{font-family:'Playfair Display',serif;font-size:15px;font-weight:400;color:var(--wh);letter-spacing:.3px}
-.sb-role{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
-.sb-user{padding:10px 16px 10px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:9px}
-.sb-av{width:28px;height:28px;border-radius:50%;background:var(--gold-l);color:var(--gold-d);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
-.sb-uname{font-size:12px;font-weight:500;color:var(--wh);line-height:1.3}
-.sb-uemail{font-size:10px;color:rgba(255,255,255,.3)}
-.sb-nav{flex:1;padding:8px 0;overflow-y:auto}
-.sb-section{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.2);padding:10px 16px 4px;font-weight:600}
-.sb-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;color:rgba(255,255,255,.45);font-size:12px;font-weight:400;position:relative;border:none;background:transparent;width:100%;text-align:left;transition:all .12s}
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--ink);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:transform .25s ease}
+.sb-logo{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sb-brand{font-family:'Playfair Display',serif;font-size:17px;font-weight:400;color:var(--wh)}
+.sb-role{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+.sb-user{padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sb-av{width:32px;height:32px;border-radius:50%;background:var(--gold-l);color:var(--gold-d);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.sb-uname{font-size:13px;font-weight:500;color:var(--wh)}
+.sb-uemail{font-size:11px;color:rgba(255,255,255,.35);margin-top:1px}
+.sb-nav{flex:1;padding:10px 0;overflow-y:auto}
+.sb-section{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:12px 20px 5px;font-weight:600}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5);font-size:13px;font-weight:400;position:relative;border:none;background:transparent;width:100%;text-align:left}
 .sb-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.8)}
-.sb-item.on{background:rgba(255,255,255,.09);color:var(--wh);font-weight:500}
-.sb-item.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--gold)}
-.sb-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
-.sb-badge{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:10px;background:var(--red);color:var(--wh);font-weight:600}
-.sb-bottom{padding:10px 16px;border-top:1px solid rgba(255,255,255,.07)}
-.btn-logout-sb{font-size:11px;color:rgba(255,255,255,.35);background:transparent;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:5px}
-.btn-logout-sb:hover{color:#f87171}
+.sb-item.on{background:rgba(255,255,255,.1);color:var(--wh);font-weight:500}
+.sb-item.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);border-radius:0 2px 2px 0}
+.sb-ico{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.sb-badge{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:10px;background:var(--red);color:var(--wh);font-weight:600}
+.sb-bottom{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08)}
+.btn-logout-sb{font-size:12px;color:rgba(255,255,255,.4);background:transparent;border:none;cursor:pointer;padding:0;display:flex;align-items:center;gap:6px}
+.btn-logout-sb:hover{color:var(--red)}
 
-/* ── MAIN ── */
+/* MAIN */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
-.topbar{background:var(--wh);border-bottom:1px solid var(--bg3);padding:0 20px;display:flex;align-items:center;height:48px;gap:12px;flex-shrink:0}
-.tb-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:400;color:var(--ink)}
-.tb-sep{width:1px;height:18px;background:var(--bg3);flex-shrink:0}
-.tb-sub{font-size:12px;color:var(--ink3);flex:1}
-.tb-actions{display:flex;gap:7px;align-items:center}
-.btn-prim{padding:6px 14px;background:var(--gold);color:var(--wh);border:none;border-radius:20px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;white-space:nowrap}
-.btn-prim:hover{background:var(--gold-d)}
-.btn-sec{padding:6px 12px;border:1px solid var(--bg3);background:var(--wh);border-radius:20px;font-size:12px;color:var(--ink2)}
-.btn-sec:hover{border-color:var(--gold);color:var(--gold-d)}
-.btn-cmp{padding:6px 12px;border:1px solid var(--blue-b);background:var(--blue-l);border-radius:20px;font-size:12px;color:var(--blue);font-weight:500;display:flex;align-items:center;gap:5px}
-.btn-cmp:hover{background:#DBEAFE}
-.btn-cmp.on{background:var(--blue);color:var(--wh);border-color:var(--blue)}
-.content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.topbar{background:var(--wh);border-bottom:1px solid var(--bg3);padding:0 24px;display:flex;align-items:center;height:56px;gap:12px;flex-shrink:0}
+.tb-menu{display:none;background:none;border:none;color:var(--ink3);font-size:20px;cursor:pointer;padding:4px;border-radius:var(--rs)}
+.tb-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:400;color:var(--ink);flex:1}
+.tb-sub{font-size:12px;color:var(--ink3);margin-top:1px}
+.tb-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.btn-primary{padding:8px 18px;background:var(--gold);color:var(--wh);border:none;border-radius:20px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary:hover{background:var(--gold-d)}
+.btn-secondary{padding:8px 16px;border:1.5px solid var(--bg3);background:transparent;border-radius:20px;font-size:13px;color:var(--ink2);white-space:nowrap}
+.btn-secondary:hover{border-color:var(--gold);color:var(--gold-d)}
+.btn-compare{padding:8px 16px;border:1.5px solid var(--blue-b);background:var(--blue-l);border-radius:20px;font-size:13px;color:var(--blue);font-weight:500;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-compare.on{background:var(--blue);color:var(--wh);border-color:var(--blue)}
+.content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(28,25,22,.5);z-index:50}
 
-/* ── TREINOS ── */
-.treinos-wrap{display:flex;flex:1;overflow:hidden}
-
-/* COLUNA ALUNOS */
-.col-alunos{width:var(--col-alunos);flex-shrink:0;border-right:1px solid var(--bg3);display:flex;flex-direction:column;background:var(--wh)}
-.ca-hdr{padding:10px 12px;border-bottom:1px solid var(--bg3);flex-shrink:0}
-.ca-search{width:100%;padding:6px 10px;border:1px solid var(--bg3);border-radius:var(--rs);font-size:12px;outline:none;background:var(--bg)}
-.ca-search:focus{border-color:var(--gold);background:var(--wh)}
+/* TREINOS LAYOUT */
+.treinos-layout{display:flex;height:100%;overflow:hidden}
+.col-alunos{width:255px;flex-shrink:0;border-right:1px solid var(--bg3);display:flex;flex-direction:column;background:var(--wh);overflow:hidden}
+.ca-header{padding:12px 14px;border-bottom:1px solid var(--bg3);flex-shrink:0}
+.ca-search{width:100%;padding:8px 12px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:13px;outline:none;background:var(--bg)}
+.ca-search:focus{border-color:var(--gold)}
 .alunos-list{flex:1;overflow-y:auto}
-.aluno-row{display:flex;align-items:center;gap:9px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--bg3);transition:background .12s}
-.aluno-row:hover{background:var(--bg)}
-.aluno-row.sel{background:var(--gold-l)}
-.aluno-row.sel{border-left:2px solid var(--gold)}
-.a-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
-.a-info{flex:1;min-width:0}
-.a-nome{font-size:12px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.a-prog{font-size:10px;color:var(--ink3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.a-chip{font-size:10px;padding:1px 6px;border-radius:10px;border:1px solid;flex-shrink:0}
-.ac-ok{background:var(--green-l);color:var(--green);border-color:var(--green-b)}
-.ac-no{background:var(--bg2);color:var(--ink3);border-color:var(--bg3)}
+.aluno-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--bg3);transition:all .15s}
+.aluno-item:hover{background:var(--bg)}
+.aluno-item.sel{background:var(--gold-l);border-right:3px solid var(--gold)}
+.aluno-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0}
+.aluno-info{flex:1;min-width:0}
+.aluno-nome{font-size:13px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aluno-prog{font-size:11px;color:var(--ink3);margin-top:1px}
 
-/* COLUNA PROGRAMA */
-.col-prog{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+/* COL PROGRAMA */
+.col-prog{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
-/* TABS DAS FICHAS */
-.fichas-bar{background:var(--wh);border-bottom:1px solid var(--bg3);display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto;min-height:40px}
-.fichas-bar::-webkit-scrollbar{height:0}
-.ftab-wrap{display:flex;align-items:stretch;border-right:1px solid var(--bg3)}
-.ftab{padding:0 14px;font-size:12px;color:var(--ink3);cursor:pointer;white-space:nowrap;border:none;background:transparent;display:flex;align-items:center;gap:6px;border-bottom:2px solid transparent;transition:all .12s;position:relative}
-.ftab:hover{color:var(--ink2);background:var(--bg)}
-.ftab.on{color:var(--ink);border-bottom:2px solid var(--gold);font-weight:600;background:var(--wh)}
-.ftab.cmp{color:var(--blue);border-bottom:2px solid var(--blue)}
-.ftab-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.ftab-del{width:16px;height:16px;border-radius:50%;border:1px solid transparent;background:transparent;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink3);opacity:.4;transition:all .12s;flex-shrink:0;cursor:pointer;line-height:1;padding:0}
-.ftab:hover .ftab-del,.ftab.on .ftab-del{opacity:.7}
-.ftab-del:hover{background:var(--red-l);color:var(--red);border-color:var(--red-b);opacity:1}
-.btn-add-tab{padding:0 12px;font-size:18px;color:var(--ink3);background:none;border:none;cursor:pointer;flex-shrink:0;display:flex;align-items:center;line-height:1}
-.btn-add-tab:hover{color:var(--gold);background:var(--gold-l)}
+/* FICHAS TABS */
+.fichas-tabs{background:var(--wh);border-bottom:1px solid var(--bg3);padding:0 14px;display:flex;align-items:stretch;gap:0;flex-shrink:0;overflow-x:auto;min-height:46px}
+.tab-wrapper{display:flex;align-items:center;border-bottom:2.5px solid transparent;flex-shrink:0}
+.tab-wrapper.on{border-bottom-color:var(--gold)}
+.tab-wrapper.comparing{border-bottom-color:var(--blue)}
+.ficha-tab{padding:12px 12px 12px 14px;font-size:13px;color:var(--ink3);cursor:pointer;white-space:nowrap;border:none;background:transparent;display:flex;align-items:center;gap:7px;transition:color .15s}
+.ficha-tab:hover{color:var(--ink2)}
+.tab-wrapper.on .ficha-tab{color:var(--ink);font-weight:600}
+.tab-wrapper.comparing .ficha-tab{color:var(--blue);font-weight:600}
+
+/* ← BOTÃO DELETE FICHA — sempre visível, vermelho */
+.btn-tab-del{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--red-b);background:var(--red-l);color:var(--red);font-size:13px;display:flex;align-items:center;justify-content:center;line-height:1;margin-right:6px;transition:all .15s;flex-shrink:0;font-weight:600}
+.btn-tab-del:hover{background:var(--red);color:var(--wh);border-color:var(--red)}
+
+.btn-add-ficha{margin-left:auto;padding:0 10px;font-size:22px;color:var(--ink3);background:none;border:none;cursor:pointer;flex-shrink:0;line-height:1;align-self:center}
+.btn-add-ficha:hover{color:var(--gold)}
 
 /* ÁREA EXERCÍCIOS */
-.exs-area{flex:1;overflow:hidden;display:flex}
+.exercicios-area{flex:1;overflow:hidden;display:flex}
+.exercicios-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.compare-cols{flex:1;display:flex;overflow:hidden}
+.compare-col{flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--bg3)}
+.compare-col:last-child{border-right:none}
+.compare-col-hdr{padding:10px 14px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:8px;background:var(--wh);flex-shrink:0}
+.compare-col-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 
-/* MODO NORMAL */
-.exs-body{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:7px}
+/* NOTA INTERNA */
+.nota-interna{border:1.5px solid var(--amber-b);border-radius:var(--r);background:var(--amber-l);overflow:hidden;margin-bottom:4px}
+.nota-hdr{padding:8px 14px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.nota-hdr-txt{font-size:12px;font-weight:600;color:var(--amber);flex:1}
+.nota-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(217,119,6,.15);color:var(--amber);border:1px solid var(--amber-b)}
+.nota-chev{font-size:12px;color:var(--amber);transition:transform .2s}
+.nota-chev.open{transform:rotate(180deg)}
+.nota-body{padding:0 14px 12px}
+.nota-textarea{width:100%;font-size:13px;border:1.5px solid var(--amber-b);border-radius:var(--rs);padding:10px 12px;background:var(--wh);color:var(--ink);outline:none;resize:none;line-height:1.7;min-height:80px}
+.nota-textarea:focus{border-color:var(--amber)}
+.nota-textarea::placeholder{color:#D9B896}
+.nota-hint{font-size:11px;color:var(--amber);margin-top:6px;opacity:.8}
 
-/* MODO COMPARAÇÃO */
-.cmp-cols{flex:1;display:flex;overflow:hidden}
-.cmp-col{flex:1;min-width:220px;display:flex;flex-direction:column;border-right:1px solid var(--bg3)}
-.cmp-col:last-child{border-right:none}
-.cmp-col-hdr{padding:8px 14px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:7px;background:var(--wh);flex-shrink:0}
-.cmp-col-title{font-size:12px;font-weight:600;color:var(--ink)}
-.cmp-col-body{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+/* MODO ESBOÇO */
+.esboço-banner{background:var(--purple-l);border:1.5px solid var(--purple-b);border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.esboço-txt{flex:1;font-size:12px;color:var(--purple);line-height:1.5}
+.btn-esboço-toggle{font-size:12px;padding:6px 14px;border-radius:20px;font-weight:600;border:1.5px solid;cursor:pointer;white-space:nowrap;transition:all .15s}
+.btn-esboço-on{background:var(--purple);color:var(--wh);border-color:var(--purple)}
+.btn-esboço-off{background:transparent;color:var(--purple);border-color:var(--purple-b)}
+.btn-esboço-off:hover{background:var(--purple);color:var(--wh);border-color:var(--purple)}
+.btn-esboço-converter{font-size:12px;padding:6px 14px;border-radius:20px;font-weight:600;border:1.5px solid var(--green-b);background:var(--green-l);color:var(--green);cursor:pointer;white-space:nowrap}
+.btn-esboço-converter:hover{background:var(--green);color:var(--wh)}
 
-/* ── EXERCÍCIO CARD ── */
-.ex-card{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden;transition:border-color .12s;user-select:none}
-.ex-card:hover{border-color:var(--bg3)}
+/* CARD ESBOÇO */
+.esboço-body{display:flex;flex-direction:column;gap:0;background:var(--wh);border:1.5px solid var(--purple-b);border-radius:var(--r);overflow:hidden}
+.esboço-hdr{padding:10px 16px;background:var(--purple-l);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--purple-b)}
+.esboço-hdr-txt{font-size:12px;font-weight:600;color:var(--purple);flex:1}
+.btn-add-grupo-esboço{font-size:12px;padding:4px 12px;border-radius:20px;border:1.5px solid var(--purple-b);background:transparent;color:var(--purple);cursor:pointer}
+.btn-add-grupo-esboço:hover{background:var(--purple);color:var(--wh)}
+.esboço-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bg3);transition:background .15s}
+.esboço-row:last-child{border-bottom:none}
+.esboço-row:hover{background:var(--bg)}
+.esboço-grupo-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.esboço-grupo-nm{font-size:13px;font-weight:500;color:var(--ink);min-width:110px;flex-shrink:0}
+.esboço-params{display:flex;gap:6px;align-items:center;flex:1}
+.esboço-inp{width:52px;padding:5px 8px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:14px;font-weight:600;text-align:center;outline:none;color:var(--ink);background:var(--bg)}
+.esboço-inp:focus{border-color:var(--purple);background:var(--wh)}
+.esboço-sep{font-size:13px;color:var(--ink3);font-weight:500}
+.esboço-obs-inp{flex:1;padding:5px 10px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:12px;outline:none;color:var(--ink2);background:var(--bg)}
+.esboço-obs-inp:focus{border-color:var(--purple-b)}
+.btn-esboço-del-row{width:24px;height:24px;border-radius:50%;border:none;background:transparent;color:var(--bg3);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.btn-esboço-del-row:hover{background:var(--red-l);color:var(--red)}
+.esboço-empty{padding:24px;text-align:center;color:var(--ink3);font-size:13px}
+
+/* EXERCÍCIO CARD */
+.ex-card{background:var(--wh);border:1.5px solid var(--bg3);border-radius:var(--r);overflow:hidden;transition:all .2s;user-select:none}
 .ex-card.dragging{opacity:.4;border-style:dashed;border-color:var(--gold)}
-.ex-card.drag-over{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,151,90,.2)}
-.ex-row{display:flex;align-items:center;gap:7px;padding:8px 10px}
-.ex-drag{color:var(--bg3);font-size:13px;cursor:grab;flex-shrink:0;padding:0 1px;line-height:1}
-.ex-drag:hover{color:var(--ink3)}
-.ex-drag:active{cursor:grabbing}
-.ex-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;background:var(--bg2);color:var(--ink3)}
+.ex-card.drag-over{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,151,90,.15)}
+.ex-main{display:flex;align-items:center;gap:8px;padding:10px 12px}
+.ex-drag{color:var(--bg3);font-size:16px;cursor:grab;flex-shrink:0;padding:0 2px;touch-action:none}
+.ex-drag:active{cursor:grabbing;color:var(--ink3)}
+.ex-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;background:var(--bg2);color:var(--ink3)}
 .ex-info{flex:1;min-width:0}
-.ex-nome{font-size:12px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ex-grupo{font-size:10px;color:var(--ink3);margin-top:1px}
-.ex-tags{display:flex;gap:4px;align-items:center;flex-shrink:0}
-.etag{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--bg2);color:var(--ink2);font-weight:500;white-space:nowrap}
-.etag.carga{background:var(--gold-l);color:var(--gold-d)}
-.ex-acts{display:flex;gap:2px;flex-shrink:0}
-.btn-ei,.btn-ed{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;border:none;background:transparent;color:var(--ink3);transition:all .1s}
-.btn-ei:hover{background:var(--gold-l);color:var(--gold-d)}
-.btn-ed:hover{background:var(--red-l);color:var(--red)}
-.ex-obs{font-size:11px;color:var(--ink3);padding:0 10px 7px 38px;font-style:italic}
+.ex-nome{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ex-grupo-tag{font-size:10px;padding:1px 7px;border-radius:10px;display:inline-block;margin-top:2px;font-weight:500}
+.ex-params{display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.ex-param{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--bg2);color:var(--ink2);font-weight:500;white-space:nowrap}
+.ex-param.carga{background:var(--gold-l);color:var(--gold-d)}
+.ex-btns{display:flex;gap:4px;flex-shrink:0}
+.btn-ex-edit,.btn-ex-del{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--bg3);background:transparent;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink3)}
+.btn-ex-edit:hover{border-color:var(--gold);background:var(--gold-l);color:var(--gold-d)}
+.btn-ex-del{border:none}
+.btn-ex-del:hover{background:var(--red-l);color:var(--red)}
 
-/* GRUPO SUPERSET */
-.grupo-card{border:1px solid;border-radius:var(--r);overflow:hidden;user-select:none}
+/* GRUPO MUSCULAR SECTION no modo completo */
+.grupo-section{margin-bottom:4px}
+.grupo-section-hdr{display:flex;align-items:center;gap:8px;padding:6px 4px;margin-bottom:4px}
+.grupo-section-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.grupo-section-nm{font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:.6px;text-transform:uppercase}
+.grupo-section-line{flex:1;height:1px;background:var(--bg3)}
+
+/* SUPERSET */
+.grupo-card{border:1.5px solid;border-radius:var(--r);overflow:hidden;transition:all .2s;user-select:none}
 .grupo-card.dragging{opacity:.4;border-style:dashed}
-.grupo-card.drag-over{box-shadow:0 0 0 2px rgba(184,151,90,.2)}
-.gc-d{border-color:var(--blue-b)}.gc-t{border-color:var(--purple-b)}
-.g-hdr{padding:5px 10px;display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;cursor:grab}
-.gc-d .g-hdr{background:var(--blue-l);color:var(--blue)}
-.gc-t .g-hdr{background:var(--purple-l);color:var(--purple)}
-.g-hdr:active{cursor:grabbing}
-.g-exs{display:flex;flex-direction:column}
-.g-row{display:flex;align-items:center;gap:7px;padding:7px 10px;border-top:1px solid}
-.gc-d .g-row{border-color:#DBEAFE}.gc-t .g-row{border-color:#EDE9FE}
-.gn-d{background:#DBEAFE;color:var(--blue)}.gn-t{background:#EDE9FE;color:var(--purple)}
+.grupo-card.drag-over{box-shadow:0 0 0 3px rgba(184,151,90,.15)}
+.gc-dupla{border-color:var(--blue-b)}
+.gc-trio{border-color:var(--purple-b)}
+.grupo-header{padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.gc-dupla .grupo-header{background:var(--blue-l);color:var(--blue)}
+.gc-trio .grupo-header{background:var(--purple-l);color:var(--purple)}
+.grupo-exs{display:flex;flex-direction:column}
+.grupo-ex-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid}
+.gc-dupla .grupo-ex-row{border-color:#DBEAFE}
+.gc-trio .grupo-ex-row{border-color:#EDE9FE}
+.gnum-d{background:#DBEAFE;color:var(--blue)}
+.gnum-t{background:#EDE9FE;color:var(--purple)}
 
-/* BOTÕES ADD */
-.btn-add-ex{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px dashed var(--bg3);border-radius:var(--r);background:transparent;color:var(--ink3);font-size:12px;cursor:pointer;width:100%;transition:all .12s}
+.btn-add-ex{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--bg3);border-radius:var(--r);background:transparent;color:var(--ink3);font-size:13px;cursor:pointer;width:100%;transition:all .15s}
 .btn-add-ex:hover{border-color:var(--gold);color:var(--gold-d);background:var(--gold-l)}
-.btns-grupo{display:flex;gap:6px;flex-wrap:wrap}
-.btn-add-g{font-size:11px;padding:5px 10px;border:1px dashed;border-radius:var(--r);background:transparent;cursor:pointer;transition:all .12s}
-.btn-add-g.d{color:var(--blue);border-color:var(--blue-b)}.btn-add-g.d:hover{background:var(--blue-l)}
-.btn-add-g.t{color:var(--purple);border-color:var(--purple-b)}.btn-add-g.t:hover{background:var(--purple-l)}
+.btn-add-grupo{display:flex;align-items:center;gap:6px;padding:9px 14px;border:1.5px dashed;border-radius:var(--r);background:transparent;font-size:12px;cursor:pointer;transition:all .15s}
 
-/* ESTADO VAZIO */
-.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:10px;padding:40px;text-align:center;color:var(--ink3)}
-.empty-ico{font-size:32px;opacity:.25}
-.empty-title{font-size:14px;font-weight:500;color:var(--ink2)}
-.empty-sub{font-size:12px;color:var(--ink3);line-height:1.6;max-width:260px}
+/* EMPTY */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:14px;padding:40px;text-align:center}
+.empty-ico{font-size:40px;opacity:.3}
+.empty-title{font-size:16px;font-weight:500;color:var(--ink2)}
+.empty-sub{font-size:13px;color:var(--ink3);line-height:1.6;max-width:280px}
 
-/* ── FILA ── */
-.fila-wrap{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:10px;max-width:860px}
-.sol-card{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden}
+/* FILA */
+.fila-body{padding:20px 24px;display:flex;flex-direction:column;gap:12px}
+.sol-card{background:var(--wh);border:1.5px solid var(--bg3);border-radius:var(--r);overflow:hidden}
 .sol-card.nova{border-color:var(--blue-b)}
-.sol-hdr{padding:10px 14px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:9px}
-.sol-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.sol-hdr{padding:12px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:10px}
+.sol-av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
 .sol-meta{flex:1;min-width:0}
-.sol-nome{font-size:12px;font-weight:600;color:var(--ink)}
-.sol-sub{font-size:10px;color:var(--ink3);margin-top:1px}
-.sbdg{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:500;flex-shrink:0}
-.sbd-n{background:var(--blue-l);color:var(--blue);border:1px solid var(--blue-b)}
-.sbd-ok{background:var(--green-l);color:var(--green);border:1px solid var(--green-b)}
-.sbd-rej{background:var(--red-l);color:var(--red);border:1px solid var(--red-b)}
-.sol-body{padding:10px 14px;display:flex;gap:14px;align-items:flex-start}
-.sol-cols{display:flex;gap:16px;flex:1;min-width:0}
-.sol-col{min-width:0}
-.slbl{font-size:9px;color:var(--ink3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px}
-.sval{font-size:12px;color:var(--ink);font-weight:500}
-.smot{font-size:12px;color:var(--ink2);background:var(--bg);border-radius:var(--rs);padding:7px 10px;line-height:1.5;font-style:italic;flex:1}
-.sol-actions{padding:8px 14px;border-top:1px solid var(--bg3);display:flex;gap:7px}
-.btn-apr{padding:7px 16px;background:var(--green);color:var(--wh);border:none;border-radius:var(--rs);font-size:12px;font-weight:600}
+.sol-nome{font-size:13px;font-weight:600;color:var(--ink)}
+.sol-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+.sol-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500;flex-shrink:0}
+.sb-nova{background:var(--blue-l);color:var(--blue);border:1px solid var(--blue-b)}
+.sb-ok{background:var(--green-l);color:var(--green);border:1px solid var(--green-b)}
+.sb-rej{background:var(--red-l);color:var(--red);border:1px solid var(--red-b)}
+.sol-body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sol-row{display:flex;gap:16px;flex-wrap:wrap}
+.sol-col{flex:1;min-width:100px}
+.sol-lbl{font-size:10px;color:var(--ink3);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.sol-val{font-size:13px;color:var(--ink);font-weight:500}
+.sol-motivo{font-size:13px;color:var(--ink2);background:var(--bg);border-radius:var(--rs);padding:8px 12px;line-height:1.5;font-style:italic}
+.sol-actions{padding:10px 16px;border-top:1px solid var(--bg3);display:flex;gap:8px}
+.btn-apr{flex:1;padding:10px;background:var(--green);color:var(--wh);border:none;border-radius:var(--rs);font-size:13px;font-weight:600}
 .btn-apr:hover{background:#047857}
-.btn-rej{padding:7px 16px;background:var(--red-l);color:var(--red);border:1px solid var(--red-b);border-radius:var(--rs);font-size:12px;font-weight:600}
-.btn-rej:hover{background:#FEE2E2}
+.btn-rej-s{flex:1;padding:10px;background:var(--red-l);color:var(--red);border:1.5px solid var(--red-b);border-radius:var(--rs);font-size:13px;font-weight:600}
+.btn-rej-s:hover{background:#FEE2E2}
 
-/* ── MODAL ── */
-.modal-bg{position:fixed;inset:0;background:rgba(28,25,22,.45);display:flex;align-items:center;justify-content:center;z-index:200}
-.modal-box{background:var(--wh);border-radius:var(--r);width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.18);animation:popin .16s ease}
+/* MODAIS */
+.modal-bg{position:fixed;inset:0;background:rgba(28,25,22,.55);display:flex;align-items:flex-end;justify-content:center;z-index:200;padding-bottom:var(--safe-bot)}
+@media(min-width:640px){.modal-bg{align-items:center}}
+.modal-box{background:var(--wh);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;animation:slideup .22s ease}
+@media(min-width:640px){.modal-box{border-radius:var(--r);animation:popin .18s ease}}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes popin{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
-.mhdr{padding:14px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--wh);z-index:2}
-.mtitle{font-family:'Playfair Display',serif;font-size:15px;font-weight:400;color:var(--ink)}
-.mclose{width:26px;height:26px;border-radius:4px;border:1px solid var(--bg3);background:transparent;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink3)}
-.mclose:hover{background:var(--bg)}
-.mbody{padding:16px;display:flex;flex-direction:column;gap:12px}
-.mf{display:flex;flex-direction:column;gap:4px}
-.ml{font-size:10px;color:var(--ink3);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
-.mi{padding:8px 10px;border:1px solid var(--bg3);border-radius:var(--rs);font-size:13px;outline:none;width:100%;background:var(--bg);color:var(--ink)}
+.modal-handle{width:36px;height:4px;border-radius:2px;background:var(--bg3);margin:10px auto 0}
+@media(min-width:640px){.modal-handle{display:none}}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--wh);z-index:2}
+.modal-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:400;color:var(--ink)}
+.modal-close{width:30px;height:30px;border-radius:50%;border:1px solid var(--bg3);background:transparent;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink3)}
+.modal-close:hover{background:var(--bg)}
+.modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.mf{display:flex;flex-direction:column;gap:5px}
+.ml{font-size:11px;color:var(--ink3);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.mi{padding:11px 14px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:15px;outline:none;width:100%;background:var(--bg);color:var(--ink)}
 .mi:focus{border-color:var(--gold);background:var(--wh)}
-.mi-sel{padding:8px 10px;border:1px solid var(--bg3);border-radius:var(--rs);font-size:13px;outline:none;width:100%;background:var(--bg);color:var(--ink);appearance:none;cursor:pointer}
+.mi-sel{padding:11px 14px;border:1.5px solid var(--bg3);border-radius:var(--rs);font-size:15px;outline:none;width:100%;background:var(--bg);color:var(--ink);appearance:none}
 .mi-sel:focus{border-color:var(--gold);background:var(--wh)}
-.params-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
-.mfoot{padding:10px 16px;border-top:1px solid var(--bg3);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--wh)}
-.btn-mok{padding:7px 20px;background:var(--gold);color:var(--wh);border:none;border-radius:var(--rs);font-size:13px;font-weight:600}
-.btn-mok:hover{background:var(--gold-d)}
-.btn-mcan{padding:7px 12px;border:1px solid var(--bg3);background:transparent;color:var(--ink3);border-radius:var(--rs);font-size:12px}
+.params-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--bg3);display:flex;gap:10px;position:sticky;bottom:0;background:var(--wh)}
+.btn-modal-ok{flex:1;padding:14px;background:var(--gold);color:var(--wh);border:none;border-radius:var(--rs);font-size:15px;font-weight:600}
+.btn-modal-ok:hover{background:var(--gold-d)}
+.btn-modal-can{padding:14px 18px;border:1.5px solid var(--bg3);background:transparent;color:var(--ink3);border-radius:var(--rs);font-size:14px}
+.confirm-box{background:var(--wh);border-radius:var(--r);width:100%;max-width:380px;padding:26px 24px;text-align:center;display:flex;flex-direction:column;gap:14px;animation:popin .18s ease}
+.confirm-ico{font-size:36px}
+.confirm-title{font-size:17px;font-weight:600;color:var(--ink)}
+.confirm-warn{background:var(--red-l);border:1.5px solid var(--red-b);border-radius:var(--rs);padding:12px 14px;font-size:13px;color:#991B1B;line-height:1.6;text-align:left}
+.confirm-sub{font-size:13px;color:var(--ink3);line-height:1.6}
+.confirm-btns{display:flex;gap:10px;margin-top:4px}
+.btn-confirm-del{flex:1;padding:13px;background:var(--red);color:var(--wh);border:none;border-radius:var(--rs);font-size:14px;font-weight:600}
+.btn-confirm-del:hover{background:#B91C1C}
+.btn-confirm-can{flex:1;padding:13px;border:1.5px solid var(--bg3);background:transparent;color:var(--ink3);border-radius:var(--rs);font-size:14px}
 
-/* CONFIRM MODAL */
-.cbox{background:var(--wh);border-radius:var(--r);width:100%;max-width:380px;padding:24px;display:flex;flex-direction:column;gap:14px;animation:popin .16s ease}
-.cico{font-size:28px;text-align:center}
-.ctit{font-size:15px;font-weight:600;color:var(--ink);text-align:center}
-.cwarn{background:var(--red-l);border:1px solid var(--red-b);border-radius:var(--rs);padding:10px 12px;font-size:12px;color:#991B1B;line-height:1.6}
-.csub{font-size:12px;color:var(--ink3);text-align:center;line-height:1.5}
-.cbtns{display:flex;gap:8px}
-.btn-cok{flex:1;padding:10px;background:var(--red);color:var(--wh);border:none;border-radius:var(--rs);font-size:13px;font-weight:600}
-.btn-cok:hover{background:#B91C1C}
-.btn-ccan{flex:1;padding:10px;border:1px solid var(--bg3);background:transparent;color:var(--ink3);border-radius:var(--rs);font-size:13px}
+/* RESPONSIVO */
+@media(max-width:900px){:root{--sidebar:240px}.col-alunos{width:220px}}
+@media(max-width:700px){
+  .sidebar{position:fixed;top:0;left:0;bottom:0;z-index:60;transform:translateX(-100%);padding-top:var(--safe-top)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .tb-menu{display:flex}
+  .treinos-layout{flex-direction:column}
+  .col-alunos{width:100%;max-height:175px;border-right:none;border-bottom:1px solid var(--bg3)}
+  .params-row{grid-template-columns:1fr 1fr}
+  .compare-cols{flex-direction:column}
+  .compare-col{border-right:none;border-bottom:1px solid var(--bg3);max-height:50%}
+  .esboço-grupo-nm{min-width:80px}
+}
+@media(max-width:480px){
+  .col-alunos{max-height:145px}
+  .topbar{padding:0 12px}
+  .exercicios-body{padding:12px 12px}
+  .tb-title{font-size:15px}
+}
 </style>
 </head>
 <body>
+<div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
 <div class="app">
-  <div class="sidebar">
-    <div class="sb-logo">
-      <div class="sb-brand">Estúdio Se7e</div>
-      <div class="sb-role">Coordenação</div>
-    </div>
-    <div class="sb-user">
-      <div class="sb-av">VR</div>
-      <div>
-        <div class="sb-uname">Vanessa Ramos</div>
-        <div class="sb-uemail">vanessa@estudio7.com.br</div>
-      </div>
-    </div>
+  <div class="sidebar" id="sidebar">
+    <div class="sb-logo"><div class="sb-brand">Estúdio Se7e</div><div class="sb-role">Painel da Coordenação</div></div>
+    <div class="sb-user"><div class="sb-av">VR</div><div><div class="sb-uname">Vanessa Ramos</div><div class="sb-uemail">vanessa@estudio7.com.br</div></div></div>
     <nav class="sb-nav">
       <div class="sb-section">Treinos</div>
-      <button class="sb-item on" onclick="setMod('treinos',this)"><span class="sb-ico">💪</span>Fichas de treino</button>
-      <button class="sb-item" onclick="setMod('fila',this)"><span class="sb-ico">📥</span>Solicitações<span class="sb-badge" id="badge-fila">3</span></button>
+      <button class="sb-item on" onclick="setMod('treinos',this)"><span class="sb-ico">💪</span> Fichas de treino</button>
+      <button class="sb-item" onclick="setMod('fila',this)"><span class="sb-ico">📥</span> Solicitações<span class="sb-badge" id="badge-fila">3</span></button>
       <div class="sb-section">Alunos</div>
-      <button class="sb-item" onclick="setMod('avaliacao',this)"><span class="sb-ico">📊</span>Avaliação física</button>
-      <button class="sb-item" onclick="setMod('evolucao',this)"><span class="sb-ico">📈</span>Evolução</button>
+      <button class="sb-item" onclick="setMod('avaliacao',this)"><span class="sb-ico">📊</span> Avaliação física</button>
+      <button class="sb-item" onclick="setMod('evolucao',this)"><span class="sb-ico">📈</span> Evolução</button>
     </nav>
     <div class="sb-bottom"><button class="btn-logout-sb">✕ &nbsp;Sair</button></div>
   </div>
 
   <div class="main">
-    <div class="topbar">
-      <div class="tb-title" id="tb-title">Fichas de treino</div>
-      <div class="tb-sep"></div>
-      <div class="tb-sub" id="tb-sub">Programas e sequências dos alunos</div>
+    <div class="topbar" id="topbar">
+      <button class="tb-menu" onclick="toggleSidebar()">☰</button>
+      <div style="flex:1;min-width:0"><div class="tb-title" id="tb-title">Fichas de treino</div><div class="tb-sub" id="tb-sub">Programas e sequências dos alunos</div></div>
       <div class="tb-actions" id="tb-actions"></div>
     </div>
     <div class="content" id="content"></div>
@@ -268,410 +319,554 @@ button{cursor:pointer}
 <script>
 const AVCV=['#E1F5EE:#0F6E56','#E6F1FB:#185FA5','#FAEEDA:#854F0B','#EEEDFE:#534AB7','#FAECE7:#993C1D','#EAF3DE:#3B6D11'];
 const ini=n=>n.split(' ').slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
-function avs(n){const[bg,c]=AVCV[n.charCodeAt(0)%6].split(':');return`background:${bg};color:${c}`}
+function avStyle(n){const[bg,c]=AVCV[n.charCodeAt(0)%6].split(':');return`background:${bg};color:${c}`}
 const uid=()=>'x'+Date.now()+Math.random().toString(36).slice(2,5);
 
-let mod='treinos',alunoSel=null,fichaAtiva=0,cmpMode=false,cmpFichas=[],modal=null,q='',drag=null;
+let modulo='treinos';
+let alunoSel=null;
+let fichaAtiva=0;
+let compareMode=false;
+let compareFichas=[];
+let notaAberta={};   // fichaId → bool
+let esboçoAberto={};
+let modal=null;
+let searchQ='';
+let dragState=null;
 
-const EX_BASE=[
-  {n:'LEG PRESS 45',g:'Quadríceps'},{n:'AGACHAMENTO LIVRE',g:'Quadríceps'},{n:'HACK SQUAT',g:'Quadríceps'},{n:'CADEIRA EXTENSORA',g:'Quadríceps'},
-  {n:'MESA FLEXORA',g:'Posterior'},{n:'CADEIRA FLEXORA',g:'Posterior'},{n:'STIFF',g:'Posterior'},
-  {n:'AGACHAMENTO SUMÔ',g:'Glúteo'},{n:'ELEVAÇÃO PÉLVICA',g:'Glúteo'},{n:'GLÚTEO NO CABO',g:'Glúteo'},
-  {n:'SUPINO RETO HALTER',g:'Peitoral'},{n:'SUPINO INCLINADO HALTER',g:'Peitoral'},{n:'CROSSOVER',g:'Peitoral'},
-  {n:'PULL DOWN BARRA',g:'Dorsal'},{n:'REMADA CURVADA',g:'Dorsal'},{n:'REMADA POLIA',g:'Dorsal'},
-  {n:'ROSCA DIRETA BARRA',g:'Bíceps'},{n:'ROSCA ALTERNADA',g:'Bíceps'},{n:'ROSCA MARTELO',g:'Bíceps'},
-  {n:'PULLEY BARRA RETA',g:'Tríceps'},{n:'TRÍCEPS CORDA',g:'Tríceps'},{n:'TRÍCEPS TESTA',g:'Tríceps'},
-  {n:'ELEVAÇÃO LATERAL',g:'Ombro'},{n:'DESENVOLVIMENTO HALTER',g:'Ombro'},{n:'ELEVAÇÃO FRONTAL',g:'Ombro'},
-  {n:'PRANCHA ISOMÉTRICA',g:'Abdômen'},{n:'ABDOMINAL SUPRA',g:'Abdômen'},{n:'ABDOMINAL INFRA',g:'Abdômen'},
-  {n:'PANTURRILHA EM PÉ',g:'Panturrilha'},{n:'PANTURRILHA SENTADO',g:'Panturrilha'},
+// Grupos musculares com cores
+const GRUPOS_INFO={
+  'Quadríceps':{cor:'#DBEAFE',tc:'#1E40AF'},
+  'Posterior':{cor:'#EDE9FE',tc:'#6D28D9'},
+  'Glúteo':{cor:'#FCE7F3',tc:'#9D174D'},
+  'Peitoral':{cor:'#FEF3C7',tc:'#92400E'},
+  'Dorsal':{cor:'#D1FAE5',tc:'#065F46'},
+  'Bíceps':{cor:'#DBEAFE',tc:'#1E40AF'},
+  'Tríceps':{cor:'#EDE9FE',tc:'#6D28D9'},
+  'Ombro':{cor:'#FEE2E2',tc:'#991B1B'},
+  'Abdômen':{cor:'#ECFDF5',tc:'#065F46'},
+  'Lombar':{cor:'#FFF7ED',tc:'#9A3412'},
+  'Panturrilha':{cor:'#F0FDF4',tc:'#166534'},
+  'Cardio':{cor:'#FFF1F2',tc:'#9F1239'},
+};
+
+// Exercícios do banco — nome contém o grupo para fácil identificação
+const EXERCICIOS=[
+  {n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps'},
+  {n:'QUADRICEPS - AGACHAMENTO LIVRE',g:'Quadríceps'},
+  {n:'QUADRICEPS - HACK SQUAT',g:'Quadríceps'},
+  {n:'QUADRICEPS - CADEIRA EXTENSORA',g:'Quadríceps'},
+  {n:'QUADRICEPS - AVANÇO COM HALTERES',g:'Quadríceps'},
+  {n:'POSTERIOR - MESA FLEXORA',g:'Posterior'},
+  {n:'POSTERIOR - CADEIRA FLEXORA',g:'Posterior'},
+  {n:'POSTERIOR - STIFF',g:'Posterior'},
+  {n:'POSTERIOR - LEG CURL DEITADO',g:'Posterior'},
+  {n:'GLUTEO - AGACHAMENTO SUMÔ',g:'Glúteo'},
+  {n:'GLUTEO - ELEVAÇÃO PÉLVICA',g:'Glúteo'},
+  {n:'GLUTEO - GLÚTEO NO CABO',g:'Glúteo'},
+  {n:'GLUTEO - ABDUÇÃO NA MÁQUINA',g:'Glúteo'},
+  {n:'PEITORAL - SUPINO RETO HALTER',g:'Peitoral'},
+  {n:'PEITORAL - SUPINO INCLINADO HALTER',g:'Peitoral'},
+  {n:'PEITORAL - CROSSOVER',g:'Peitoral'},
+  {n:'PEITORAL - CRUCIFIXO',g:'Peitoral'},
+  {n:'DORSAL - PULL DOWN BARRA',g:'Dorsal'},
+  {n:'DORSAL - REMADA CURVADA',g:'Dorsal'},
+  {n:'DORSAL - REMADA POLIA ALTA CORDA',g:'Dorsal'},
+  {n:'DORSAL - REMADA UNILATERAL',g:'Dorsal'},
+  {n:'BICEPS - ROSCA DIRETA BARRA',g:'Bíceps'},
+  {n:'BICEPS - ROSCA ALTERNADA',g:'Bíceps'},
+  {n:'BICEPS - ROSCA MARTELO',g:'Bíceps'},
+  {n:'TRICEPS - PULLEY BARRA RETA',g:'Tríceps'},
+  {n:'TRICEPS - TRÍCEPS CORDA',g:'Tríceps'},
+  {n:'TRICEPS - FRANCÊS',g:'Tríceps'},
+  {n:'OMBRO - ELEVAÇÃO LATERAL',g:'Ombro'},
+  {n:'OMBRO - DESENVOLVIMENTO HALTER',g:'Ombro'},
+  {n:'OMBRO - ELEVAÇÃO FRONTAL',g:'Ombro'},
+  {n:'ABDOMEN - PRANCHA ISOMETRICA',g:'Abdômen'},
+  {n:'ABDOMEN - ABDOMINAL SUPRA',g:'Abdômen'},
+  {n:'ABDOMEN - ABDOMINAL INFRA',g:'Abdômen'},
+  {n:'PANTURRILHA - PANTURRILHA EM PÉ',g:'Panturrilha'},
+  {n:'LOMBAR - HIPEREXTENSÃO',g:'Lombar'},
 ];
-const GRUPOS=['Quadríceps','Posterior','Glúteo','Peitoral','Dorsal','Bíceps','Tríceps','Ombro','Abdômen','Lombar','Panturrilha','Cardio'];
+
+function getGrupoInfo(g){return GRUPOS_INFO[g]||{cor:'#F1EFE8',tc:'#4A453F'};}
+function exNomeExibir(n){return n.replace(/^[A-ZÁÉÍÓÚÃÕÇ]+ - /,'');}
 
 let D={
   alunos:[
     {id:1,nm:'Ana Paula Tanaka',mat:2660,programas:[{id:'p1',nm:'Programa — Março 2026',fichas:[
-      {id:'f1',cor:'#1E40AF',nm:'Treino A',exs:[
-        {id:'e1',tp:'s',n:'LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:60,ca:80,obs:''},
-        {id:'e2',tp:'g',grupo:'dupla',exs:[
-          {id:'e2a',n:'PULL DOWN BARRA',g:'Dorsal',s:4,r:'10',d:0,ca:25,obs:''},
-          {id:'e2b',n:'ROSCA DIRETA BARRA',g:'Bíceps',s:4,r:'12',d:90,ca:8,obs:'Prefere rosca alternada'},
-        ]},
-        {id:'e3',tp:'s',n:'AGACHAMENTO SUMÔ',g:'Glúteo',s:3,r:'15',d:60,ca:20,obs:''},
-        {id:'e4',tp:'s',n:'PRANCHA ISOMÉTRICA',g:'Abdômen',s:3,r:'30s',d:45,ca:null,obs:''},
-      ]},
-      {id:'f2',cor:'#6D28D9',nm:'Treino B',exs:[
-        {id:'e5',tp:'s',n:'SUPINO INCLINADO HALTER',g:'Peitoral',s:4,r:'12',d:90,ca:14,obs:''},
-        {id:'e6',tp:'g',grupo:'dupla',exs:[
-          {id:'e6a',n:'PULLEY BARRA RETA',g:'Tríceps',s:3,r:'12',d:0,ca:18,obs:''},
-          {id:'e6b',n:'ELEVAÇÃO LATERAL',g:'Ombro',s:3,r:'15',d:60,ca:5,obs:'Prefere sentada'},
-        ]},
-        {id:'e7',tp:'s',n:'CADEIRA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:25,obs:''},
-      ]},
-      {id:'f3',cor:'#059669',nm:'Treino C',exs:[
-        {id:'e8',tp:'s',n:'MESA FLEXORA',g:'Posterior',s:4,r:'12',d:60,ca:30,obs:''},
-        {id:'e9',tp:'s',n:'AGACHAMENTO LIVRE',g:'Quadríceps',s:3,r:'10',d:90,ca:40,obs:''},
-        {id:'e10',tp:'s',n:'CADEIRA EXTENSORA',g:'Quadríceps',s:3,r:'15',d:60,ca:20,obs:''},
-        {id:'e11',tp:'s',n:'ABDOMINAL SUPRA',g:'Abdômen',s:3,r:'20',d:30,ca:null,obs:''},
+      {id:'f1',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',
+       esboço:[
+         {id:'es1',g:'Quadríceps',s:4,r:'12',obs:'Foco em amplitude'},
+         {id:'es2',g:'Glúteo',s:3,r:'15',obs:''},
+         {id:'es3',g:'Posterior',s:3,r:'12',obs:'Evitar carga excessiva no stiff'},
+         {id:'es4',g:'Abdômen',s:3,r:'20',obs:''},
+       ],
+       exs:[
+         {id:'e1',tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:60,ca:80,obs:''},
+         {id:'e2',tp:'g',grupo:'dupla',exs:[
+           {id:'e2a',n:'DORSAL - PULL DOWN BARRA',g:'Dorsal',s:4,r:'10',d:0,ca:25,obs:''},
+           {id:'e2b',n:'BICEPS - ROSCA DIRETA BARRA',g:'Bíceps',s:4,r:'12',d:90,ca:8,obs:'Prefere rosca alternada'},
+         ]},
+         {id:'e3',tp:'s',n:'GLUTEO - AGACHAMENTO SUMÔ',g:'Glúteo',s:3,r:'15',d:60,ca:20,obs:''},
+         {id:'e4',tp:'s',n:'ABDOMEN - PRANCHA ISOMETRICA',g:'Abdômen',s:3,r:'30s',d:45,ca:null,obs:''},
+       ]},
+      {id:'f2',cor:'#6D28D9',letra:'B',nm:'Treino B',nota:'Foco em membros superiores. Observar postura no supino — ombro esquerdo fraco.',
+       esboço:[
+         {id:'es5',g:'Peitoral',s:4,r:'12',obs:''},
+         {id:'es6',g:'Tríceps',s:3,r:'12',obs:'Dupla com ombro'},
+         {id:'es7',g:'Ombro',s:3,r:'15',obs:''},
+         {id:'es8',g:'Posterior',s:3,r:'15',obs:''},
+       ],
+       exs:[
+         {id:'e5',tp:'s',n:'PEITORAL - SUPINO INCLINADO HALTER',g:'Peitoral',s:4,r:'12',d:90,ca:14,obs:''},
+         {id:'e6',tp:'g',grupo:'dupla',exs:[
+           {id:'e6a',n:'TRICEPS - PULLEY BARRA RETA',g:'Tríceps',s:3,r:'12',d:0,ca:18,obs:''},
+           {id:'e6b',n:'OMBRO - ELEVAÇÃO LATERAL',g:'Ombro',s:3,r:'15',d:60,ca:5,obs:'Prefere sentada'},
+         ]},
+         {id:'e7',tp:'s',n:'POSTERIOR - CADEIRA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:25,obs:''},
+       ]},
+      {id:'f3',cor:'#059669',letra:'C',nm:'Treino C',nota:'',esboço:[],exs:[
+         {id:'e8',tp:'s',n:'POSTERIOR - MESA FLEXORA',g:'Posterior',s:4,r:'12',d:60,ca:30,obs:''},
+         {id:'e9',tp:'s',n:'QUADRICEPS - AGACHAMENTO LIVRE',g:'Quadríceps',s:3,r:'10',d:90,ca:40,obs:''},
+         {id:'e10',tp:'s',n:'QUADRICEPS - CADEIRA EXTENSORA',g:'Quadríceps',s:3,r:'15',d:60,ca:20,obs:''},
+         {id:'e11',tp:'s',n:'ABDOMEN - ABDOMINAL SUPRA',g:'Abdômen',s:3,r:'20',d:30,ca:null,obs:''},
       ]},
     ]}]},
     {id:2,nm:'Renata Yoshihara',mat:2326,programas:[{id:'p2',nm:'Programa — Março 2026',fichas:[
-      {id:'f4',cor:'#1E40AF',nm:'Treino A',exs:[
-        {id:'e12',tp:'s',n:'HACK SQUAT',g:'Quadríceps',s:4,r:'12',d:60,ca:60,obs:''},
-        {id:'e13',tp:'s',n:'STIFF',g:'Posterior',s:3,r:'12',d:60,ca:20,obs:''},
-        {id:'e14',tp:'s',n:'ELEVAÇÃO PÉLVICA',g:'Glúteo',s:3,r:'15',d:60,ca:25,obs:''},
-      ]},
-      {id:'f5',cor:'#6D28D9',nm:'Treino B',exs:[
-        {id:'e15',tp:'s',n:'SUPINO RETO HALTER',g:'Peitoral',s:4,r:'10',d:90,ca:12,obs:''},
-        {id:'e16',tp:'s',n:'PULL DOWN BARRA',g:'Dorsal',s:4,r:'12',d:60,ca:20,obs:''},
+      {id:'f4',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Aluna prefere aparelhos guiados — evitar livres por enquanto.',esboço:[
+        {id:'es9',g:'Quadríceps',s:4,r:'12',obs:''},
+        {id:'es10',g:'Posterior',s:3,r:'12',obs:''},
+        {id:'es11',g:'Glúteo',s:3,r:'15',obs:''},
+      ],exs:[
+        {id:'e12',tp:'s',n:'QUADRICEPS - HACK SQUAT',g:'Quadríceps',s:4,r:'12',d:60,ca:60,obs:''},
+        {id:'e13',tp:'s',n:'POSTERIOR - STIFF',g:'Posterior',s:3,r:'12',d:60,ca:20,obs:''},
+        {id:'e14',tp:'s',n:'GLUTEO - ELEVAÇÃO PÉLVICA',g:'Glúteo',s:3,r:'15',d:60,ca:25,obs:''},
       ]},
     ]}]},
     {id:3,nm:'Fabio Bonomi',mat:2504,programas:[{id:'p3',nm:'Programa — Março 2026',fichas:[
-      {id:'f6',cor:'#1E40AF',nm:'Treino A',exs:[
-        {id:'e17',tp:'s',n:'LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:90,ca:100,obs:''},
-        {id:'e18',tp:'s',n:'MESA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:30,obs:''},
-        {id:'e19',tp:'s',n:'REMADA POLIA',g:'Dorsal',s:4,r:'10',d:90,ca:32,obs:''},
+      {id:'f5',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[
+        {id:'e15',tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:90,ca:100,obs:''},
+        {id:'e16',tp:'s',n:'POSTERIOR - MESA FLEXORA',g:'Posterior',s:3,r:'15',d:60,ca:30,obs:''},
+        {id:'e17',tp:'s',n:'DORSAL - REMADA POLIA ALTA CORDA',g:'Dorsal',s:4,r:'10',d:90,ca:32,obs:''},
       ]},
     ]}]},
     {id:4,nm:'Mariana Costa',mat:2512,programas:[]},
     {id:5,nm:'Carlos Mendes',mat:2481,programas:[{id:'p4',nm:'Programa — Março 2026',fichas:[
-      {id:'f7',cor:'#1E40AF',nm:'Treino A',exs:[
-        {id:'e20',tp:'s',n:'AGACHAMENTO LIVRE',g:'Quadríceps',s:4,r:'10',d:90,ca:80,obs:''},
-        {id:'e21',tp:'s',n:'SUPINO RETO HALTER',g:'Peitoral',s:4,r:'12',d:90,ca:22,obs:''},
+      {id:'f6',cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'Histórico de dor lombar — evitar carga axial pesada.',esboço:[
+        {id:'es12',g:'Quadríceps',s:4,r:'10',obs:''},
+        {id:'es13',g:'Peitoral',s:4,r:'12',obs:''},
+      ],exs:[
+        {id:'e18',tp:'s',n:'QUADRICEPS - AGACHAMENTO LIVRE',g:'Quadríceps',s:4,r:'10',d:90,ca:80,obs:''},
+        {id:'e19',tp:'s',n:'PEITORAL - SUPINO RETO HALTER',g:'Peitoral',s:4,r:'12',d:90,ca:22,obs:''},
       ]},
-      {id:'f8',cor:'#6D28D9',nm:'Treino B',exs:[
-        {id:'e22',tp:'s',n:'PULL DOWN BARRA',g:'Dorsal',s:4,r:'10',d:90,ca:40,obs:''},
-        {id:'e23',tp:'s',n:'DESENVOLVIMENTO HALTER',g:'Ombro',s:3,r:'12',d:60,ca:12,obs:''},
+      {id:'f7',cor:'#6D28D9',letra:'B',nm:'Treino B',nota:'',esboço:[],exs:[
+        {id:'e20',tp:'s',n:'DORSAL - PULL DOWN BARRA',g:'Dorsal',s:4,r:'10',d:90,ca:40,obs:''},
+        {id:'e21',tp:'s',n:'OMBRO - DESENVOLVIMENTO HALTER',g:'Ombro',s:3,r:'12',d:60,ca:12,obs:''},
       ]},
     ]}]},
     {id:6,nm:'Lucia Fernandes',mat:2390,programas:[]},
   ],
-  sols:[
-    {id:'s1',prof:'Rafael Caires',aluno:'Ana Paula Tanaka',mat:2660,tipo:'troca',exAt:'ROSCA DIRETA BARRA',exSug:'ROSCA MARTELO',mot:'Desconforto no pulso na rosca direta. A rosca martelo alivia a tensão no pulso.',status:'nova',dt:'Hoje, 08:42'},
-    {id:'s2',prof:'Rafael Caires',aluno:'Renata Yoshihara',mat:2326,tipo:'remover',exAt:'STIFF',exSug:null,mot:'Histórico de hérnia lombar. Médico recomendou evitar carga na cadeia posterior.',status:'nova',dt:'Hoje, 07:15'},
-    {id:'s3',prof:'Lucas Santana',aluno:'Fabio Bonomi',mat:2504,tipo:'troca',exAt:'LEG PRESS 45',exSug:'HACK SQUAT',mot:'Aluno sente melhor ativação do quadríceps no hack squat.',status:'nova',dt:'Ontem, 16:30'},
-    {id:'s4',prof:'Rafael Caires',aluno:'Carlos Mendes',mat:2481,tipo:'troca',exAt:'SUPINO RETO HALTER',exSug:'SUPINO INCLINADO HALTER',mot:'Dificuldade de estabilizar na posição plana.',status:'aprovada',dt:'3 mar'},
-    {id:'s5',prof:'Lucas Santana',aluno:'Lucia Fernandes',mat:2390,tipo:'remover',exAt:'AGACHAMENTO LIVRE',exSug:null,mot:'Dor no joelho direito pós-treino.',status:'rejeitada',dt:'28 fev'},
+  solicitacoes:[
+    {id:'s1',prof:'Rafael Caires',aluno:'Ana Paula Tanaka',mat:2660,tipo:'troca',exAtual:'BICEPS - ROSCA DIRETA BARRA',exSugere:'BICEPS - ROSCA MARTELO',motivo:'Aluna relatou desconforto no pulso. A rosca martelo alivia a tensão.',status:'nova',dt:'Hoje, 08:42'},
+    {id:'s2',prof:'Rafael Caires',aluno:'Renata Yoshihara',mat:2326,tipo:'remover',exAtual:'POSTERIOR - STIFF',exSugere:null,motivo:'Aluna tem histórico de hérnia lombar. Médico recomendou evitar carga na cadeia posterior.',status:'nova',dt:'Hoje, 07:15'},
+    {id:'s3',prof:'Lucas Santana',aluno:'Fabio Bonomi',mat:2504,tipo:'troca',exAtual:'QUADRICEPS - LEG PRESS 45',exSugere:'QUADRICEPS - HACK SQUAT',motivo:'Aluno sente melhor o quadríceps no hack squat.',status:'nova',dt:'Ontem, 16:30'},
+    {id:'s4',prof:'Rafael Caires',aluno:'Carlos Mendes',mat:2481,tipo:'troca',exAtual:'PEITORAL - SUPINO RETO HALTER',exSugere:'PEITORAL - SUPINO INCLINADO HALTER',motivo:'Aluno tem dificuldade de estabilizar na posição plana.',status:'aprovada',dt:'3 mar'},
   ]
 };
 
-const gp=a=>a&&a.programas.length?a.programas[0]:null;
-const gfs=a=>gp(a)?gp(a).fichas:[];
-const gf=(a,i)=>{const fs=gfs(a);return fs[i]||fs[0]||null;}
-const cntEx=f=>f.exs.reduce((a,e)=>a+(e.tp==='s'?1:e.exs.length),0);
+function getProg(a){return a&&a.programas.length?a.programas[0]:null;}
+function getFichas(a){return getProg(a)?getProg(a).fichas:[];}
+function getFicha(a,idx){const fs=getFichas(a);return fs[idx]||fs[0]||null;}
 
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
 function setMod(m,el){
-  mod=m;cmpMode=false;cmpFichas=[];
+  modulo=m;compareMode=false;compareFichas=[];fichaAtiva=0;
   document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('on'));
   el.classList.add('on');
-  fichaAtiva=0;render();
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  render();
 }
 
 function render(){
   const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho']};
-  const[tt,ts]=titles[mod]||['',''];
+  const [tt,ts]=titles[modulo]||['',''];
   document.getElementById('tb-title').textContent=tt;
   document.getElementById('tb-sub').textContent=ts;
-  const novas=D.sols.filter(s=>s.status==='nova').length;
-  const b=document.getElementById('badge-fila');b.textContent=novas;b.style.display=novas?'':'none';
-
+  const novas=D.solicitacoes.filter(s=>s.status==='nova').length;
+  const badge=document.getElementById('badge-fila');
+  badge.textContent=novas;badge.style.display=novas?'':'none';
   const acts=document.getElementById('tb-actions');
-  if(mod==='treinos'&&alunoSel&&gfs(alunoSel).length>1){
-    acts.innerHTML=`<button class="btn-cmp ${cmpMode?'on':''}" onclick="toggleCmp()">⧉ Comparar fichas</button><button class="btn-sec" onclick="novoProg()">+ Novo programa</button>`;
-  } else if(mod==='treinos'){
-    acts.innerHTML=`<button class="btn-sec" onclick="novoProg()">+ Novo programa</button>`;
-  } else if(mod==='fila'){
-    acts.innerHTML=`<span style="font-size:12px;color:var(--ink3)">${novas} pendente${novas!==1?'s':''}</span>`;
+  if(modulo==='treinos'&&alunoSel&&getFichas(alunoSel).length>1){
+    acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button>`;
+  } else if(modulo==='treinos'){
+    acts.innerHTML=`<button class="btn-secondary" onclick="novoPrograma()">+ Programa</button>`;
+  } else if(modulo==='fila'){
+    acts.innerHTML=`<span style="font-size:13px;color:var(--ink3)">${novas} pendente${novas!==1?'s':''}</span>`;
   } else acts.innerHTML='';
-
   document.getElementById('content').innerHTML=
-    mod==='treinos'?renderTreinos():
-    mod==='fila'?renderFila():
-    `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Este módulo será construído na próxima fase.</div></div>`;
-  setupDrag();
+    modulo==='treinos'?renderTreinos():
+    modulo==='fila'?renderFila():
+    `<div class="empty-state"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div></div>`;
+  setupDragDrop();
 }
 
-// ── TREINOS ──
 function renderTreinos(){
-  const alunos=q?D.alunos.filter(a=>a.nm.toLowerCase().includes(q.toLowerCase())):D.alunos;
-  const aRows=alunos.map(a=>{
+  const alunos=searchQ?D.alunos.filter(a=>a.nm.toLowerCase().includes(searchQ.toLowerCase())):D.alunos;
+  const listHtml=alunos.map(a=>{
     const tp=a.programas.length>0;const sel=alunoSel&&alunoSel.id===a.id;
-    return`<div class="aluno-row ${sel?'sel':''}" onclick="selAluno(${a.id})">
-      <div class="a-av" style="${avs(a.nm)}">${ini(a.nm)}</div>
-      <div class="a-info"><div class="a-nome">${a.nm}</div><div class="a-prog">${tp?gp(a).nm:'Sem programa'}</div></div>
-      <span class="a-chip ${tp?'ac-ok':'ac-no'}">${tp?gfs(a).length+'T':'—'}</span>
+    return`<div class="aluno-item ${sel?'sel':''}" onclick="selecionarAluno(${a.id})">
+      <div class="aluno-av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
+      <div class="aluno-info"><div class="aluno-nome">${a.nm}</div><div class="aluno-prog">${tp?getProg(a).nm:'Sem programa'}</div></div>
+      <span style="font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid;flex-shrink:0;background:${tp?'var(--green-l)':'var(--bg2)'};color:${tp?'var(--green)':'var(--ink3)'};border-color:${tp?'var(--green-b)':'var(--bg3)'}">
+        ${tp?getFichas(a).length+' treinos':'—'}
+      </span>
     </div>`;
   }).join('');
 
   let main='';
   if(!alunoSel){
-    main=`<div class="empty"><div class="empty-ico">👆</div><div class="empty-title">Selecione um aluno</div><div class="empty-sub">Escolha na lista ao lado para editar o programa de treino.</div></div>`;
-  } else if(gfs(alunoSel).length===0){
-    main=`<div class="empty"><div class="empty-ico">📋</div><div class="empty-title">Sem programa</div><div class="empty-sub">${alunoSel.nm.split(' ')[0]} ainda não tem programa.</div><button class="btn-prim" onclick="novoProg()" style="margin-top:8px">+ Criar programa</button></div>`;
+    main=`<div class="empty-state"><div class="empty-ico">👆</div><div class="empty-title">Selecione um aluno</div><div class="empty-sub">Escolha na lista para ver e editar o programa.</div></div>`;
+  } else if(getFichas(alunoSel).length===0){
+    main=`<div class="empty-state"><div class="empty-ico">📋</div><div class="empty-title">Sem programa</div><div class="empty-sub">${alunoSel.nm.split(' ')[0]} ainda não tem programa.</div><button class="btn-primary" onclick="novoPrograma()" style="margin-top:8px">+ Criar programa</button></div>`;
   } else {
     main=renderFichasArea();
   }
-
-  return`<div class="treinos-wrap">
+  return`<div class="treinos-layout">
     <div class="col-alunos">
-      <div class="ca-hdr"><input class="ca-search" placeholder="Buscar aluno…" value="${q}" oninput="q=this.value;render()"></div>
-      <div class="alunos-list">${aRows}</div>
+      <div class="ca-header"><input class="ca-search" placeholder="Buscar aluno…" value="${searchQ}" oninput="searchQ=this.value;render()"></div>
+      <div class="alunos-list">${listHtml}</div>
     </div>
     <div class="col-prog">${main}</div>
   </div>`;
 }
 
 function renderFichasArea(){
-  const fs=gfs(alunoSel);
-
-  // BARRA DE FICHAS
-  const tabs=fs.map((f,i)=>{
-    const isOn=!cmpMode&&fichaAtiva===i;
-    const isCmp=cmpMode&&cmpFichas.includes(i);
-    return`<div class="ftab-wrap">
-      <button class="ftab ${isOn?'on':''} ${isCmp?'cmp':''}" onclick="${cmpMode?`toggleCmpF(${i})`:`fichaAtiva=${i};render()`}">
-        <span class="ftab-dot" style="background:${f.cor}"></span>
+  const fs=getFichas(alunoSel);
+  const tabsHtml=fs.map((f,i)=>{
+    const isOn=!compareMode&&fichaAtiva===i;
+    const isComp=compareMode&&compareFichas.includes(i);
+    return`<div class="tab-wrapper ${isOn?'on':''} ${isComp?'comparing':''}">
+      <button class="ficha-tab" onclick="${compareMode?`toggleCompareFicha(${i})`:`fichaAtiva=${i};render()`}">
+        <span style="width:10px;height:10px;border-radius:50%;background:${f.cor};display:inline-block;flex-shrink:0"></span>
         ${f.nm}
-        <button class="ftab-del" onclick="event.stopPropagation();pedirDelF('${f.id}')" title="Remover ficha">×</button>
       </button>
+      ${fs.length>1?`<button class="btn-tab-del" onclick="pedirDelFicha('${f.id}')" title="Remover ficha">×</button>`:''}
     </div>`;
   }).join('');
 
-  // CORPO
   let body='';
-  if(cmpMode){
-    if(cmpFichas.length===0){
-      body=`<div class="empty"><div class="empty-ico">⧉</div><div class="empty-title">Selecione as fichas para comparar</div><div class="empty-sub">Clique nas abas para selecionar os treinos que deseja ver lado a lado.</div></div>`;
+  if(compareMode){
+    if(compareFichas.length===0){
+      body=`<div class="exercicios-area"><div class="empty-state" style="flex:1"><div class="empty-ico">⧉</div><div class="empty-title">Selecione as fichas</div><div class="empty-sub">Clique nas abas para comparar lado a lado.</div></div></div>`;
     } else {
-      const cols=cmpFichas.map(i=>{
-        const f=fs[i];
-        return`<div class="cmp-col">
-          <div class="cmp-col-hdr">
-            <span class="ftab-dot" style="background:${f.cor};width:10px;height:10px"></span>
-            <span class="cmp-col-title">${f.nm}</span>
-            <span style="font-size:10px;color:var(--ink3);margin-left:auto">${cntEx(f)} exercícios</span>
-          </div>
-          <div class="cmp-col-body">${renderExsCmp(f)}</div>
-        </div>`;
-      }).join('');
-      body=`<div class="exs-area"><div class="cmp-cols">${cols}</div></div>`;
+      const cols=compareFichas.map(i=>{const f=fs[i];const tot=countExs(f);return`<div class="compare-col">
+        <div class="compare-col-hdr">
+          <span style="width:12px;height:12px;border-radius:50%;background:${f.cor};display:inline-block;flex-shrink:0"></span>
+          <span style="font-size:13px;font-weight:600;color:var(--ink)">${f.nm}</span>
+          <span style="font-size:11px;color:var(--ink3);margin-left:auto">${tot} ex</span>
+        </div>
+        <div class="compare-col-body">${renderExsCompact(f)}</div>
+      </div>`;}).join('');
+      body=`<div class="exercicios-area"><div class="compare-cols">${cols}</div></div>`;
     }
   } else {
     const fa=fs[fichaAtiva]||fs[0];
-    body=`<div class="exs-area">
-      <div class="exs-body">
-        ${renderExsFull(fa)}
-        <button class="btn-add-ex" onclick="openEx(null,'${fa.id}')">＋ Adicionar exercício</button>
-        <div class="btns-grupo">
-          <button class="btn-add-g d" onclick="addGrupo('${fa.id}','dupla')">+ Dupla</button>
-          <button class="btn-add-g t" onclick="addGrupo('${fa.id}','trio')">+ Trio</button>
+    body=`<div class="exercicios-area">
+      <div class="exercicios-body" id="exs-body-${fa.id}">
+        ${renderNotaInterna(fa)}
+        ${renderEsboço(fa)}
+        ${renderExsGrupados(fa)}
+        <button class="btn-add-ex" onclick="abrirModalEx(null,'${fa.id}')"><span style="font-size:18px;line-height:1">+</span> Adicionar exercício</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-add-grupo" style="color:var(--blue);border-color:var(--blue-b)" onclick="addGrupo('${fa.id}','dupla')">+ Dupla</button>
+          <button class="btn-add-grupo" style="color:var(--purple);border-color:var(--purple-b)" onclick="addGrupo('${fa.id}','trio')">+ Trio</button>
         </div>
       </div>
     </div>`;
   }
-
-  return`<div class="fichas-bar">${tabs}<button class="btn-add-tab" onclick="addFicha()" title="Nova ficha">＋</button></div>${body}`;
+  return`<div class="fichas-tabs">${tabsHtml}<button class="btn-add-ficha" onclick="addFicha()" title="Nova ficha">+</button></div>${body}`;
 }
 
-function renderExsFull(f){
-  let n=0;
-  return f.exs.map((e,idx)=>{
-    if(e.tp==='s'){n++;return`<div class="ex-card" draggable="true" data-fid="${f.id}" data-eid="${e.id}" data-idx="${idx}">
-      <div class="ex-row">
-        <span class="ex-drag" title="Arrastar para reordenar">⠿</span>
-        <div class="ex-num">${n}</div>
-        <div class="ex-info"><div class="ex-nome">${e.n}</div><div class="ex-grupo">${e.g}</div></div>
-        <div class="ex-tags">
-          <span class="etag">${e.s}× ${e.r}</span>
-          ${e.d?`<span class="etag">${e.d}s</span>`:''}
-          ${e.ca!=null?`<span class="etag carga">${e.ca} kg</span>`:''}
-        </div>
-        <div class="ex-acts">
-          <button class="btn-ei" onclick="openEx('${e.id}','${f.id}')" title="Editar">✎</button>
-          <button class="btn-ed" onclick="delEx('${f.id}','${e.id}')" title="Remover">×</button>
-        </div>
+// ── NOTA INTERNA ──
+function renderNotaInterna(f){
+  const aberta=notaAberta[f.id]||false;
+  const temNota=f.nota&&f.nota.trim();
+  return`<div class="nota-interna">
+    <div class="nota-hdr" onclick="notaAberta['${f.id}']=!notaAberta['${f.id}'];render()">
+      <span style="font-size:15px">📝</span>
+      <span class="nota-hdr-txt">Nota interna</span>
+      ${temNota?`<span class="nota-badge">Com nota</span>`:`<span class="nota-badge" style="opacity:.5">Sem nota</span>`}
+      <span class="nota-chev ${aberta?'open':''}">▾</span>
+    </div>
+    ${aberta?`<div class="nota-body">
+      <textarea class="nota-textarea" placeholder="Observações internas desta ficha — visível apenas para coordenação e admin…" oninput="getFichas(alunoSel).find(f=>f.id==='${f.id}').nota=this.value" rows="4">${f.nota||''}</textarea>
+      <div class="nota-hint">🔒 Visível apenas para quem tem acesso ao módulo de treinos</div>
+    </div>`:''}
+  </div>`;
+}
+
+// ── ESBOÇO ──
+function renderEsboço(f){
+  const aberto=esboçoAberto[f.id]!==false;
+  const temEsboço=f.esboço&&f.esboço.length>0;
+  const gruposDisponiveis=Object.keys(GRUPOS_INFO);
+
+  const rowsHtml=f.esboço&&f.esboço.length?f.esboço.map(e=>{
+    const gi=getGrupoInfo(e.g);
+    const gruposOpts=gruposDisponiveis.map(g=>`<option value="${g}" ${e.g===g?'selected':''}>${g}</option>`).join('');
+    return`<div class="esboço-row">
+      <span class="esboço-grupo-dot" style="background:${gi.cor};border:1.5px solid ${gi.tc}20"></span>
+      <select class="esboço-grupo-nm" style="border:none;background:transparent;font-size:13px;font-weight:500;color:var(--ink);outline:none;cursor:pointer;appearance:none;padding:0" onchange="e_upd('${f.id}','${e.id}','g',this.value)">
+        ${gruposOpts}
+      </select>
+      <div class="esboço-params">
+        <input class="esboço-inp" type="number" min="1" max="10" value="${e.s}" oninput="e_upd('${f.id}','${e.id}','s',parseInt(this.value)||3)" title="Séries">
+        <span class="esboço-sep">×</span>
+        <input class="esboço-inp" value="${e.r}" oninput="e_upd('${f.id}','${e.id}','r',this.value)" title="Repetições" style="width:60px">
+        <input class="esboço-obs-inp" placeholder="obs…" value="${e.obs||''}" oninput="e_upd('${f.id}','${e.id}','obs',this.value)">
       </div>
-      ${e.obs?`<div class="ex-obs">📌 ${e.obs}</div>`:''}
-    </div>`;}
-    const d=e.grupo==='dupla';
-    return`<div class="grupo-card ${d?'gc-d':'gc-t'}" draggable="true" data-fid="${f.id}" data-eid="${e.id}" data-idx="${idx}">
-      <div class="g-hdr"><span class="ex-drag">⠿</span>${d?'Dupla':'Trio'} — sem descanso</div>
-      <div class="g-exs">${e.exs.map((ex,i)=>{n++;const last=i===e.exs.length-1;return`<div class="g-row">
-        <div class="ex-num ${d?'gn-d':'gn-t'}">${n}</div>
-        <div class="ex-info" style="flex:1;min-width:0"><div class="ex-nome">${ex.n}</div><div class="ex-grupo">${ex.g}</div></div>
-        <div class="ex-tags">
-          <span class="etag">${ex.s}×${ex.r}</span>
-          ${last&&ex.d?`<span class="etag">${ex.d}s</span>`:''}
-          ${ex.ca!=null?`<span class="etag carga">${ex.ca} kg</span>`:''}
-        </div>
-        <div class="ex-acts">
-          <button class="btn-ei" onclick="openExG('${e.id}','${ex.id}','${f.id}')">✎</button>
-          <button class="btn-ed" onclick="delExG('${f.id}','${e.id}','${ex.id}')">×</button>
-        </div>
-      </div>`}).join('')}</div>
+      <button class="btn-esboço-del-row" onclick="e_del('${f.id}','${e.id}')">×</button>
+    </div>`;
+  }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar o esboço.</div>`;
+
+  return`<div class="esboço-banner">
+    <div>
+      <div style="font-size:14px">📐</div>
+    </div>
+    <div class="esboço-txt">
+      <strong>Esboço da ficha</strong> — planejamento por grupo muscular antes de escolher os exercícios
+    </div>
+    <button class="btn-esboço-toggle ${aberto?'btn-esboço-on':'btn-esboço-off'}" onclick="esboçoAberto['${f.id}']=!aberto;render()">${aberto?'Fechar':'Ver esboço'}</button>
+  </div>
+  ${aberto?`<div style="margin-bottom:4px">
+    <div class="esboço-body">
+      <div class="esboço-hdr">
+        <span class="esboço-hdr-txt">📐 Volume planejado por grupo</span>
+        <button class="btn-add-grupo-esboço" onclick="e_add('${f.id}')">+ Grupo</button>
+      </div>
+      ${rowsHtml}
+    </div>
+    ${temEsboço?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding:0 2px">
+      <div style="flex:1;height:1px;background:var(--bg3)"></div>
+      <span style="font-size:11px;color:var(--ink3)">esboço pronto? monte a ficha abaixo</span>
+      <div style="flex:1;height:1px;background:var(--bg3)"></div>
+    </div>`:''}
+  </div>`:''}`;
+}
+
+function e_upd(fichaId,esId,campo,val){
+  const f=getFichas(alunoSel).find(f=>f.id===fichaId);
+  if(!f)return;
+  const es=f.esboço.find(e=>e.id===esId);
+  if(es)es[campo]=val;
+}
+function e_add(fichaId){
+  const f=getFichas(alunoSel).find(f=>f.id===fichaId);
+  if(!f)return;
+  if(!f.esboço)f.esboço=[];
+  const usado=f.esboço.map(e=>e.g);
+  const prox=Object.keys(GRUPOS_INFO).find(g=>!usado.includes(g))||'Quadríceps';
+  f.esboço.push({id:uid(),g:prox,s:3,r:'12',obs:''});
+  esboçoAberto[fichaId]=true;
+  render();
+}
+function e_del(fichaId,esId){
+  const f=getFichas(alunoSel).find(f=>f.id===fichaId);
+  if(f)f.esboço=f.esboço.filter(e=>e.id!==esId);
+  render();
+}
+
+// ── RENDER EXERCÍCIOS AGRUPADOS POR GRUPO MUSCULAR ──
+function renderExsGrupados(f){
+  if(!f.exs.length)return'';
+  // Agrupa por grupo muscular para exibição
+  const gruposPresentes=[];
+  const exsByGrupo={};
+  f.exs.forEach((e,idx)=>{
+    const g=e.tp==='s'?e.g:(e.exs[0]?.g||'Outro');
+    if(!exsByGrupo[g]){exsByGrupo[g]=[];gruposPresentes.push(g);}
+    exsByGrupo[g].push({...e,_idx:idx});
+  });
+  let globalNum=0;
+  return gruposPresentes.map(g=>{
+    const gi=getGrupoInfo(g);
+    const exsHtml=exsByGrupo[g].map(e=>{
+      if(e.tp==='s'){globalNum++;return renderExSingle(e,globalNum,f.id);}
+      return renderExGrupo(e,f.id,g=>{globalNum+=g;return globalNum;},globalNum);
+    }).join('');
+    return`<div class="grupo-section">
+      <div class="grupo-section-hdr">
+        <span class="grupo-section-dot" style="background:${gi.cor};border:1.5px solid ${gi.tc}50"></span>
+        <span class="grupo-section-nm" style="color:${gi.tc}">${g}</span>
+        <div class="grupo-section-line"></div>
+      </div>
+      ${exsHtml}
     </div>`;
   }).join('');
 }
 
-function renderExsCmp(f){
-  let n=0;
+function renderExSingle(e,num,fichaId){
+  const gi=getGrupoInfo(e.g);
+  return`<div class="ex-card" draggable="true" data-ficha="${fichaId}" data-ex="${e.id}" data-idx="${e._idx}">
+    <div class="ex-main">
+      <span class="ex-drag" title="Arrastar para reordenar">⠿</span>
+      <div class="ex-num">${num}</div>
+      <div class="ex-info">
+        <div class="ex-nome">${exNomeExibir(e.n)}</div>
+        <span class="ex-grupo-tag" style="background:${gi.cor};color:${gi.tc}">${e.g}</span>
+      </div>
+      <div class="ex-params">
+        <span class="ex-param">${e.s}× ${e.r}</span>
+        ${e.d?`<span class="ex-param">${e.d}s</span>`:''}
+        ${e.ca!=null?`<span class="ex-param carga">${e.ca}kg</span>`:''}
+      </div>
+      <div class="ex-btns">
+        <button class="btn-ex-edit" onclick="abrirModalEx('${e.id}','${fichaId}')">✎</button>
+        <button class="btn-ex-del" onclick="delEx('${fichaId}','${e.id}')">×</button>
+      </div>
+    </div>
+    ${e.obs?`<div style="font-size:12px;color:var(--ink3);padding:0 14px 9px 46px;font-style:italic">📌 ${e.obs}</div>`:''}
+  </div>`;
+}
+
+function renderExGrupo(e,fichaId){
+  const isDupla=e.grupo==='dupla';
+  let localNum=0;
+  const gi0=getGrupoInfo(e.exs[0]?.g||'Outro');
+  return`<div class="grupo-card ${isDupla?'gc-dupla':'gc-trio'}" draggable="true" data-ficha="${fichaId}" data-ex="${e.id}" data-idx="${e._idx}">
+    <div class="grupo-header"><span class="ex-drag" style="font-size:14px">⠿</span>${isDupla?'Dupla':'Trio'} — sem descanso</div>
+    <div class="grupo-exs">${e.exs.map((ex,i)=>{localNum++;const isLast=i===e.exs.length-1;const gi=getGrupoInfo(ex.g);return`
+      <div class="grupo-ex-row">
+        <div class="ex-num ${isDupla?'gnum-d':'gnum-t'}">${localNum}</div>
+        <div class="ex-info" style="flex:1;min-width:0">
+          <div class="ex-nome">${exNomeExibir(ex.n)}</div>
+          <span class="ex-grupo-tag" style="background:${gi.cor};color:${gi.tc}">${ex.g}</span>
+        </div>
+        <div class="ex-params">
+          <span class="ex-param">${ex.s}×${ex.r}</span>
+          ${isLast&&ex.d?`<span class="ex-param">${ex.d}s</span>`:''}
+          ${ex.ca!=null?`<span class="ex-param carga">${ex.ca}kg</span>`:''}
+        </div>
+        <div class="ex-btns">
+          <button class="btn-ex-edit" onclick="abrirModalExGrupo('${e.id}','${ex.id}','${fichaId}')">✎</button>
+          <button class="btn-ex-del" onclick="delExGrupo('${fichaId}','${e.id}','${ex.id}')">×</button>
+        </div>
+      </div>`}).join('')}
+    </div>
+  </div>`;
+}
+
+function countExs(f){return f.exs.reduce((a,e)=>a+(e.tp==='s'?1:e.exs.length),0);}
+
+function renderExsCompact(f){
+  let num=0;
   return f.exs.map(e=>{
-    if(e.tp==='s'){n++;return`<div class="ex-card">
-      <div class="ex-row">
-        <div class="ex-num" style="background:var(--bg2);color:var(--ink3)">${n}</div>
-        <div class="ex-info"><div class="ex-nome" style="font-size:11px">${e.n}</div><div class="ex-grupo">${e.g}</div></div>
-        <div class="ex-tags">
-          <span class="etag">${e.s}×${e.r}</span>
-          ${e.d?`<span class="etag">${e.d}s</span>`:''}
-          ${e.ca!=null?`<span class="etag carga">${e.ca}kg</span>`:''}
+    if(e.tp==='s'){num++;const gi=getGrupoInfo(e.g);return`<div class="ex-card">
+      <div class="ex-main" style="padding:8px 10px;gap:7px">
+        <div class="ex-num" style="width:18px;height:18px;font-size:10px">${num}</div>
+        <div class="ex-info"><div class="ex-nome" style="font-size:12px">${exNomeExibir(e.n)}</div>
+          <span class="ex-grupo-tag" style="background:${gi.cor};color:${gi.tc};font-size:10px">${e.g}</span>
+        </div>
+        <div class="ex-params">
+          <span class="ex-param" style="font-size:10px">${e.s}×${e.r}</span>
+          ${e.ca!=null?`<span class="ex-param carga" style="font-size:10px">${e.ca}kg</span>`:''}
         </div>
       </div>
-      ${e.obs?`<div class="ex-obs">📌 ${e.obs}</div>`:''}
     </div>`;}
-    const d=e.grupo==='dupla';
-    return`<div class="grupo-card ${d?'gc-d':'gc-t'}">
-      <div class="g-hdr" style="cursor:default">${d?'Dupla':'Trio'} — sem descanso</div>
-      <div class="g-exs">${e.exs.map((ex,i)=>{n++;const last=i===e.exs.length-1;return`<div class="g-row">
-        <div class="ex-num ${d?'gn-d':'gn-t'}">${n}</div>
-        <div class="ex-info" style="flex:1;min-width:0"><div class="ex-nome" style="font-size:11px">${ex.n}</div><div class="ex-grupo">${ex.g}</div></div>
-        <div class="ex-tags">${last&&ex.d?`<span class="etag">${ex.d}s</span>`:''}${ex.ca!=null?`<span class="etag carga">${ex.ca}kg</span>`:''}</div>
-      </div>`}).join('')}</div>
+    const isDupla=e.grupo==='dupla';
+    return`<div class="grupo-card ${isDupla?'gc-dupla':'gc-trio'}">
+      <div class="grupo-header" style="font-size:10px;padding:5px 10px">${isDupla?'Dupla':'Trio'}</div>
+      <div class="grupo-exs">${e.exs.map((ex,i)=>{num++;const isLast=i===e.exs.length-1;const gi=getGrupoInfo(ex.g);return`
+        <div class="grupo-ex-row" style="padding:7px 10px;gap:6px">
+          <div class="ex-num ${isDupla?'gnum-d':'gnum-t'}" style="width:18px;height:18px;font-size:10px">${num}</div>
+          <div class="ex-info" style="flex:1;min-width:0"><div class="ex-nome" style="font-size:12px">${exNomeExibir(ex.n)}</div>
+            <span class="ex-grupo-tag" style="background:${gi.cor};color:${gi.tc};font-size:10px">${ex.g}</span>
+          </div>
+          <div class="ex-params">${isLast&&ex.d?`<span class="ex-param" style="font-size:10px">${ex.d}s</span>`:''}${ex.ca!=null?`<span class="ex-param carga" style="font-size:10px">${ex.ca}kg</span>`:''}</div>
+        </div>`}).join('')}
+      </div>
     </div>`;
   }).join('');
-}
-
-// ── FILA ──
-function renderFila(){
-  const novas=D.sols.filter(s=>s.status==='nova');
-  const hist=D.sols.filter(s=>s.status!=='nova');
-  const rS=s=>`<div class="sol-card ${s.status==='nova'?'nova':''}">
-    <div class="sol-hdr">
-      <div class="sol-av" style="${avs(s.aluno)}">${ini(s.aluno)}</div>
-      <div class="sol-meta">
-        <div class="sol-nome">${s.aluno} <span style="color:var(--ink3);font-weight:400;font-size:11px">· mat. ${s.mat}</span></div>
-        <div class="sol-sub">por ${s.prof} · ${s.dt}</div>
-      </div>
-      <span class="sbdg ${s.status==='nova'?'sbd-n':s.status==='aprovada'?'sbd-ok':'sbd-rej'}">${s.status==='nova'?'Pendente':s.status==='aprovada'?'Aprovada':'Rejeitada'}</span>
-    </div>
-    <div class="sol-body">
-      <div class="sol-cols">
-        <div class="sol-col"><div class="slbl">Tipo</div><div class="sval">${s.tipo==='troca'?'↔ Troca':'✕ Remoção'}</div></div>
-        <div class="sol-col"><div class="slbl">Atual</div><div class="sval">${s.exAt}</div></div>
-        ${s.exSug?`<div class="sol-col"><div class="slbl">Sugestão</div><div class="sval" style="color:var(--green)">${s.exSug}</div></div>`:''}
-      </div>
-      <div class="smot">"${s.mot}"</div>
-    </div>
-    ${s.status==='nova'?`<div class="sol-actions">
-      <button class="btn-apr" onclick="D.sols.find(x=>x.id==='${s.id}').status='aprovada';render()">✓ Aprovar</button>
-      <button class="btn-rej" onclick="D.sols.find(x=>x.id==='${s.id}').status='rejeitada';render()">✕ Rejeitar</button>
-    </div>`:
-    `<div style="padding:7px 14px;font-size:11px;color:${s.status==='aprovada'?'var(--green)':'var(--red)'}">
-      ${s.status==='aprovada'?'✓ Aprovada — alteração aplicada':'✕ Rejeitada'}
-    </div>`}
-  </div>`;
-  return`<div class="fila-wrap">
-    ${novas.length?`<div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px">Aguardando revisão (${novas.length})</div>${novas.map(rS).join('')}`
-    :`<div style="font-size:12px;color:var(--ink3);padding:4px 0">Nenhuma solicitação pendente.</div>`}
-    ${hist.length?`<div style="font-size:12px;font-weight:600;color:var(--ink3);margin:10px 0 2px">Histórico</div>${hist.map(rS).join('')}`:''}
-  </div>`;
 }
 
 // ── DRAG & DROP ──
-function setupDrag(){
-  document.querySelectorAll('[draggable="true"][data-eid]').forEach(el=>{
-    el.addEventListener('dragstart',e=>{
-      drag={fid:el.dataset.fid,eid:el.dataset.eid,idx:+el.dataset.idx};
-      el.classList.add('dragging');e.dataTransfer.effectAllowed='move';
+function setupDragDrop(){
+  document.querySelectorAll('[draggable="true"][data-ex]').forEach(card=>{
+    card.addEventListener('dragstart',e=>{
+      dragState={fichaId:card.dataset.ficha,exId:card.dataset.ex,idx:parseInt(card.dataset.idx)};
+      card.classList.add('dragging');e.dataTransfer.effectAllowed='move';
     });
-    el.addEventListener('dragend',()=>{
-      el.classList.remove('dragging');
-      document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
-      drag=null;
-    });
-    el.addEventListener('dragover',e=>{
-      e.preventDefault();
-      if(!drag||el.dataset.eid===drag.eid)return;
-      document.querySelectorAll('.drag-over').forEach(x=>x.classList.remove('drag-over'));
-      el.classList.add('drag-over');
-    });
-    el.addEventListener('dragleave',()=>el.classList.remove('drag-over'));
-    el.addEventListener('drop',e=>{
-      e.preventDefault();
-      if(!drag||el.dataset.eid===drag.eid)return;
-      const f=gfs(alunoSel).find(f=>f.id===drag.fid);
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));dragState=null;});
+    card.addEventListener('dragover',e=>{e.preventDefault();if(!dragState||card.dataset.ex===dragState.exId)return;document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));card.classList.add('drag-over');});
+    card.addEventListener('dragleave',()=>card.classList.remove('drag-over'));
+    card.addEventListener('drop',e=>{
+      e.preventDefault();if(!dragState||card.dataset.ex===dragState.exId)return;
+      const ti=parseInt(card.dataset.idx);
+      const f=getFichas(alunoSel).find(f=>f.id===dragState.fichaId);
       if(!f)return;
-      const[m]=f.exs.splice(drag.idx,1);
-      f.exs.splice(+el.dataset.idx,0,m);
-      render();
+      const[moved]=f.exs.splice(dragState.idx,1);f.exs.splice(ti,0,moved);render();
     });
   });
 }
 
 // ── ACTIONS ──
-function selAluno(id){alunoSel=D.alunos.find(a=>a.id===id);fichaAtiva=0;cmpMode=false;cmpFichas=[];render();}
-function toggleCmp(){cmpMode=!cmpMode;if(cmpMode)cmpFichas=[0,Math.min(1,gfs(alunoSel).length-1)];render();}
-function toggleCmpF(i){cmpFichas=cmpFichas.includes(i)?cmpFichas.filter(x=>x!==i):[...cmpFichas,i];render();}
-function novoProg(){if(!alunoSel)return;alunoSel.programas.unshift({id:uid(),nm:'Novo Programa',fichas:[{id:uid(),cor:'#1E40AF',nm:'Treino A',exs:[]}]});fichaAtiva=0;render();}
-function addFicha(){
-  if(!alunoSel)return;const fs=gfs(alunoSel);
-  const letras='ABCDE',cores=['#1E40AF','#6D28D9','#059669','#D97706','#DC2626'];const i=fs.length;
-  fs.push({id:uid(),cor:cores[i%5],nm:`Treino ${letras[i%5]}`,exs:[]});
-  fichaAtiva=i;cmpMode=false;render();
-}
-function pedirDelF(fid){modal={type:'del-f',fid};renderModal();}
-function confirmarDelF(){
-  const fs=gfs(alunoSel);const i=fs.findIndex(f=>f.id===modal.fid);
-  if(i>=0){fs.splice(i,1);fichaAtiva=Math.max(0,Math.min(fichaAtiva,fs.length-1));}
+function selecionarAluno(id){alunoSel=D.alunos.find(a=>a.id===id);fichaAtiva=0;compareMode=false;compareFichas=[];render();}
+function toggleCompare(){compareMode=!compareMode;compareFichas=compareMode?[0,Math.min(1,getFichas(alunoSel).length-1)]:[];render();}
+function toggleCompareFicha(idx){compareFichas=compareFichas.includes(idx)?compareFichas.filter(i=>i!==idx):[...compareFichas,idx];render();}
+function novoPrograma(){if(!alunoSel)return;alunoSel.programas.unshift({id:uid(),nm:'Novo Programa',fichas:[{id:uid(),cor:'#1E40AF',letra:'A',nm:'Treino A',nota:'',esboço:[],exs:[]}]});fichaAtiva=0;render();}
+function addFicha(){if(!alunoSel)return;const f=getFichas(alunoSel);const letras='ABCDE',cores=['#1E40AF','#6D28D9','#059669','#D97706','#DC2626'];const i=f.length;f.push({id:uid(),cor:cores[i%5],letra:letras[i%5],nm:`Treino ${letras[i%5]}`,nota:'',esboço:[],exs:[]});fichaAtiva=i;compareMode=false;render();}
+function pedirDelFicha(fichaId){modal={type:'del-ficha',fichaId};renderModal();}
+function confirmarDelFicha(){
+  const fs=getFichas(alunoSel);const idx=fs.findIndex(f=>f.id===modal.fichaId);
+  if(idx>=0){fs.splice(idx,1);fichaAtiva=Math.max(0,Math.min(fichaAtiva,fs.length-1));}
   fecharModal();render();
 }
-function addGrupo(fid,tipo){
-  const f=gfs(alunoSel).find(f=>f.id===fid);if(!f)return;
-  const n=tipo==='trio'?3:2;
-  f.exs.push({id:uid(),tp:'g',grupo:tipo,exs:Array.from({length:n},(_,i)=>({id:uid(),n:`EXERCÍCIO ${i+1}`,g:'Quadríceps',s:3,r:'12',d:i===n-1?60:0,ca:null,obs:''}))});
+function addGrupo(fichaId,tipo){
+  const f=getFichas(alunoSel).find(f=>f.id===fichaId);if(!f)return;
+  const num=tipo==='trio'?3:2;
+  f.exs.push({id:uid(),tp:'g',grupo:tipo,exs:Array.from({length:num},(_,i)=>({id:uid(),n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:3,r:'12',d:i===num-1?60:0,ca:null,obs:''}))});
   render();
 }
-function delEx(fid,eid){const f=gfs(alunoSel).find(f=>f.id===fid);if(f)f.exs=f.exs.filter(e=>e.id!==eid);render();}
-function delExG(fid,gid,eid){
-  const f=gfs(alunoSel).find(f=>f.id===fid);if(!f)return;
-  const g=f.exs.find(e=>e.id===gid);if(!g)return;
-  g.exs=g.exs.filter(e=>e.id!==eid);
-  if(!g.exs.length)f.exs=f.exs.filter(e=>e.id!==gid);
-  render();
-}
+function delEx(fichaId,exId){const f=getFichas(alunoSel).find(f=>f.id===fichaId);if(f)f.exs=f.exs.filter(e=>e.id!==exId);render();}
+function delExGrupo(fichaId,grupoId,exId){const f=getFichas(alunoSel).find(f=>f.id===fichaId);if(!f)return;const g=f.exs.find(e=>e.id===grupoId);if(!g)return;g.exs=g.exs.filter(e=>e.id!==exId);if(!g.exs.length)f.exs=f.exs.filter(e=>e.id!==grupoId);render();}
+function aprovarSol(id){D.solicitacoes.find(s=>s.id===id).status='aprovada';render();}
+function rejeitarSol(id){D.solicitacoes.find(s=>s.id===id).status='rejeitada';render();}
 
-// ── MODAL ──
-function openEx(eid,fid){
-  const f=gfs(alunoSel).find(f=>f.id===fid);
-  const ex=eid?f.exs.find(e=>e.id===eid):null;
-  modal={type:'ex',fid,eid,f,ex:ex?{...ex}:{id:uid(),tp:'s',n:'',g:'Quadríceps',s:4,r:'12',d:60,ca:null,obs:''}};
+// ── MODAIS ──
+function abrirModalEx(exId,fichaId){
+  const ficha=getFichas(alunoSel).find(f=>f.id===fichaId);
+  const ex=exId?ficha.exs.find(e=>e.id===exId):null;
+  modal={type:'ex',fichaId,exId,ficha,ex:ex?{...ex}:{id:uid(),tp:'s',n:'QUADRICEPS - LEG PRESS 45',g:'Quadríceps',s:4,r:'12',d:60,ca:null,obs:''}};
   renderModal();
 }
-function openExG(gid,eid,fid){
-  const f=gfs(alunoSel).find(f=>f.id===fid);
-  const g=f.exs.find(e=>e.id===gid);
-  const ex=g.exs.find(e=>e.id===eid);
-  modal={type:'ex-g',fid,gid,eid,f,g,ex:{...ex}};
+function abrirModalExGrupo(grupoId,exId,fichaId){
+  const ficha=getFichas(alunoSel).find(f=>f.id===fichaId);
+  const grupo=ficha.exs.find(e=>e.id===grupoId);
+  const ex=grupo.exs.find(e=>e.id===exId);
+  modal={type:'ex-grupo',fichaId,grupoId,exId,ficha,grupo,ex:{...ex}};
   renderModal();
 }
-function fecharModal(){modal=null;document.getElementById('modal-root').innerHTML='';}
 
 function renderModal(){
   const r=document.getElementById('modal-root');
   if(!modal){r.innerHTML='';return;}
 
-  if(modal.type==='del-f'){
-    const f=gfs(alunoSel).find(f=>f.id===modal.fid);
-    const n=f?cntEx(f):0;
-    r.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)fecharModal()">
-      <div class="cbox" onclick="event.stopPropagation()">
-        <div class="cico">🗑</div>
-        <div class="ctit">Remover ${f?f.nm:'ficha'}?</div>
-        <div class="cwarn"><strong>⚠ Esta ação é permanente e não pode ser desfeita.</strong><br>
-          ${n>0?`Serão removidos <strong>${n} exercício${n!==1?'s':''}</strong> permanentemente.`:'Ficha vazia — será removida.'}
-        </div>
-        <div class="csub">Após confirmar não há como recuperar os dados.</div>
-        <div class="cbtns">
-          <button class="btn-ccan" onclick="fecharModal()">Cancelar</button>
-          <button class="btn-cok" onclick="confirmarDelF()">Remover definitivamente</button>
+  if(modal.type==='del-ficha'){
+    const ficha=getFichas(alunoSel).find(f=>f.id===modal.fichaId);
+    const numExs=ficha?ficha.exs.reduce((a,e)=>a+(e.tp==='s'?1:e.exs.length),0):0;
+    r.innerHTML=`<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+      <div class="confirm-box" onclick="event.stopPropagation()">
+        <div class="confirm-ico">🗑</div>
+        <div class="confirm-title">Remover ${ficha?ficha.nm:'esta ficha'}?</div>
+        <div class="confirm-warn">⚠ <strong>Esta ação é permanente e não pode ser desfeita.</strong><br>${numExs>0?`Serão removidos <strong>${numExs} exercício${numExs!==1?'s':''}</strong> e o esboço desta ficha.`:'A ficha está vazia e será removida.'}</div>
+        <div class="confirm-sub">Após clicar em <strong>Remover definitivamente</strong>, não há como recuperar.</div>
+        <div class="confirm-btns">
+          <button class="btn-confirm-can" onclick="fecharModal()">Cancelar</button>
+          <button class="btn-confirm-del" onclick="confirmarDelFicha()">Remover definitivamente</button>
         </div>
       </div>
     </div>`;
@@ -679,63 +874,99 @@ function renderModal(){
   }
 
   const ex=modal.ex;
-  const gOpts=GRUPOS.map(g=>`<option value="${g}" ${ex.g===g?'selected':''}>${g}</option>`).join('');
-  const exsDoG=EX_BASE.filter(e=>e.g===ex.g);
-  const eOpts=exsDoG.map(e=>`<option value="${e.n}" ${ex.n===e.n?'selected':''}>${e.n}</option>`).join('');
-  const isCustom=ex.n&&!EX_BASE.find(e=>e.n===ex.n);
+  const grupoAtual=ex.g||'Quadríceps';
+  const exsDoGrupo=EXERCICIOS.filter(e=>e.g===grupoAtual);
+  const gruposOpts=Object.keys(GRUPOS_INFO).map(g=>`<option value="${g}" ${grupoAtual===g?'selected':''}>${g}</option>`).join('');
+  const exOpts=exsDoGrupo.map(e=>`<option value="${e.n}" ${ex.n===e.n?'selected':''}>${exNomeExibir(e.n)}</option>`).join('');
+  const isCustom=ex.n&&!EXERCICIOS.find(e=>e.n===ex.n);
 
-  r.innerHTML=`<div class="modal-bg" onclick="if(event.target===this)fecharModal()">
+  r.innerHTML=`<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
     <div class="modal-box" onclick="event.stopPropagation()">
-      <div class="mhdr">
-        <div class="mtitle">${modal.eid?'Editar exercício':'Novo exercício'}</div>
-        <button class="mclose" onclick="fecharModal()">✕</button>
+      <div class="modal-handle"></div>
+      <div class="modal-hdr">
+        <div class="modal-title">${modal.exId?'Editar exercício':'Novo exercício'}</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
       </div>
-      <div class="mbody">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="mf"><label class="ml">Grupo muscular</label>
-            <select class="mi-sel" onchange="modal.ex.g=this.value;modal.ex.n='';renderModal()">${gOpts}</select>
-          </div>
-          <div class="mf"><label class="ml">Exercício</label>
-            <select class="mi-sel" id="sel-ex" onchange="if(this.value==='__outro'){modal.ex.n='';}else{modal.ex.n=this.value;}renderModal()">
-              ${eOpts}<option value="__outro" ${isCustom?'selected':''}>Outro…</option>
-            </select>
-          </div>
+      <div class="modal-body">
+        <div class="mf"><label class="ml">Grupo muscular</label>
+          <select class="mi-sel" onchange="modal.ex.g=this.value;modal.ex.n=EXERCICIOS.find(e=>e.g===this.value)?.n||'';renderModal()">
+            ${gruposOpts}
+          </select>
         </div>
-        ${isCustom||!exsDoG.find(e=>e.n===ex.n)?`<div class="mf"><label class="ml">Nome personalizado</label>
-          <input class="mi" placeholder="Nome do exercício" value="${isCustom?ex.n:''}" oninput="modal.ex.n=this.value">
+        <div class="mf"><label class="ml">Exercício</label>
+          <select class="mi-sel" id="m-ex-sel" onchange="modal.ex.n=this.value==='__outro'?'':this.value;renderModal()">
+            ${exOpts}
+            <option value="__outro" ${isCustom?'selected':''}>Outro (digitar abaixo)</option>
+          </select>
+        </div>
+        ${isCustom||!exsDoGrupo.find(e=>e.n===ex.n)?`<div class="mf"><label class="ml">Nome personalizado</label>
+          <input class="mi" placeholder="Ex: QUADRICEPS - NOME DO EXERCÍCIO" value="${isCustom?ex.n:''}" oninput="modal.ex.n=this.value">
         </div>`:''}
-        <div class="params-grid">
-          <div class="mf"><label class="ml">Séries</label><input class="mi" type="number" min="1" max="10" value="${ex.s}" oninput="modal.ex.s=+this.value||4"></div>
-          <div class="mf"><label class="ml">Repetições</label><input class="mi" value="${ex.r}" oninput="modal.ex.r=this.value" placeholder="12 ou 10-12"></div>
-          <div class="mf"><label class="ml">Descanso (s)</label><input class="mi" type="number" min="0" step="15" value="${ex.d||0}" oninput="modal.ex.d=+this.value||0"></div>
-          <div class="mf"><label class="ml">Carga (kg)</label><input class="mi" type="number" step="0.5" placeholder="—" value="${ex.ca!=null?ex.ca:''}" oninput="modal.ex.ca=this.value?+this.value:null"></div>
+        <div class="params-row">
+          <div class="mf"><label class="ml">Séries</label><input class="mi" type="number" min="1" max="10" value="${ex.s}" oninput="modal.ex.s=parseInt(this.value)||4"></div>
+          <div class="mf"><label class="ml">Reps</label><input class="mi" value="${ex.r}" oninput="modal.ex.r=this.value" placeholder="12 ou 10-12"></div>
+          <div class="mf"><label class="ml">Descanso (s)</label><input class="mi" type="number" min="0" step="15" value="${ex.d||0}" oninput="modal.ex.d=parseInt(this.value)||0"></div>
+          <div class="mf"><label class="ml">Carga (kg)</label><input class="mi" type="number" step="0.5" placeholder="—" value="${ex.ca!=null?ex.ca:''}" oninput="modal.ex.ca=this.value?parseFloat(this.value):null"></div>
         </div>
         <div class="mf"><label class="ml">Observação</label>
           <input class="mi" placeholder="Ex: prefere amplitude parcial…" value="${ex.obs||''}" oninput="modal.ex.obs=this.value">
         </div>
       </div>
-      <div class="mfoot">
-        <button class="btn-mcan" onclick="fecharModal()">Cancelar</button>
-        <button class="btn-mok" onclick="salvarEx()">Salvar</button>
+      <div class="modal-footer">
+        <button class="btn-modal-can" onclick="fecharModal()">Cancelar</button>
+        <button class="btn-modal-ok" onclick="salvarEx()">Salvar exercício</button>
       </div>
     </div>
   </div>`;
 }
 
+function fecharModal(){modal=null;document.getElementById('modal-root').innerHTML='';}
 function salvarEx(){
   const ex=modal.ex;if(!ex.n)return;
   if(modal.type==='ex'){
-    const i=modal.f.exs.findIndex(e=>e.id===ex.id);
-    if(i>=0)modal.f.exs[i]={...modal.f.exs[i],...ex};
-    else modal.f.exs.push({...ex,tp:'s'});
-  } else if(modal.type==='ex-g'){
-    const i=modal.g.exs.findIndex(e=>e.id===ex.id);
-    if(i>=0)modal.g.exs[i]={...modal.g.exs[i],...ex};
+    const f=modal.ficha;const idx=f.exs.findIndex(e=>e.id===ex.id);
+    if(idx>=0)f.exs[idx]={...f.exs[idx],...ex};else f.exs.push({...ex,tp:'s'});
+  } else if(modal.type==='ex-grupo'){
+    const g=modal.grupo;const idx=g.exs.findIndex(e=>e.id===ex.id);
+    if(idx>=0)g.exs[idx]={...g.exs[idx],...ex};
   }
   fecharModal();render();
 }
 
-alunoSel=D.alunos[0];render();
+// ── FILA ──
+function renderFila(){
+  const novas=D.solicitacoes.filter(s=>s.status==='nova');
+  const hist=D.solicitacoes.filter(s=>s.status!=='nova');
+  const rSol=s=>`<div class="sol-card ${s.status==='nova'?'nova':''}">
+    <div class="sol-hdr">
+      <div class="sol-av" style="${avStyle(s.aluno)}">${ini(s.aluno)}</div>
+      <div class="sol-meta"><div class="sol-nome">${s.aluno} <span style="font-size:11px;color:var(--ink3);font-weight:400">· mat. ${s.mat}</span></div><div class="sol-sub">por ${s.prof} · ${s.dt}</div></div>
+      <span class="sol-badge ${s.status==='nova'?'sb-nova':s.status==='aprovada'?'sb-ok':'sb-rej'}">${s.status==='nova'?'Pendente':s.status==='aprovada'?'Aprovada':'Rejeitada'}</span>
+    </div>
+    <div class="sol-body">
+      <div class="sol-row">
+        <div class="sol-col"><div class="sol-lbl">Tipo</div><div class="sol-val">${s.tipo==='troca'?'↔ Troca':'✕ Remoção'}</div></div>
+        <div class="sol-col"><div class="sol-lbl">Exercício atual</div><div class="sol-val">${exNomeExibir(s.exAtual)}</div></div>
+        ${s.exSugere?`<div class="sol-col"><div class="sol-lbl">Sugestão</div><div class="sol-val" style="color:var(--green)">${exNomeExibir(s.exSugere)}</div></div>`:''}
+      </div>
+      <div><div class="sol-lbl">Motivo</div><div class="sol-motivo" style="margin-top:4px">"${s.motivo}"</div></div>
+    </div>
+    ${s.status==='nova'?`<div class="sol-actions">
+      <button class="btn-apr" onclick="aprovarSol('${s.id}')">✓ Aprovar</button>
+      <button class="btn-rej-s" onclick="rejeitarSol('${s.id}')">✕ Rejeitar</button>
+    </div>`:`<div style="padding:10px 16px;font-size:12px;color:${s.status==='aprovada'?'var(--green)':'var(--red)'}">
+      ${s.status==='aprovada'?'✓ Aprovada — alteração aplicada':'✕ Rejeitada'}
+    </div>`}
+  </div>`;
+  return`<div class="fila-body">
+    ${novas.length?`<div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px">Aguardando revisão (${novas.length})</div>${novas.map(rSol).join('')}`:`<div style="font-size:13px;color:var(--ink3);padding:8px 0">Sem solicitações pendentes.</div>`}
+    ${hist.length?`<div style="font-size:13px;font-weight:600;color:var(--ink3);margin:12px 0 4px">Histórico</div>${hist.map(rSol).join('')}`:''}
+  </div>`;
+}
+
+alunoSel=D.alunos[0];
+esboçoAberto[D.alunos[0].programas[0]?.fichas[0]?.id]=true;
+render();
 </script>
 </body>
 </html>
