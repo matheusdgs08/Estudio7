@@ -1012,20 +1012,44 @@ let D={alunos:[],solicitacoes:[]};
 // Carrega dados dos alunos de forma assíncrona
 async function carregarDados(){
   try{
+    // Load base data
     const resp=await fetch('/data.js');
     const js=await resp.text();
-    // Execute the JS to get D
     const fn=new Function(js+';return D;');
     const loaded=fn();
     D.alunos=loaded.alunos;
     D.solicitacoes=loaded.solicitacoes||[];
-    loadSaved(); // aplica saves locais por cima
+    loadSaved();
     render();
-    console.log(`✅ ${D.alunos.length} alunos carregados`);
+    console.log('✅ '+D.alunos.length+' alunos carregados');
+
+    // Load fichas async (background)
+    const [fResp,cResp]=await Promise.all([fetch('/fichas.js'),fetch('/carga_ref.js')]);
+    const [fJs,cJs]=await Promise.all([fResp.text(),cResp.text()]);
+    new Function(fJs)();   // sets window.FICHAS_DATA
+    new Function(cJs)();   // sets window.CARGA_REF
+    console.log('✅ Fichas e cargas de referência carregadas');
+
+    // Merge fichas into current aluno if selected
+    if(alunoSel) mergeAluno(alunoSel);
+    render();
   }catch(e){
     console.error('Erro ao carregar dados:',e);
   }
-};
+}
+
+function mergeAluno(a){
+  if(!window.FICHAS_DATA) return;
+  const mat=String(a.mat);
+  const fichasData=window.FICHAS_DATA[mat];
+  if(!fichasData||!fichasData.length) return;
+  // Only inject if current first programa has empty fichas
+  const prog=a.programas[0];
+  if(prog&&(!prog.fichas||prog.fichas.length===0)){
+    prog.fichas=fichasData;
+    prog.nm=prog.nm||'Programa Atual';
+  }
+}
 
 function getProg(a){return a&&a.programas.length?a.programas[0]:null;}
 function getFichas(a){return getProg(a)?getProg(a).fichas:[];}
@@ -1564,7 +1588,7 @@ function setupDragDrop(){
 }
 
 // ── ACTIONS ──
-function selecionarAluno(id){alunoSel=D.alunos.find(a=>a.id===id);fichaAtiva=0;compareMode=false;compareFichas=[];render();}
+function selecionarAluno(id){alunoSel=D.alunos.find(a=>a.id===id);if(alunoSel)mergeAluno(alunoSel);fichaAtiva=0;compareMode=false;compareFichas=[];render();}
 function toggleCompare(){compareMode=!compareMode;compareFichas=compareMode?[0,Math.min(1,getFichas(alunoSel).length-1)]:[];render();}
 function toggleCompareFicha(idx){compareFichas=compareFichas.includes(idx)?compareFichas.filter(i=>i!==idx):[...compareFichas,idx];render();}
 function novoPrograma(){
@@ -1906,6 +1930,12 @@ function modalBuscaEx(q){
   </div>`).join('');
 }
 function modalSelecionarEx(nome,grupo){
+  // Show carga de referência if available
+  const cargaRef=window.CARGA_REF&&window.CARGA_REF[nome];
+  const cargaInp=document.querySelector('#modal-root input[type="number"][placeholder="—"]');
+  if(cargaInp&&cargaRef&&!cargaInp.value){
+    cargaInp.placeholder='ref: '+cargaRef+'kg';
+  }
   modal.ex.n=nome;
   modal.ex.g=grupo;
   const inp=document.getElementById('m-ex-busca');
