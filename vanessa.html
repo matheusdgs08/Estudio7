@@ -364,18 +364,51 @@ const EXERCICIOS_INATIVOS=new Set(JSON.parse(localStorage.getItem('se7e_inativos
 
 // Grupos musculares com cores
 const GRUPOS_INFO={
+  // Nomes canônicos (exibição)
   'Quadríceps':{cor:'#DBEAFE',tc:'#1E40AF'},
-  'Posterior':{cor:'#EDE9FE',tc:'#6D28D9'},
+  'Posterior de Coxa':{cor:'#EDE9FE',tc:'#6D28D9'},
   'Glúteo':{cor:'#FCE7F3',tc:'#9D174D'},
   'Peitoral':{cor:'#FEF3C7',tc:'#92400E'},
   'Dorsal':{cor:'#D1FAE5',tc:'#065F46'},
   'Bíceps':{cor:'#DBEAFE',tc:'#1E40AF'},
   'Tríceps':{cor:'#EDE9FE',tc:'#6D28D9'},
-  'Ombro':{cor:'#FEE2E2',tc:'#991B1B'},
+  'Deltóide':{cor:'#FEE2E2',tc:'#991B1B'},
   'Abdômen':{cor:'#ECFDF5',tc:'#065F46'},
   'Lombar':{cor:'#FFF7ED',tc:'#9A3412'},
   'Panturrilha':{cor:'#F0FDF4',tc:'#166534'},
-  'Cardio':{cor:'#FFF1F2',tc:'#9F1239'},
+  'Abdutor':{cor:'#FEF9C3',tc:'#854D0E'},
+  'Adutor':{cor:'#FFF0F5',tc:'#9D174D'},
+  'Manguito':{cor:'#F0F9FF',tc:'#075985'},
+  'Alongamento':{cor:'#F0FDF4',tc:'#166534'},
+  'Aeróbio':{cor:'#FFF1F2',tc:'#9F1239'},
+  'Mobilidade':{cor:'#F5F3FF',tc:'#6D28D9'},
+  'Core':{cor:'#ECFDF5',tc:'#065F46'},
+  'Antebraço':{cor:'#FEF3C7',tc:'#92400E'},
+  // Aliases uppercase → mesmo info (fichas importadas do Bubble)
+  'QUADRICEPS':{cor:'#DBEAFE',tc:'#1E40AF'},
+  'POSTERIOR DE COXA':{cor:'#EDE9FE',tc:'#6D28D9'},
+  'GLUTEO':{cor:'#FCE7F3',tc:'#9D174D'},
+  'PEITORAL':{cor:'#FEF3C7',tc:'#92400E'},
+  'DORSAL':{cor:'#D1FAE5',tc:'#065F46'},
+  'BICEPS':{cor:'#DBEAFE',tc:'#1E40AF'},
+  'TRICEPS':{cor:'#EDE9FE',tc:'#6D28D9'},
+  'DELTOIDE':{cor:'#FEE2E2',tc:'#991B1B'},
+  'ABDOMEN':{cor:'#ECFDF5',tc:'#065F46'},
+  'LOMBAR':{cor:'#FFF7ED',tc:'#9A3412'},
+  'PANTURRILHA':{cor:'#F0FDF4',tc:'#166534'},
+  'ABDUTOR':{cor:'#FEF9C3',tc:'#854D0E'},
+  'ADUTOR':{cor:'#FFF0F5',tc:'#9D174D'},
+  'MANGUITO':{cor:'#F0F9FF',tc:'#075985'},
+  'ALONGAMENTO':{cor:'#F0FDF4',tc:'#166534'},
+  'AEROBIO':{cor:'#FFF1F2',tc:'#9F1239'},
+  'AEROBICO':{cor:'#FFF1F2',tc:'#9F1239'},
+  'MOBILIDADE':{cor:'#F5F3FF',tc:'#6D28D9'},
+  'CORE':{cor:'#ECFDF5',tc:'#065F46'},
+  'ANTEBRACO':{cor:'#FEF3C7',tc:'#92400E'},
+  'TIBIAL ANTERIOR':{cor:'#F0FDF4',tc:'#166534'},
+  'EQUILIBRIO':{cor:'#F5F3FF',tc:'#6D28D9'},
+  'ESCAPULA':{cor:'#FEE2E2',tc:'#991B1B'},
+  'DORSAL- ARTICULADA':{cor:'#D1FAE5',tc:'#065F46'},
 };
 
 // Exercícios do banco — nome contém o grupo para fácil identificação
@@ -1476,15 +1509,15 @@ function renderNotaInterna(f){
 // ── ESBOÇO ──
 function calcMatch(f){
   if(!f.esboço||!f.esboço.length) return null;
-  // Conta exercícios reais na ficha por grupo muscular
+  // Conta exercícios reais na ficha por grupo muscular (normaliza uppercase→canonical)
   const real={};
   f.exs.forEach(e=>{
     if(e.tp==='s'){
-      const g=e.g||'?';
+      const g=normGrupo(e.g||'?');
       real[g]=(real[g]||0)+1;
     } else if(e.tp==='g'||e.exs){
       (e.exs||[]).forEach(ex=>{
-        const g=ex.g||'?';
+        const g=normGrupo(ex.g||'?');
         real[g]=(real[g]||0)+1;
       });
     }
@@ -1495,7 +1528,7 @@ function calcMatch(f){
     const planejado=(es.num_singles!=null||(es.num_duplas!=null)||(es.num_trios!=null))?((es.num_singles||0)+(es.num_duplas||0)*2+(es.num_trios||0)*3)||1:(es.num_ex||1);
     totalPlanejado+=planejado;
     // match por grupo (case insensitive partial)
-    const gKey=es.g.toLowerCase();
+    const gKey=normGrupo(es.g).toLowerCase();
     let realCount=0;
     Object.entries(real).forEach(([rg,cnt])=>{
       if(rg.toLowerCase().includes(gKey)||gKey.includes(rg.toLowerCase())) realCount+=cnt;
@@ -1519,7 +1552,8 @@ function renderEsboço(f){
 
   const rowsHtml=f.esboço&&f.esboço.length?f.esboço.map(e=>{
     const gi=getGrupoInfo(e.g);
-    const gruposOpts=gruposDisponiveis.map(g=>`<option value="${g}" ${e.g===g?'selected':''}>${g}</option>`).join('');
+    const eG=normGrupo(e.g)||e.g;
+    const gruposOpts=['Quadríceps','Posterior de Coxa','Glúteo','Peitoral','Dorsal','Bíceps','Tríceps','Deltóide','Abdômen','Lombar','Panturrilha','Abdutor','Adutor','Manguito','Alongamento','Aeróbio','Mobilidade','Core','Antebraço'].map(g=>`<option value="${g}" ${eG===g?'selected':''}>${g}</option>`).join('');
     const estimulosOpts=['Padrão','Rest Pause','Drop Set','Bi-Set','Giant Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(e.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('');
     const mdet=match?match.detalhes.find(d=>d.g===e.g):null;
     const statusDot=f.exs.length>0?(mdet&&mdet.real>=mdet.planejado?`<span style="font-size:12px">✅</span>`:(mdet&&mdet.real>0?`<span style="font-size:12px">🟡</span>`:`<span style="font-size:12px">⭕</span>`)):'';
@@ -1527,7 +1561,7 @@ function renderEsboço(f){
 
     return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <!-- grupo -->
-      <span style="width:9px;height:9px;border-radius:50%;background:${gi.cor};flex-shrink:0"></span>
+      ${(()=>{const gi2=getGrupoInfo(eG);return`<span style="width:9px;height:9px;border-radius:50%;background:${gi2.cor};flex-shrink:0"></span>`;})()}
       <select style="border:none;background:transparent;font-size:13px;font-weight:700;color:var(--ink);outline:none;cursor:pointer;appearance:none;flex:1;min-width:90px" onchange="e_upd('${f.id}','${e.id}','g',this.value)">${gruposOpts}</select>
       ${statusDot}
       <!-- qtd exercícios -->
@@ -1670,7 +1704,7 @@ function renderExGrupo(e,fichaId){
   const gi0=getGrupoInfo(e.exs[0]?.g||'Outro');
   return`<div class="grupo-card ${isDupla?'gc-dupla':'gc-trio'}" draggable="true" data-ficha="${fichaId}" data-ex="${e.id}" data-idx="${e._idx}">
     <div class="grupo-header"><span class="ex-drag" style="font-size:14px">⠿</span>${isDupla?'Dupla':'Trio'} — sem descanso</div>
-    <div class="grupo-exs">${e.exs.map((ex,i)=>{localNum++;const isLast=i===e.exs.length-1;const gi=getGrupoInfo(ex.g);return`
+    <div class="grupo-exs">${e.exs.map((ex,i)=>{localNum++;const isLast=i===e.exs.length-1;const gi=getGrupoInfo(normGrupo(ex.g||''));return`
       <div class="grupo-ex-row">
         <div class="ex-num ${isDupla?'gnum-d':'gnum-t'}">${localNum}</div>
         <div class="ex-info" style="flex:1;min-width:0">
@@ -1711,7 +1745,7 @@ function renderExsCompact(f){
     const isDupla=e.grupo==='dupla';
     return`<div class="grupo-card ${isDupla?'gc-dupla':'gc-trio'}">
       <div class="grupo-header" style="font-size:10px;padding:5px 10px">${isDupla?'Dupla':'Trio'}</div>
-      <div class="grupo-exs">${e.exs.map((ex,i)=>{num++;const isLast=i===e.exs.length-1;const gi=getGrupoInfo(ex.g);return`
+      <div class="grupo-exs">${e.exs.map((ex,i)=>{num++;const isLast=i===e.exs.length-1;const gi=getGrupoInfo(normGrupo(ex.g||''));return`
         <div class="grupo-ex-row" style="padding:7px 10px;gap:6px">
           <div class="ex-num ${isDupla?'gnum-d':'gnum-t'}" style="width:18px;height:18px;font-size:10px">${num}</div>
           <div class="ex-info" style="flex:1;min-width:0"><div class="ex-nome" style="font-size:12px">${exNomeExibir(ex.n)}</div>
@@ -2266,7 +2300,7 @@ function renderCatalogo(){
 
   const row=(ex)=>{
     const off=EXERCICIOS_INATIVOS.has(ex.n);
-    const gi=getGrupoInfo(ex.g);
+    const gi=getGrupoInfo(normGrupo(ex.g||''));
     const isCustom=!ex._fromDB; // exercícios adicionados manualmente podem ser deletados
     return`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--bg3);${off?'opacity:.45':''}">
       <span style="font-size:9px;padding:2px 8px;border-radius:20px;font-weight:600;background:${gi.cor}33;color:${gi.tc};border:1px solid ${gi.cor}66;white-space:nowrap;flex-shrink:0">${ex.g||'—'}</span>
