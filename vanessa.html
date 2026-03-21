@@ -1134,11 +1134,11 @@ function render(){
   // Auto-save
   autoSave();
   const [tt,ts]=titles[modulo]||['',''];
-  document.getElementById('tb-title').textContent=tt;
-  document.getElementById('tb-sub').textContent=ts;
+  const _tbt=document.getElementById('tb-title');const _tbs=document.getElementById('tb-sub');
+  if(_tbt)_tbt.textContent=tt;if(_tbs)_tbs.textContent=ts;
   const novas=D.solicitacoes.filter(s=>s.status==='nova').length;
   const badge=document.getElementById('badge-fila');
-  badge.textContent=novas;badge.style.display=novas?'':'none';
+  if(badge){badge.textContent=novas;badge.style.display=novas?'':'none';}
   const acts=document.getElementById('tb-actions');
   if(modulo==='treinos'&&alunoSel&&getFichas(alunoSel).length>1){
     acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
@@ -1170,20 +1170,6 @@ function render(){
 }
 
 // ── HELPERS: PENDENTE / HISTÓRICO / AUTO-SAVE ──
-function isPendente(a){
-  // Aluno tem esboço preenchido em alguma ficha mas sem exercícios reais
-  const p=getProg(a);
-  if(!p)return false;
-  return p.fichas.some(f=>f.esboço&&f.esboço.length>0&&(!f.exs||f.exs.length===0));
-}
-function countPendentes(){return D.alunos.filter(isPendente).length;}
-
-function autoSave(){
-  try{
-    const snap={alunos:D.alunos.map(a=>({id:a.id,programas:a.programas}))};
-    localStorage.setItem('se7e_programas',JSON.stringify(snap));
-  }catch(e){}
-}
 
 
 // ── PENDENTE / HISTÓRICO / AUTO-SAVE ──
