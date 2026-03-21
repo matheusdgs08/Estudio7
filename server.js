@@ -25,7 +25,7 @@ http.createServer((req, res) => {
     const filePath = path.join(__dirname, url.slice(1));
     fs.readFile(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Not found'); return; }
-      res.writeHead(200, { 'Content-Type': MIME[ext], 'Cache-Control': 'public, max-age=3600' });
+      res.writeHead(200, { 'Content-Type': MIME[ext], 'Cache-Control': 'public, max-age=300' });
       res.end(data);
     });
     return;
