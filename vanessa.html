@@ -1064,6 +1064,11 @@ function exNomeExibir(n){return n.replace(/^[A-ZÁÉÍÓÚÃÕÇ]+ - /,'');}
 let D={alunos:[],solicitacoes:[]};
 // Carrega dados dos alunos de forma assíncrona
 async function carregarDados(){
+  const dbg=document.createElement('div');
+  dbg.id='dbg';
+  dbg.style='position:fixed;bottom:0;left:0;right:0;background:#1C1916;color:#4ade80;font-size:10px;padding:6px 10px;z-index:9999;font-family:monospace;max-height:120px;overflow-y:auto';
+  document.body.appendChild(dbg);
+  const log=(...a)=>{console.log(...a);const d=document.getElementById('dbg');if(d){const p=document.createElement('div');p.textContent=new Date().toLocaleTimeString()+' '+a.join(' ');d.appendChild(p);d.scrollTop=d.scrollHeight;}};
   try{
     // Limpa localStorage corrompido de versões anteriores (fichas com exs:[])
     try{
@@ -1080,7 +1085,7 @@ async function carregarDados(){
     D.solicitacoes=loaded.solicitacoes||[];
     loadSaved();
     render();
-    console.log('✅ '+D.alunos.length+' alunos carregados');
+    log('✅ alunos:',D.alunos.length);
 
     // Carrega fichas + carga_ref em paralelo
     window.FICHAS_DATA=window.FICHAS_DATA||{};
@@ -1089,11 +1094,12 @@ async function carregarDados(){
     const [cJs,...fJsArr]=await Promise.all([cResp.text(),...fResps.map(r=>r.text())]);
     new Function(cJs)();
     fJsArr.forEach(js=>new Function(js)());
-    console.log('✅ '+Object.keys(window.FICHAS_DATA).length+' fichas carregadas');
+    log('✅ FICHAS_DATA mats:',Object.keys(window.FICHAS_DATA).length);
 
     // Merge fichas em TODOS os alunos de uma vez
     D.alunos.forEach(a=>mergeAluno(a));
-    console.log('✅ Fichas injetadas em todos os alunos');
+    const bianca=D.alunos.find(a=>a.mat===23);
+    log('✅ merge done | bianca fichas:',bianca?bianca.programas[0]?.fichas?.length:'?','exs:',bianca?.programas[0]?.fichas?.[0]?.exs?.length);
     render();
   }catch(e){
     console.error('Erro ao carregar dados:',e);
@@ -1107,6 +1113,7 @@ function mergeAluno(a){
   if(!fichasData||!fichasData.length) return;
   const prog=a.programas[0];
   if(!prog) return;
+  if(mat==='23'){const dbg=document.getElementById('dbg');if(dbg){const p=document.createElement('div');p.style.color='#facc15';p.textContent='mergeAluno mat=23 fichasData:'+fichasData.length+' prog._editado:'+prog._editado+' exs0:'+fichasData[0]?.exs?.length;dbg.appendChild(p);dbg.scrollTop=dbg.scrollHeight;}}
   // Sempre injeta fichas reais do arquivo fichas_X.js no programa atual
   // _editado só protege esboço e metadata — exs vem sempre do arquivo
   if(!prog._editado){
@@ -1814,7 +1821,9 @@ function selecionarAluno(id){
   fichaAtiva=0;compareMode=false;compareFichas=[];
   if(!alunoSel){render();return;}
 
+  const _dbg=document.getElementById('dbg');if(_dbg){const _p=document.createElement('div');_p.style.color='#60a5fa';_p.textContent='click '+alunoSel.nm.split(' ')[0]+' mat='+alunoSel.mat+' fichas:'+getFichas(alunoSel).length;_dbg.appendChild(_p);_dbg.scrollTop=_dbg.scrollHeight;}
   mergeAluno(alunoSel);
+  const _dbg2=document.getElementById('dbg');if(_dbg2){const _p=document.createElement('div');_p.style.color='#f472b6';_p.textContent='after merge fichas:'+getFichas(alunoSel).length+' exs:'+getFichas(alunoSel)[0]?.exs?.length;_dbg2.appendChild(_p);_dbg2.scrollTop=_dbg2.scrollHeight;}
   // Safety: if fichas not yet in FICHAS_DATA, they'll be injected by the interval below
 
   // Update selected highlight on list without full re-render
