@@ -1058,7 +1058,20 @@ const EXERCICIOS=[
   {n:'TRÍCEPS - SMITH - BANCO 180 - TRÍCEPS SUPINADO',g:'TRÍCEPS'}
 ];
 
-function getGrupoInfo(g){return GRUPOS_INFO[g]||{cor:'#F1EFE8',tc:'#4A453F'};}
+const GRUPO_CANONICAL={
+  'QUADRICEPS':'Quadríceps','POSTERIOR DE COXA':'Posterior de Coxa',
+  'GLUTEO':'Glúteo','PEITORAL':'Peitoral','DORSAL':'Dorsal',
+  'BICEPS':'Bíceps','TRICEPS':'Tríceps','DELTOIDE':'Deltóide',
+  'ABDOMEN':'Abdômen','LOMBAR':'Lombar','PANTURRILHA':'Panturrilha',
+  'ABDUTOR':'Abdutor','ADUTOR':'Adutor','MANGUITO':'Manguito',
+  'ALONGAMENTO':'Alongamento','AEROBIO':'Aeróbio','AEROBICO':'Aeróbio',
+  'MOBILIDADE':'Mobilidade','CORE':'Core','ANTEBRACO':'Antebraço',
+  'TIBIAL ANTERIOR':'Tibial Anterior','EQUILIBRIO':'Equilíbrio',
+  'ESCAPULA':'Escápula','ILIOPSOAS':'Iliopsoas',
+  'DORSAL- ARTICULADA':'Dorsal','TRICEPS ':'Tríceps','BICEPS ':'Bíceps',
+};
+function normGrupo(g){return GRUPO_CANONICAL[g]||GRUPO_CANONICAL[(g||'').trim().toUpperCase()]||g;}
+function getGrupoInfo(g){return GRUPOS_INFO[normGrupo(g)]||GRUPOS_INFO[g]||{cor:'#F1EFE8',tc:'#4A453F'};}
 function exNomeExibir(n){return n.replace(/^[A-ZÁÉÍÓÚÃÕÇ]+ - /,'');}
 
 let D={alunos:[],solicitacoes:[]};
