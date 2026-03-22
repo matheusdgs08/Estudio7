@@ -2634,17 +2634,19 @@ let avalAnamForm = {};         // anamnese ativa
 function initAvalForm(){
   return {
     id: uid(), data: new Date().toISOString().slice(0,10),
-    peso: '', altura: '', imc: '',
-    // Dobras 7 (protocolo Pollock)
+    genero: '', peso: '', altura: '', imc: '',
+    // Dobras Pollock 7
     peitoral:'', abdominal:'', coxa:'', triceps:'', subescapular:'', suprailiaca:'', axilar:'',
-    // Circunferências completas
+    // Circunferências
     cintura:'', abdominal_circ:'', quadril:'', braco:'', braco_contraido:'',
     antebraco:'', coxa_circ:'', panturrilha:'', pescoco:'', torax:'',
-    // Resultado calculado
+    // Resultados calculados
     gord_pct:'', massa_gorda:'', massa_magra:'',
     objetivo_aval: '', obs_aval: ''
   };
 }
+
+// ── Cálculos composição corporal ──
 
 function calcIMC(peso, altura){
   const p=parseFloat(peso), h=parseFloat(altura)/100;
@@ -2653,9 +2655,9 @@ function calcIMC(peso, altura){
 }
 
 function calcPollock7(dobras, idade, genero){
-  // Pollock 7 dobras
   const {peitoral=0,abdominal=0,coxa=0,triceps=0,subescapular=0,suprailiaca=0,axilar=0} = dobras;
-  const soma = [peitoral,abdominal,coxa,triceps,subescapular,suprailiaca,axilar].map(Number).reduce((a,b)=>a+b,0);
+  const vals = [peitoral,abdominal,coxa,triceps,subescapular,suprailiaca,axilar].map(Number);
+  const soma = vals.reduce((a,b)=>a+b,0);
   if(!soma) return null;
   const id=parseInt(idade)||30;
   let dc;
@@ -2668,54 +2670,113 @@ function calcPollock7(dobras, idade, genero){
   return Math.max(3, Math.min(50, gord)).toFixed(1);
 }
 
-function renderAvaliacao(){
-  if(avalTab==='form')   return renderAvalForm();
-  if(avalTab==='anamnese') return renderAnamneseForm();
-  if(avalTab==='historico') return renderAvalHistorico();
-  return renderAvalLista();
+function classGordura(pct, genero, idade){
+  const g = parseFloat(pct);
+  const id = parseInt(idade)||30;
+  // Tabela ACSM adaptada por sexo e faixa etária
+  const fem = id<30?[13,20,28,35]:id<40?[14,21,29,36]:id<50?[16,23,31,38]:[18,25,33,40];
+  const mas = id<30?[8,13,20,25]:id<40?[10,15,21,27]:id<50?[12,17,23,29]:[14,19,25,31];
+  const ref = genero==='Feminino' ? fem : mas;
+  if(g <= ref[0]) return {label:'Excelente',cor:'#059669',bg:'#D1FAE5'};
+  if(g <= ref[1]) return {label:'Bom',cor:'#16A34A',bg:'#DCFCE7'};
+  if(g <= ref[2]) return {label:'Regular',cor:'#D97706',bg:'#FEF3C7'};
+  if(g <= ref[3]) return {label:'Ruim',cor:'#EA580C',bg:'#FFEDD5'};
+  return {label:'Muito ruim',cor:'#DC2626',bg:'#FEE2E2'};
 }
 
-// ── Lista de alunos para avaliação ──
-function renderAvalLista(){
-  const busca = (document.getElementById('av-busca')||{}).value||'';
-  const alunos = D.alunos.filter(a=>!busca||a.nm.toLowerCase().includes(busca.toLowerCase()));
-
-  const cards = alunos.map(a=>{
-    const avals = (a.avaliacoes||[]);
-    const ultima = avals.length ? avals[avals.length-1] : null;
-    const diasSem = ultima ? Math.round((Date.now()-new Date(ultima.data))/864e5) : null;
-    const alerta = diasSem===null ? '⚠️ Sem avaliação' : diasSem>90 ? `🔴 ${diasSem}d sem avaliar` : diasSem>60 ? `🟡 ${diasSem}d` : `✅ ${diasSem}d`;
-    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="avalAluno=D.alunos.find(a=>a.id==='${a.id}');avalTab='form';avalForm=initAvalForm();render()">
-      <div style="${avStyle(a.nm)};width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">${ini(a.nm)}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;color:var(--ink)">${a.nm}</div>
-        <div style="font-size:11px;color:var(--ink3)">mat. ${a.mat}${a.objetivo?' · '+a.objetivo:''}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-        <span style="font-size:11px">${alerta}</span>
-        ${avals.length?`<span style="font-size:10px;color:var(--ink3)">${avals.length} aval.</span>`:''}
-      </div>
-      <span style="color:var(--ink3)">›</span>
-    </div>`;
-  }).join('');
-
-  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-    <div style="padding:14px 20px;background:var(--wh);border-bottom:1px solid var(--bg3);flex-shrink:0">
-      <input id="av-busca" class="ca-search" placeholder="Buscar aluno…" oninput="render()">
-    </div>
-    <div style="padding:14px 20px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1">${cards}</div>
-  </div>`;
+function classIMC(imc){
+  const v = parseFloat(imc);
+  if(v < 18.5) return {label:'Abaixo do peso',cor:'#2563EB',bg:'#DBEAFE'};
+  if(v < 25)   return {label:'Peso normal',cor:'#059669',bg:'#D1FAE5'};
+  if(v < 30)   return {label:'Sobrepeso',cor:'#D97706',bg:'#FEF3C7'};
+  if(v < 35)   return {label:'Obesidade I',cor:'#EA580C',bg:'#FFEDD5'};
+  if(v < 40)   return {label:'Obesidade II',cor:'#DC2626',bg:'#FEE2E2'};
+  return {label:'Obesidade III',cor:'#7C3AED',bg:'#EDE9FE'};
 }
 
-// ── Formulário de avaliação ──
+function calcRCQ(cintura, quadril, genero){
+  const c=parseFloat(cintura), q=parseFloat(quadril);
+  if(!c||!q) return null;
+  const rcq = (c/q).toFixed(2);
+  // Classificação OMS por sexo
+  let cls;
+  if(genero==='Feminino'){
+    if(rcq < 0.80) cls={label:'Baixo risco',cor:'#059669',bg:'#D1FAE5'};
+    else if(rcq < 0.85) cls={label:'Risco moderado',cor:'#D97706',bg:'#FEF3C7'};
+    else cls={label:'Alto risco',cor:'#DC2626',bg:'#FEE2E2'};
+  } else {
+    if(rcq < 0.90) cls={label:'Baixo risco',cor:'#059669',bg:'#D1FAE5'};
+    else if(rcq < 0.95) cls={label:'Risco moderado',cor:'#D97706',bg:'#FEF3C7'};
+    else cls={label:'Alto risco',cor:'#DC2626',bg:'#FEE2E2'};
+  }
+  return {valor: rcq, ...cls};
+}
+
+function calcICA(cintura, altura){
+  const c=parseFloat(cintura), h=parseFloat(altura);
+  if(!c||!h) return null;
+  const ica = (c/h).toFixed(2);
+  let cls;
+  if(ica < 0.50)      cls={label:'Ótimo',cor:'#059669',bg:'#D1FAE5'};
+  else if(ica < 0.55) cls={label:'Aceitável',cor:'#16A34A',bg:'#DCFCE7'};
+  else if(ica < 0.60) cls={label:'Elevado',cor:'#D97706',bg:'#FEF3C7'};
+  else                cls={label:'Muito elevado',cor:'#DC2626',bg:'#FEE2E2'};
+  return {valor: ica, ...cls};
+}
+
+function calcTMB(peso, altura, idade, genero){
+  const p=parseFloat(peso), h=parseFloat(altura), id=parseInt(idade)||30;
+  if(!p||!h) return null;
+  // Mifflin-St Jeor
+  if(genero==='Feminino') return Math.round(10*p + 6.25*h - 5*id - 161);
+  return Math.round(10*p + 6.25*h - 5*id + 5);
+}
+
+function calcPesoIdeal(altura, genero){
+  const h = parseFloat(altura)/100;
+  if(!h) return null;
+  const min = (18.5*h*h).toFixed(1);
+  const max = (24.9*h*h).toFixed(1);
+  return {min, max};
+}
+
+function calcScoreEvolucao(av, genero, idade){
+  let pts = 0, total = 0;
+  // Composição corporal (40pts)
+  if(av.gord_pct){
+    const cls = classGordura(av.gord_pct, genero, idade);
+    const map = {'Excelente':40,'Bom':32,'Regular':20,'Ruim':10,'Muito ruim':4};
+    pts += map[cls.label]||0; total += 40;
+  }
+  // IMC (15pts)
+  if(av.imc){
+    const cls = classIMC(av.imc);
+    const map = {'Peso normal':15,'Abaixo do peso':8,'Sobrepeso':8,'Obesidade I':4,'Obesidade II':2,'Obesidade III':0};
+    pts += map[cls.label]||0; total += 15;
+  }
+  // RCQ (25pts)
+  if(av.cintura && av.quadril){
+    const r = calcRCQ(av.cintura, av.quadril, genero);
+    if(r){ const map = {'Baixo risco':25,'Risco moderado':12,'Alto risco':4}; pts += map[r.label]||0; total += 25; }
+  }
+  // ICA (20pts)
+  if(av.cintura && av.altura){
+    const r = calcICA(av.cintura, av.altura);
+    if(r){ const map = {'Ótimo':20,'Aceitável':14,'Elevado':7,'Muito elevado':2}; pts += map[r.label]||0; total += 20; }
+  }
+  if(!total) return null;
+  return Math.round((pts/total)*100);
+}
+
 function renderAvalForm(){
   const a = avalAluno;
   if(!a) return renderAvalLista();
   const f = avalForm;
   const idade = a.idade || 30;
-  const genero = a.genero || 'Feminino';
+  // Gênero: do form se preenchido, senão do aluno
+  const genero = f.genero || a.genero || 'Feminino';
 
-  // Calcular IMC e gordura automaticamente
+  // Calcular tudo automaticamente
   f.imc = calcIMC(f.peso, f.altura);
   const gordPct = calcPollock7({
     peitoral:f.peitoral, abdominal:f.abdominal, coxa:f.coxa,
@@ -2727,6 +2788,17 @@ function renderAvalForm(){
     f.massa_magra = (parseFloat(f.peso)-parseFloat(f.massa_gorda)).toFixed(1);
   }
 
+  // Índices derivados
+  const rcq = calcRCQ(f.cintura, f.quadril, genero);
+  const ica = calcICA(f.cintura, f.altura);
+  const tmb = calcTMB(f.peso, f.altura, idade, genero);
+  const pesoIdeal = calcPesoIdeal(f.altura, genero);
+  const clsGord = gordPct ? classGordura(gordPct, genero, idade) : null;
+  const clsIMC  = f.imc   ? classIMC(f.imc) : null;
+  const score   = calcScoreEvolucao(f, genero, idade);
+  const pesoNum = parseFloat(f.peso);
+  const gordNum = parseFloat(gordPct);
+
   const inp = (campo, label, unit='kg', type='number', step='0.1') =>
     `<div style="display:flex;flex-direction:column;gap:4px">
       <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${label}</label>
@@ -2736,16 +2808,82 @@ function renderAvalForm(){
       </div>
     </div>`;
 
-  const resultado = gordPct ? `
-    <div style="background:linear-gradient(135deg,#1E40AF,#6D28D9);border-radius:12px;padding:16px;color:#fff;margin-top:4px">
-      <div style="font-size:11px;opacity:.75;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Resultado Pollock 7 dobras</div>
-      <div style="display:flex;gap:16px;flex-wrap:wrap">
-        <div><div style="font-size:26px;font-weight:700">${gordPct}%</div><div style="font-size:11px;opacity:.8">Gordura</div></div>
-        ${f.massa_gorda?`<div><div style="font-size:26px;font-weight:700">${f.massa_gorda}kg</div><div style="font-size:11px;opacity:.8">Massa gorda</div></div>`:''}
-        ${f.massa_magra?`<div><div style="font-size:26px;font-weight:700">${f.massa_magra}kg</div><div style="font-size:11px;opacity:.8">Massa magra</div></div>`:''}
-        ${f.imc?`<div><div style="font-size:26px;font-weight:700">${f.imc}</div><div style="font-size:11px;opacity:.8">IMC</div></div>`:''}
-      </div>
-    </div>` : '';
+  const badge = (label, cor, bg) =>
+    `<span style="font-size:11px;font-weight:600;color:${cor};background:${bg};border:1px solid ${cor}33;border-radius:20px;padding:2px 10px">${label}</span>`;
+
+  const metricCard = (val, lbl, cls=null, sub='') =>
+    `<div style="background:var(--bg);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px">
+      <div style="font-size:22px;font-weight:700;color:${cls?cls.cor:'var(--ink)'};">${val}</div>
+      <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${lbl}</div>
+      ${cls?`<div style="margin-top:2px">${badge(cls.label,cls.cor,cls.bg)}</div>`:''}
+      ${sub?`<div style="font-size:10px;color:var(--ink3);margin-top:2px">${sub}</div>`:''}
+    </div>`;
+
+  // Bloco de resultado principal
+  const resultadoHTML = (gordPct||f.imc||rcq||ica) ? `
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <!-- Score geral -->
+      ${score!==null?`
+      <div style="background:linear-gradient(135deg,#1E40AF,#6D28D9);border-radius:12px;padding:14px 16px;color:#fff;display:flex;align-items:center;gap:14px">
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:40px;font-weight:800;line-height:1">${score}</div>
+          <div style="font-size:10px;opacity:.75;text-transform:uppercase;letter-spacing:1px">Score</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:12px;opacity:.85;margin-bottom:6px">Score de Evolução</div>
+          <div style="background:rgba(255,255,255,.2);border-radius:20px;height:8px">
+            <div style="background:#fff;border-radius:20px;height:8px;width:${score}%;transition:width .5s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:10px;opacity:.6;margin-top:3px"><span>0</span><span>50</span><span>100</span></div>
+        </div>
+      </div>`:``}
+
+      <!-- Composição corporal -->
+      ${gordPct?`
+      <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Composição Corporal</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          ${metricCard(gordPct+'%','Gordura',clsGord)}
+          ${f.massa_magra?metricCard(f.massa_magra+'kg','Massa magra'):''}
+          ${f.massa_gorda?metricCard(f.massa_gorda+'kg','Massa gorda'):''}
+        </div>
+        ${pesoNum&&gordNum&&pesoIdeal?`
+        <div style="margin-top:10px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--ink2)">
+          ${(() => {
+            const metaGord = genero==='Feminino'?20:13;
+            const pesoMeta = ((pesoNum*(100-gordNum)/100) / (1 - metaGord/100)).toFixed(1);
+            const diff = (pesoNum - parseFloat(pesoMeta)).toFixed(1);
+            const semanas = Math.ceil(parseFloat(diff)/0.35);
+            if(parseFloat(diff) <= 0) return `<span style="color:var(--green)">✅ Gordura já dentro do ideal para o objetivo</span>`;
+            return `🎯 Meta de gordura ideal: <strong>${pesoMeta}kg</strong> · perder <strong>${diff}kg</strong> · estimativa: <strong>~${semanas} semanas</strong>`;
+          })()}
+        </div>`:``}
+      </div>`:``}
+
+      <!-- IMC + Peso ideal -->
+      ${f.imc?`
+      <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">IMC e Peso</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${metricCard(f.imc,'IMC',clsIMC)}
+          ${pesoIdeal?metricCard(pesoIdeal.min+'–'+pesoIdeal.max+'kg','Peso ideal',null,'Para IMC 18,5–24,9'):''}
+        </div>
+        ${tmb?`<div style="margin-top:8px;padding:8px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--ink2)">🔥 TMB (Mifflin): <strong>${tmb} kcal/dia</strong> · Sedentária: <strong>${Math.round(tmb*1.2)}</strong> · Ativa: <strong>${Math.round(tmb*1.55)}</strong> kcal</div>`:''}
+      </div>`:``}
+
+      <!-- Índices de risco cardiometabólico -->
+      ${rcq||ica?`
+      <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Risco Cardiometabólico</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${rcq?metricCard(rcq.valor,'RCQ',rcq,'Cintura ÷ Quadril'):''}
+          ${ica?metricCard(ica.valor,'ICA',ica,'Cintura ÷ Altura'):''}
+        </div>
+        ${ica?`<div style="margin-top:8px;font-size:11px;color:var(--ink3);background:var(--bg);padding:7px 10px;border-radius:8px">
+          💡 ICA < 0,50 = ótimo · 0,50–0,55 = aceitável · 0,55–0,60 = elevado · > 0,60 = muito elevado
+        </div>`:''}
+      </div>`:``}
+    </div>` : ``;
 
   return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
@@ -2756,24 +2894,30 @@ function renderAvalForm(){
     </div>
 
     <div style="padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px">
-      <!-- Data -->
-      <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Data</label>
-        <input type="date" value="${f.data}" class="mi" style="margin-top:4px" oninput="avalForm.data=this.value"></div>
+      <!-- Data e gênero -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Data</label>
+          <input type="date" value="${f.data}" class="mi" style="margin-top:4px" oninput="avalForm.data=this.value"></div>
+        <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sexo</label>
+          <select class="mi" style="margin-top:4px;height:38px" oninput="avalForm.genero=this.value;render()">
+            <option value="Feminino" ${genero==='Feminino'?'selected':''}>Feminino</option>
+            <option value="Masculino" ${genero==='Masculino'?'selected':''}>Masculino</option>
+          </select></div>
+      </div>
 
       <!-- Medidas básicas -->
       <div>
-        <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px">📏 Medidas básicas</div>
+        <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px">⚖️ Medidas básicas</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           ${inp('peso','Peso','kg')}
           ${inp('altura','Altura','cm','number','1')}
         </div>
-        ${f.imc?`<div style="margin-top:6px;padding:6px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--ink2)">IMC: <strong>${f.imc}</strong></div>`:''}
       </div>
 
       <!-- Dobras 7 -->
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px">📐 Dobras cutâneas — Pollock 7</div>
-        <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">Preencha as que usar. Deixe zero as que não medir.</div>
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:8px">Protocolo Jackson & Pollock. Insira as 7 dobras em mm.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
           ${inp('peitoral','Peitoral','mm')}
           ${inp('abdominal','Abdominal','mm')}
@@ -2785,15 +2929,8 @@ function renderAvalForm(){
         </div>
       </div>
 
-      <!-- Resultado composição corporal -->
-      ${gordPct ? resultado : f.peso ? `
-        <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px">
-          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">COMPOSIÇÃO CORPORAL</div>
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            ${f.imc?`<div><div style="font-size:20px;font-weight:700">${f.imc}</div><div style="font-size:10px;color:var(--ink3)">IMC</div></div>`:''}
-            <div style="font-size:12px;color:var(--ink3);align-self:center">Preencha as dobras para calcular % gordura</div>
-          </div>
-        </div>` : ''}
+      <!-- RESULTADO AUTOMÁTICO -->
+      ${resultadoHTML}
 
       <!-- Circunferências -->
       <div>
@@ -2817,11 +2954,9 @@ function renderAvalForm(){
         <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Objetivo desta avaliação</label>
         <input class="mi" style="margin-top:4px" placeholder="Ex: Acompanhar emagrecimento pós-gravidez…" value="${f.objetivo_aval||''}" oninput="avalForm.objetivo_aval=this.value">
       </div>
-
-      <!-- Observações -->
       <div>
         <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Observações gerais</label>
-        <textarea class="nota-textarea" style="margin-top:4px" rows="3" placeholder="Dicas de alimentação, histórico, combinados…" oninput="avalForm.obs_aval=this.value">${f.obs_aval||''}</textarea>
+        <textarea class="nota-textarea" style="margin-top:4px" rows="3" placeholder="Combinados, dicas, histórico…" oninput="avalForm.obs_aval=this.value">${f.obs_aval||''}</textarea>
       </div>
 
       <!-- Anamnese -->
@@ -2833,7 +2968,7 @@ function renderAvalForm(){
           </div>
           <span style="color:#B45309">›</span>
         </div>
-        ${a.anamnese?`<div style="font-size:11px;color:#92400E;margin-top:6px">✓ Preenchida · última atualização disponível</div>`:`<div style="font-size:11px;color:#B45309;margin-top:6px">Ainda não preenchida — toque para preencher</div>`}
+        ${a.anamnese?`<div style="font-size:11px;color:#92400E;margin-top:6px">✓ Preenchida</div>`:`<div style="font-size:11px;color:#B45309;margin-top:6px">Ainda não preenchida — toque para preencher</div>`}
       </div>
 
       <!-- Botões -->
@@ -2844,6 +2979,7 @@ function renderAvalForm(){
     </div>
   </div>`;
 }
+
 
 // ── Anamnese ──
 function renderAnamneseForm(){
@@ -2909,27 +3045,60 @@ function renderAvalHistorico(){
   const avals = (a.avaliacoes||[]).slice().reverse();
   if(!avals.length) return `<div class="empty-state"><div class="empty-ico">📊</div><div class="empty-title">Sem avaliações</div></div>`;
 
+  const genero = a.genero || 'Feminino';
+  const idade  = a.idade  || 30;
   const cards = avals.map((av,i)=>{
-    const isFirst = i===0;
-    const prev = avals[i+1];
-    const delta = prev&&av.gord_pct&&prev.gord_pct ? (parseFloat(av.gord_pct)-parseFloat(prev.gord_pct)).toFixed(1) : null;
-    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden">
+    const prev  = avals[i+1];
+    const score = calcScoreEvolucao(av, genero, idade);
+    const prevScore = prev ? calcScoreEvolucao(prev, genero, idade) : null;
+    const deltaGord = prev&&av.gord_pct&&prev.gord_pct ? (parseFloat(av.gord_pct)-parseFloat(prev.gord_pct)).toFixed(1) : null;
+    const deltaMag  = prev&&av.massa_magra&&prev.massa_magra ? (parseFloat(av.massa_magra)-parseFloat(prev.massa_magra)).toFixed(1) : null;
+    const deltaScore = score!==null&&prevScore!==null ? score-prevScore : null;
+    const rcq = calcRCQ(av.cintura, av.quadril, genero);
+    const ica = calcICA(av.cintura, av.altura);
+    const clsG = av.gord_pct ? classGordura(av.gord_pct, genero, idade) : null;
+    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;overflow:hidden">
+      <!-- Header -->
       <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600">${new Date(av.data+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'})}</div>
           ${av.objetivo_aval?`<div style="font-size:11px;color:var(--ink3);margin-top:2px">${av.objetivo_aval}</div>`:''}
         </div>
-        ${av.gord_pct?`<div style="text-align:right"><div style="font-size:20px;font-weight:700;color:var(--purple)">${av.gord_pct}%</div><div style="font-size:10px;color:var(--ink3)">gordura</div></div>`:''}
-        ${delta?`<div style="font-size:12px;font-weight:600;color:${parseFloat(delta)<0?'var(--green)':'#DC2626'}">${parseFloat(delta)<0?'▼':'▲'}${Math.abs(delta)}%</div>`:''}
+        ${score!==null?`
+        <div style="text-align:center;background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;border-radius:10px;padding:6px 12px">
+          <div style="font-size:22px;font-weight:800;line-height:1">${score}</div>
+          <div style="font-size:9px;opacity:.8">Score</div>
+        </div>`:''}
+        ${deltaScore!==null?`<div style="font-size:13px;font-weight:700;color:${deltaScore>=0?'var(--green)':'#DC2626'}">${deltaScore>=0?'▲':'▼'}${Math.abs(deltaScore)}</div>`:''}
       </div>
-      <div style="border-top:1px solid var(--bg3);padding:8px 14px;display:flex;gap:16px;flex-wrap:wrap;background:var(--bg)">
-        ${av.peso?`<span style="font-size:12px;color:var(--ink2)">⚖️ ${av.peso}kg</span>`:''}
-        ${av.imc?`<span style="font-size:12px;color:var(--ink2)">IMC ${av.imc}</span>`:''}
-        ${av.massa_magra?`<span style="font-size:12px;color:var(--ink2)">💪 ${av.massa_magra}kg magra</span>`:''}
-        ${av.cintura?`<span style="font-size:12px;color:var(--ink2)">👗 ${av.cintura}cm</span>`:''}
-        ${av.quadril?`<span style="font-size:12px;color:var(--ink2)">📏 Q ${av.quadril}cm</span>`:''}
-        ${av.coxa_circ?`<span style="font-size:12px;color:var(--ink2)">🦵 ${av.coxa_circ}cm</span>`:''}
-      </div>
+      <!-- Gordura + Massa -->
+      ${av.gord_pct||av.massa_magra||av.peso?`
+      <div style="border-top:1px solid var(--bg3);padding:10px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--bg)">
+        ${av.gord_pct?`<div style="text-align:center">
+          <div style="font-size:18px;font-weight:700;color:${clsG?clsG.cor:'var(--ink)'}">${av.gord_pct}%</div>
+          <div style="font-size:10px;color:var(--ink3)">Gordura</div>
+          ${deltaGord?`<div style="font-size:10px;font-weight:600;color:${parseFloat(deltaGord)<0?'var(--green)':'#DC2626'}">${parseFloat(deltaGord)<0?'▼':'▲'}${Math.abs(deltaGord)}%</div>`:''}
+          ${clsG?`<div style="font-size:9px;color:${clsG.cor}">${clsG.label}</div>`:''}
+        </div>`:''}
+        ${av.massa_magra?`<div style="text-align:center">
+          <div style="font-size:18px;font-weight:700;color:var(--ink)">${av.massa_magra}kg</div>
+          <div style="font-size:10px;color:var(--ink3)">Massa magra</div>
+          ${deltaMag?`<div style="font-size:10px;font-weight:600;color:${parseFloat(deltaMag)>0?'var(--green)':'#DC2626'}">${parseFloat(deltaMag)>0?'▲':'▼'}${Math.abs(deltaMag)}kg</div>`:''}
+        </div>`:''}
+        ${av.peso?`<div style="text-align:center">
+          <div style="font-size:18px;font-weight:700">${av.peso}kg</div>
+          <div style="font-size:10px;color:var(--ink3)">Peso</div>
+          ${av.imc?`<div style="font-size:10px;color:var(--ink3)">IMC ${av.imc}</div>`:''}
+        </div>`:''}
+      </div>`:''}
+      <!-- Índices cardiometabólicos -->
+      ${rcq||ica||av.cintura?`
+      <div style="border-top:1px solid var(--bg3);padding:8px 14px;display:flex;gap:10px;flex-wrap:wrap;background:var(--wh)">
+        ${rcq?`<span style="font-size:11px;background:${rcq.bg};color:${rcq.cor};border-radius:20px;padding:2px 9px">RCQ ${rcq.valor} · ${rcq.label}</span>`:''}
+        ${ica?`<span style="font-size:11px;background:${ica.bg};color:${ica.cor};border-radius:20px;padding:2px 9px">ICA ${ica.valor} · ${ica.label}</span>`:''}
+        ${av.cintura?`<span style="font-size:11px;color:var(--ink2)">Cintura ${av.cintura}cm</span>`:''}
+        ${av.quadril?`<span style="font-size:11px;color:var(--ink2)">Quadril ${av.quadril}cm</span>`:''}
+      </div>`:''}
       ${av.obs_aval?`<div style="padding:8px 14px;border-top:1px solid var(--bg3);font-size:12px;color:var(--ink3)">📝 ${av.obs_aval}</div>`:''}
     </div>`;
   }).join('');
@@ -2960,66 +3129,143 @@ function gerarPDFAvaliacao(){
   const a = avalAluno;
   const f = avalForm;
   const data = new Date(f.data+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
+  const genero = f.genero || a.genero || 'Feminino';
+  const idade  = a.idade || 30;
+  const rcq    = calcRCQ(f.cintura, f.quadril, genero);
+  const ica    = calcICA(f.cintura, f.altura);
+  const tmb    = calcTMB(f.peso, f.altura, idade, genero);
+  const pesoId = calcPesoIdeal(f.altura, genero);
+  const score  = calcScoreEvolucao(f, genero, idade);
+  const clsG   = f.gord_pct ? classGordura(f.gord_pct, genero, idade) : null;
+  const clsIMC_= f.imc ? classIMC(f.imc) : null;
+
+  const card = (val,lbl,sub='') => `<div class="card"><div class="card-val">${val}</div><div class="card-lbl">${lbl}</div>${sub?`<div class="card-sub">${sub}</div>`:''}</div>`;
+  const badge= (txt,cor) => `<span style="font-size:11px;font-weight:600;color:${cor};background:${cor}18;border:1px solid ${cor}44;border-radius:20px;padding:2px 9px">${txt}</span>`;
+
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
   <title>Avaliação Física — ${a.nm}</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',Arial,sans-serif;color:#1C1916;padding:32px;max-width:680px;margin:0 auto;font-size:14px}
-    h1{font-size:22px;font-weight:700;color:#1C1916;margin-bottom:4px}
-    .sub{font-size:13px;color:#6B5E52;margin-bottom:24px}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1C1916;padding:32px;max-width:720px;margin:0 auto;font-size:14px}
+    h1{font-size:24px;font-weight:700;color:#1C1916;margin-bottom:2px}
+    .sub{font-size:13px;color:#6B5E52;margin-bottom:4px}
+    .studio{font-size:11px;color:#8A8278;margin-bottom:28px}
     .sec{margin-bottom:20px}
-    .sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#8A8278;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #E8E3DC}
-    .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#8A8278;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #E8E3DC}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .card{background:#F5F0E8;border-radius:8px;padding:10px 14px}
-    .card-val{font-size:22px;font-weight:700;color:#1C1916}
-    .card-lbl{font-size:10px;color:#8A8278;text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
-    .result-box{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;border-radius:10px;padding:16px;margin-bottom:20px}
-    .result-box .card{background:rgba(255,255,255,.15);color:#fff}
-    .result-box .card-val{color:#fff}
-    .result-box .card-lbl{color:rgba(255,255,255,.7)}
-    .obs{background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400E}
+    .card-val{font-size:24px;font-weight:700;color:#1C1916;line-height:1.1}
+    .card-lbl{font-size:10px;color:#8A8278;text-transform:uppercase;letter-spacing:.8px;margin-top:3px}
+    .card-sub{font-size:11px;color:#8A8278;margin-top:3px}
+    .score-box{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px}
+    .score-num{font-size:52px;font-weight:800;line-height:1;flex-shrink:0}
+    .score-bar-bg{background:rgba(255,255,255,.2);border-radius:20px;height:10px;margin-top:6px}
+    .score-bar-fill{background:#fff;border-radius:20px;height:10px}
+    .res-box{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:20px}
+    .res-box .card{background:rgba(255,255,255,.15)}
+    .res-box .card-val,.res-box .card-lbl{color:#fff}
+    .res-box .card-sub{color:rgba(255,255,255,.7)}
+    .risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .risk-card{border-radius:8px;padding:10px 14px;border:1px solid}
+    .obs-box{background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:12px 14px;font-size:13px;color:#92400E}
+    .tag{display:inline-block;font-size:11px;font-weight:600;border-radius:20px;padding:3px 10px;border:1px solid;margin-top:4px}
     @media print{body{padding:16px}}
   </style></head><body>
-  <h1>Avaliação Física</h1>
-  <div class="sub">${a.nm} · mat. ${a.mat} · ${data}</div>
-  ${f.gord_pct?`<div class="result-box"><div style="font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Resultado</div>
-    <div class="grid">
-      <div class="card"><div class="card-val">${f.gord_pct}%</div><div class="card-lbl">Gordura</div></div>
-      ${f.massa_gorda?`<div class="card"><div class="card-val">${f.massa_gorda}kg</div><div class="card-lbl">Massa gorda</div></div>`:''}
-      ${f.massa_magra?`<div class="card"><div class="card-val">${f.massa_magra}kg</div><div class="card-lbl">Massa magra</div></div>`:''}
-      ${f.imc?`<div class="card"><div class="card-val">${f.imc}</div><div class="card-lbl">IMC</div></div>`:''}
-    </div></div>`:''}
-  <div class="sec"><div class="sec-title">Medidas básicas</div>
-    <div class="grid">
-      ${f.peso?`<div class="card"><div class="card-val">${f.peso}kg</div><div class="card-lbl">Peso</div></div>`:''}
-      ${f.altura?`<div class="card"><div class="card-val">${f.altura}cm</div><div class="card-lbl">Altura</div></div>`:''}
-      ${f.imc?`<div class="card"><div class="card-val">${f.imc}</div><div class="card-lbl">IMC</div></div>`:''}
-    </div></div>
-  ${(f.cintura||f.quadril||f.braco||f.coxa_circ||f.panturrilha)?`<div class="sec"><div class="sec-title">Circunferências</div>
-    <div class="grid">
-      ${f.pescoco?`<div class="card"><div class="card-val">${f.pescoco}cm</div><div class="card-lbl">Pescoço</div></div>`:''}
-      ${f.torax?`<div class="card"><div class="card-val">${f.torax}cm</div><div class="card-lbl">Tórax</div></div>`:''}
-      ${f.cintura?`<div class="card"><div class="card-val">${f.cintura}cm</div><div class="card-lbl">Cintura</div></div>`:''}
-      ${f.abdominal_circ?`<div class="card"><div class="card-val">${f.abdominal_circ}cm</div><div class="card-lbl">Abdominal</div></div>`:''}
-      ${f.quadril?`<div class="card"><div class="card-val">${f.quadril}cm</div><div class="card-lbl">Quadril</div></div>`:''}
-      ${f.braco?`<div class="card"><div class="card-val">${f.braco}cm</div><div class="card-lbl">Braço relaxado</div></div>`:''}
-      ${f.braco_contraido?`<div class="card"><div class="card-val">${f.braco_contraido}cm</div><div class="card-lbl">Braço contraído</div></div>`:''}
-      ${f.antebraco?`<div class="card"><div class="card-val">${f.antebraco}cm</div><div class="card-lbl">Antebraço</div></div>`:''}
-      ${f.coxa_circ?`<div class="card"><div class="card-val">${f.coxa_circ}cm</div><div class="card-lbl">Coxa</div></div>`:''}
-      ${f.panturrilha?`<div class="card"><div class="card-val">${f.panturrilha}cm</div><div class="card-lbl">Panturrilha</div></div>`:''}
-      ${f.braco?`<div class="card"><div class="card-val">${f.braco}cm</div><div class="card-lbl">Braço</div></div>`:''}
-      ${f.coxa_circ?`<div class="card"><div class="card-val">${f.coxa_circ}cm</div><div class="card-lbl">Coxa</div></div>`:''}
-    </div></div>`:''}
-  ${f.objetivo_aval?`<div class="sec"><div class="sec-title">Objetivo desta avaliação</div><p>${f.objetivo_aval}</p></div>`:''}
-  ${f.obs_aval?`<div class="obs">${f.obs_aval}</div>`:''}
-  <div style="margin-top:32px;padding-top:16px;border-top:1px solid #E8E3DC;font-size:11px;color:#8A8278;display:flex;justify-content:space-between">
-    <span>Estúdio Se7e · Vila Mariana, SP</span><span>${data}</span>
-  </div></body></html>`;
+  <h1>${a.nm}</h1>
+  <div class="sub">Mat. ${a.mat} · ${data}</div>
+  <div class="studio">Estúdio Se7e — Avaliação Física</div>
 
-  const win = window.open('','_blank');
-  win.document.write(html);
-  win.document.close();
-  setTimeout(()=>win.print(),500);
+  ${score!==null?`
+  <div class="score-box">
+    <div class="score-num">${score}</div>
+    <div style="flex:1">
+      <div style="font-size:14px;font-weight:700;margin-bottom:2px">Score de Evolução</div>
+      <div style="font-size:12px;opacity:.8;margin-bottom:8px">Composição corporal + Índices de risco</div>
+      <div class="score-bar-bg"><div class="score-bar-fill" style="width:${score}%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;opacity:.6;margin-top:3px"><span>0</span><span>50</span><span>100</span></div>
+    </div>
+  </div>`:''}
+
+  ${f.gord_pct?`
+  <div class="res-box">
+    <div style="font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Composição Corporal</div>
+    <div class="grid3">
+      ${card(f.gord_pct+'%','Gordura corporal',clsG?clsG.label:'')}
+      ${f.massa_magra?card(f.massa_magra+'kg','Massa magra'):''}
+      ${f.massa_gorda?card(f.massa_gorda+'kg','Massa gorda'):''}
+    </div>
+  </div>`:''}
+
+  <div class="sec">
+    <div class="sec-title">Peso e IMC</div>
+    <div class="grid3">
+      ${f.peso?card(f.peso+'kg','Peso corporal'):''}
+      ${f.imc?card(f.imc,'IMC',clsIMC_?clsIMC_.label:''):''}
+      ${pesoId?card(pesoId.min+'–'+pesoId.max+'kg','Peso ideal','IMC 18,5–24,9'):''}
+    </div>
+    ${tmb?`<div style="margin-top:10px;background:#F5F0E8;border-radius:8px;padding:10px 14px;font-size:13px">
+      🔥 Taxa Metabólica Basal: <strong>${tmb} kcal/dia</strong>
+      &nbsp;&nbsp;·&nbsp;&nbsp; Sedentária: <strong>${Math.round(tmb*1.2)} kcal</strong>
+      &nbsp;&nbsp;·&nbsp;&nbsp; Ativa: <strong>${Math.round(tmb*1.55)} kcal</strong>
+    </div>`:''}
+  </div>
+
+  ${rcq||ica?`
+  <div class="sec">
+    <div class="sec-title">Risco Cardiometabólico</div>
+    <div class="risk-grid">
+      ${rcq?`<div class="risk-card" style="background:${rcq.bg};border-color:${rcq.cor}44">
+        <div style="font-size:22px;font-weight:700;color:${rcq.cor}">${rcq.valor}</div>
+        <div style="font-size:10px;color:#8A8278;text-transform:uppercase;letter-spacing:.8px">RCQ (cintura/quadril)</div>
+        <div class="tag" style="color:${rcq.cor};background:${rcq.cor}18;border-color:${rcq.cor}44">${rcq.label}</div>
+      </div>`:''}
+      ${ica?`<div class="risk-card" style="background:${ica.bg};border-color:${ica.cor}44">
+        <div style="font-size:22px;font-weight:700;color:${ica.cor}">${ica.valor}</div>
+        <div style="font-size:10px;color:#8A8278;text-transform:uppercase;letter-spacing:.8px">ICA (cintura/altura)</div>
+        <div class="tag" style="color:${ica.cor};background:${ica.cor}18;border-color:${ica.cor}44">${ica.label}</div>
+      </div>`:''}
+    </div>
+  </div>`:''}
+
+  ${(f.cintura||f.quadril||f.braco||f.coxa_circ||f.panturrilha)?`
+  <div class="sec">
+    <div class="sec-title">Circunferências</div>
+    <div class="grid3">
+      ${f.pescoco?card(f.pescoco+'cm','Pescoço'):''}
+      ${f.torax?card(f.torax+'cm','Tórax'):''}
+      ${f.cintura?card(f.cintura+'cm','Cintura'):''}
+      ${f.abdominal_circ?card(f.abdominal_circ+'cm','Abdominal'):''}
+      ${f.quadril?card(f.quadril+'cm','Quadril'):''}
+      ${f.braco?card(f.braco+'cm','Braço relaxado'):''}
+      ${f.braco_contraido?card(f.braco_contraido+'cm','Braço contraído'):''}
+      ${f.antebraco?card(f.antebraco+'cm','Antebraço'):''}
+      ${f.coxa_circ?card(f.coxa_circ+'cm','Coxa'):''}
+      ${f.panturrilha?card(f.panturrilha+'cm','Panturrilha'):''}
+    </div>
+  </div>`:''}
+
+  ${(f.peitoral||f.abdominal||f.coxa)?`
+  <div class="sec">
+    <div class="sec-title">Dobras Cutâneas — Pollock 7 (mm)</div>
+    <div class="grid3">
+      ${f.peitoral?card(f.peitoral+'mm','Peitoral'):''}
+      ${f.abdominal?card(f.abdominal+'mm','Abdominal'):''}
+      ${f.coxa?card(f.coxa+'mm','Coxa'):''}
+      ${f.triceps?card(f.triceps+'mm','Tríceps'):''}
+      ${f.subescapular?card(f.subescapular+'mm','Subescapular'):''}
+      ${f.suprailiaca?card(f.suprailiaca+'mm','Supra-ilíaca'):''}
+      ${f.axilar?card(f.axilar+'mm','Axilar média'):''}
+    </div>
+  </div>`:''}
+
+  ${f.obs_aval?`<div class="obs-box"><strong>Observações:</strong> ${f.obs_aval}</div>`:''}
+  </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(), 600);
 }
 
 function renderFila(){
