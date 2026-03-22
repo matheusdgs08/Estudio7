@@ -1836,32 +1836,17 @@ function selecionarAluno(id){
     }
   }
 
-  // Only re-render the main panel (col-prog), not the full page
-  const colProg=document.querySelector('.col-prog');
-  if(colProg){
-    let main='';
-    if(getFichas(alunoSel).length===0){
-      main=`<div class="empty-state"><div class="empty-ico">📋</div><div class="empty-title">Sem programa</div><div class="empty-sub">${alunoSel.nm.split(' ')[0]} ainda não tem programa.</div><button class="btn-primary" onclick="novoPrograma()" style="margin-top:8px">+ Criar programa</button></div>`;
-    } else {
-      main=renderFichasArea();
-    }
-    colProg.innerHTML=main;
-    setupDragDrop();
-    // Update toolbar buttons
-    const acts=document.getElementById('tb-actions');
-    if(acts){
-      if(getFichas(alunoSel).length>1){
-        acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
-      } else {
-        acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
-      }
-    }
-
-  } else {
+  // FULL render — partial update had silent errors
+  try{
+    const _dbgR=document.getElementById('dbg');
+    if(_dbgR){const _p=document.createElement('div');_p.style.color='#fb923c';_p.textContent='→render fichas:'+getFichas(alunoSel).length;_dbgR.appendChild(_p);_dbgR.scrollTop=_dbgR.scrollHeight;}
     render();
+  }catch(e){
+    const _dbgE=document.getElementById('dbg');
+    if(_dbgE){const _p=document.createElement('div');_p.style.color='#f87171';_p.textContent='ERR:'+e.message;_dbgE.appendChild(_p);}
+    console.error(e);
   }
 }
-function toggleCompare(){compareMode=!compareMode;compareFichas=compareMode?[0,Math.min(1,getFichas(alunoSel).length-1)]:[];render();}
 function toggleCompareFicha(idx){compareFichas=compareFichas.includes(idx)?compareFichas.filter(i=>i!==idx):[...compareFichas,idx];render();}
 function novoPrograma(){
   if(!alunoSel)return;
