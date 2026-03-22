@@ -2586,8 +2586,9 @@ function initAvalForm(){
     peso: '', altura: '', imc: '',
     // Dobras 7 (protocolo Pollock)
     peitoral:'', abdominal:'', coxa:'', triceps:'', subescapular:'', suprailiaca:'', axilar:'',
-    // Circunferências
-    cintura:'', quadril:'', braco:'', coxa_circ:'',
+    // Circunferências completas
+    cintura:'', abdominal_circ:'', quadril:'', braco:'', braco_contraido:'',
+    antebraco:'', coxa_circ:'', panturrilha:'', pescoco:'', torax:'',
     // Resultado calculado
     gord_pct:'', massa_gorda:'', massa_magra:'',
     objetivo_aval: '', obs_aval: ''
@@ -2733,16 +2734,30 @@ function renderAvalForm(){
         </div>
       </div>
 
-      ${resultado}
+      <!-- Resultado composição corporal -->
+      ${gordPct ? resultado : f.peso ? `
+        <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px">
+          <div style="font-size:11px;color:var(--ink3);margin-bottom:6px">COMPOSIÇÃO CORPORAL</div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            ${f.imc?`<div><div style="font-size:20px;font-weight:700">${f.imc}</div><div style="font-size:10px;color:var(--ink3)">IMC</div></div>`:''}
+            <div style="font-size:12px;color:var(--ink3);align-self:center">Preencha as dobras para calcular % gordura</div>
+          </div>
+        </div>` : ''}
 
       <!-- Circunferências -->
       <div>
         <div style="font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px">📏 Circunferências</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${inp('pescoco','Pescoço','cm')}
+          ${inp('torax','Tórax','cm')}
           ${inp('cintura','Cintura','cm')}
+          ${inp('abdominal_circ','Abdominal','cm')}
           ${inp('quadril','Quadril','cm')}
-          ${inp('braco','Braço','cm')}
+          ${inp('braco','Braço relaxado','cm')}
+          ${inp('braco_contraido','Braço contraído','cm')}
+          ${inp('antebraco','Antebraço','cm')}
           ${inp('coxa_circ','Coxa','cm')}
+          ${inp('panturrilha','Panturrilha','cm')}
         </div>
       </div>
 
@@ -2860,7 +2875,9 @@ function renderAvalHistorico(){
         ${av.peso?`<span style="font-size:12px;color:var(--ink2)">⚖️ ${av.peso}kg</span>`:''}
         ${av.imc?`<span style="font-size:12px;color:var(--ink2)">IMC ${av.imc}</span>`:''}
         ${av.massa_magra?`<span style="font-size:12px;color:var(--ink2)">💪 ${av.massa_magra}kg magra</span>`:''}
-        ${av.cintura?`<span style="font-size:12px;color:var(--ink2)">📏 Cintura ${av.cintura}cm</span>`:''}
+        ${av.cintura?`<span style="font-size:12px;color:var(--ink2)">👗 ${av.cintura}cm</span>`:''}
+        ${av.quadril?`<span style="font-size:12px;color:var(--ink2)">📏 Q ${av.quadril}cm</span>`:''}
+        ${av.coxa_circ?`<span style="font-size:12px;color:var(--ink2)">🦵 ${av.coxa_circ}cm</span>`:''}
       </div>
       ${av.obs_aval?`<div style="padding:8px 14px;border-top:1px solid var(--bg3);font-size:12px;color:var(--ink3)">📝 ${av.obs_aval}</div>`:''}
     </div>`;
@@ -2927,10 +2944,18 @@ function gerarPDFAvaliacao(){
       ${f.altura?`<div class="card"><div class="card-val">${f.altura}cm</div><div class="card-lbl">Altura</div></div>`:''}
       ${f.imc?`<div class="card"><div class="card-val">${f.imc}</div><div class="card-lbl">IMC</div></div>`:''}
     </div></div>
-  ${(f.cintura||f.quadril||f.braco)?`<div class="sec"><div class="sec-title">Circunferências</div>
+  ${(f.cintura||f.quadril||f.braco||f.coxa_circ||f.panturrilha)?`<div class="sec"><div class="sec-title">Circunferências</div>
     <div class="grid">
+      ${f.pescoco?`<div class="card"><div class="card-val">${f.pescoco}cm</div><div class="card-lbl">Pescoço</div></div>`:''}
+      ${f.torax?`<div class="card"><div class="card-val">${f.torax}cm</div><div class="card-lbl">Tórax</div></div>`:''}
       ${f.cintura?`<div class="card"><div class="card-val">${f.cintura}cm</div><div class="card-lbl">Cintura</div></div>`:''}
+      ${f.abdominal_circ?`<div class="card"><div class="card-val">${f.abdominal_circ}cm</div><div class="card-lbl">Abdominal</div></div>`:''}
       ${f.quadril?`<div class="card"><div class="card-val">${f.quadril}cm</div><div class="card-lbl">Quadril</div></div>`:''}
+      ${f.braco?`<div class="card"><div class="card-val">${f.braco}cm</div><div class="card-lbl">Braço relaxado</div></div>`:''}
+      ${f.braco_contraido?`<div class="card"><div class="card-val">${f.braco_contraido}cm</div><div class="card-lbl">Braço contraído</div></div>`:''}
+      ${f.antebraco?`<div class="card"><div class="card-val">${f.antebraco}cm</div><div class="card-lbl">Antebraço</div></div>`:''}
+      ${f.coxa_circ?`<div class="card"><div class="card-val">${f.coxa_circ}cm</div><div class="card-lbl">Coxa</div></div>`:''}
+      ${f.panturrilha?`<div class="card"><div class="card-val">${f.panturrilha}cm</div><div class="card-lbl">Panturrilha</div></div>`:''}
       ${f.braco?`<div class="card"><div class="card-val">${f.braco}cm</div><div class="card-lbl">Braço</div></div>`:''}
       ${f.coxa_circ?`<div class="card"><div class="card-val">${f.coxa_circ}cm</div><div class="card-lbl">Coxa</div></div>`:''}
     </div></div>`:''}
