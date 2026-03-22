@@ -1119,6 +1119,38 @@ async function carregarDados(){
   }
 }
 
+// Recalcula esboço de uma ficha a partir dos exercícios reais (exs[])
+function recalcEsboço(ficha){
+  if(!ficha||!ficha.exs||!ficha.exs.length) return;
+  const grupos={};
+  ficha.exs.forEach(e=>{
+    const addG=(g,tipo)=>{
+      const gn=normGrupo(g||'?');
+      if(!grupos[gn]) grupos[gn]={singles:0,duplas:0,s:3,r:'12',d:60};
+      if(tipo==='s') grupos[gn].singles++;
+      else grupos[gn].duplas++;
+      grupos[gn].s=e.s||3;
+      grupos[gn].r=e.r||'12';
+      grupos[gn].d=e.d||60;
+    };
+    if(e.tp==='s'){
+      addG(e.g||e.n.split(' - ')[0],'s');
+    } else if(e.exs){
+      e.exs.forEach(ie=>addG(ie.g||ie.n.split(' - ')[0],'d'));
+    }
+  });
+  // Preserve manually edited esboço entries (estimulo, obs) by merging
+  const oldEsb={};
+  (ficha.esboço||[]).forEach(e=>{ oldEsb[normGrupo(e.g)]=e; });
+  ficha.esboço=Object.entries(grupos).map(([g,info])=>({
+    id:(oldEsb[g]||{}).id||('e'+Math.random().toString(36).slice(2,7)),
+    g,s:info.s,r:info.r,
+    num_singles:info.singles,num_duplas:info.duplas,num_trios:0,
+    estimulo:(oldEsb[g]||{}).estimulo||'Padrão',
+    obs:(oldEsb[g]||{}).obs||''
+  }));
+}
+
 function mergeAluno(a){
   if(!window.FICHAS_DATA) return;
   const mat=String(a.mat);
@@ -1132,7 +1164,6 @@ function mergeAluno(a){
   if(!prog._editado){
     prog.fichas=fichasData;
   } else {
-    // Mesmo se editado, injeta exs de fichasData se a ficha não tem exs
     (prog.fichas||[]).forEach((f,i)=>{
       if(!f.exs||!f.exs.length){
         const src=fichasData[i];
@@ -1141,6 +1172,10 @@ function mergeAluno(a){
     });
   }
   prog.nm=prog.nm||'Programa Atual';
+  // Recalcula esboço de cada ficha a partir dos exercícios reais
+  (prog.fichas||[]).forEach(f=>{
+    if(f.exs&&f.exs.length&&!f._editado) recalcEsboço(f);
+  });
 }
 
 function getProg(a){return a&&a.programas.length?a.programas[0]:null;}
