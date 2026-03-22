@@ -1085,8 +1085,25 @@ async function carregarDados(){
     fJsArr.forEach(js=>new Function(js)()); // cada chunk adiciona ao window.FICHAS_DATA
     console.log('✅ '+Object.keys(window.FICHAS_DATA).length+' fichas carregadas');
 
-    // Merge fichas into current aluno if selected
-    if(alunoSel) mergeAluno(alunoSel);
+    // Merge fichas into all alunos that are needed  
+    if(alunoSel){
+      mergeAluno(alunoSel);
+      // Update col-prog directly if we're on treinos screen
+      const cp=document.querySelector('.col-prog');
+      if(cp&&getFichas(alunoSel).length>0){
+        cp.innerHTML=renderFichasArea();
+        setupDragDrop();
+        // Update toolbar too
+        const acts=document.getElementById('tb-actions');
+        if(acts){
+          if(getFichas(alunoSel).length>1){
+            acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
+          } else {
+            acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
+          }
+        }
+      }
+    }
     render();
   }catch(e){
     console.error('Erro ao carregar dados:',e);
@@ -1772,6 +1789,7 @@ function selecionarAluno(id){
   if(!alunoSel){render();return;}
 
   mergeAluno(alunoSel);
+  // Safety: if fichas not yet in FICHAS_DATA, they'll be injected by the interval below
 
   // Update selected highlight on list without full re-render
   if(prev&&prev.id!==id){
@@ -1805,14 +1823,20 @@ function selecionarAluno(id){
     }
     autoSave();
 
-    // If fichas.js not loaded yet, wait
-    if(!window.FICHAS_DATA){
+    // Wait for this student's fichas to load (may be in any of the 6 chunks)
+    const _waitMat=String(alunoSel.mat);
+    const _needsWait=!window.FICHAS_DATA||!window.FICHAS_DATA[_waitMat];
+    if(_needsWait){
+      let _attempts=0;
       const check=setInterval(()=>{
-        if(window.FICHAS_DATA){
+        _attempts++;
+        if((window.FICHAS_DATA&&window.FICHAS_DATA[_waitMat])||_attempts>50){
           clearInterval(check);
-          mergeAluno(alunoSel);
-          const cp=document.querySelector('.col-prog');
-          if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
+          if(alunoSel&&String(alunoSel.mat)===_waitMat){
+            mergeAluno(alunoSel);
+            const cp=document.querySelector('.col-prog');
+            if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
+          }
         }
       },200);
     }
