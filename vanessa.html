@@ -1574,7 +1574,7 @@ function calcMatch(f){
   // Compara com o planejado no esboço
   let totalPlanejado=0, totalOk=0;
   const detalhes=f.esboço.map(es=>{
-    const planejado=(es.num_singles!=null||(es.num_duplas!=null)||(es.num_trios!=null))?((es.num_singles||0)+(es.num_duplas||0)*2+(es.num_trios||0)*3)||1:(es.num_ex||1);
+    const planejado=(es.num_singles!=null||(es.num_duplas!=null)||(es.num_trios!=null))?((es.num_singles||0)+(es.num_duplas||0)+(es.num_trios||0))||1:(es.num_ex||1);
     totalPlanejado+=planejado;
     // match por grupo (case insensitive partial)
     const gKey=normGrupo(es.g).toLowerCase();
@@ -1606,7 +1606,7 @@ function renderEsboço(f){
     const estimulosOpts=['Padrão','Rest Pause','Drop Set','Bi-Set','Giant Set','Pirâmide','Isometria','Máquina Contínua'].map(s=>`<option value="${s}" ${(e.estimulo||'Padrão')===s?'selected':''}>${s}</option>`).join('');
     const mdet=match?match.detalhes.find(d=>d.g===e.g):null;
     const statusDot=f.exs.length>0?(mdet&&mdet.real>=mdet.planejado?`<span style="font-size:12px">✅</span>`:(mdet&&mdet.real>0?`<span style="font-size:12px">🟡</span>`:`<span style="font-size:12px">⭕</span>`)):'';
-    const qtd=(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1);
+    const qtd=(e.num_singles||0)+(e.num_duplas||0)+(e.num_trios||0)||(e.num_ex||1);
 
     return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <!-- grupo -->
@@ -1638,7 +1638,7 @@ function renderEsboço(f){
     </div>`;
   }).join(''):`<div class="esboço-empty">Nenhum grupo. Clique em <b>+ Grupo</b> para começar.</div>`;
 
-  const totalPlan=temEsboço?f.esboço.reduce((a,e)=>a+((e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1)),0):0;
+  const totalPlan=temEsboço?f.esboço.reduce((a,e)=>a+((e.num_singles||0)+(e.num_duplas||0)+(e.num_trios||0)||(e.num_ex||1)),0):0;
   const matchBadge=temEsboço?`<div style="display:flex;align-items:center;gap:6px">
     ${f.exs.length>0?`<div style="width:72px;height:4px;background:rgba(0,0,0,.12);border-radius:99px;overflow:hidden">
       <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div></div>
@@ -2444,7 +2444,7 @@ function renderPendentes(){
     const p=getProg(a);
     const fichasPend=p.fichas.filter(f=>f.esboço&&f.esboço.length>0&&(!f.exs||f.exs.length===0));
     const totalGrupos=fichasPend.reduce((s,f)=>s+f.esboço.length,0);
-    const totalExPlan=fichasPend.reduce((s,f)=>s+f.esboço.reduce((ss,e)=>(ss+(e.num_singles||0)+(e.num_duplas||0)*2+(e.num_trios||0)*3||(e.num_ex||1)),0),0);
+    const totalExPlan=fichasPend.reduce((s,f)=>s+f.esboço.reduce((ss,e)=>(ss+(e.num_singles||0)+(e.num_duplas||0)+(e.num_trios||0)||(e.num_ex||1)),0),0);
     return`<div class="acard" style="cursor:pointer" onclick="selecionarAluno('${a.id}');setMod('treinos',document.querySelector('.sb-item'))">
       <div class="av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
       <div class="ainfo">
