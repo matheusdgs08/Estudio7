@@ -1082,34 +1082,18 @@ async function carregarDados(){
     render();
     console.log('✅ '+D.alunos.length+' alunos carregados');
 
-    // Load fichas em paralelo (6 chunks) + carga_ref
+    // Carrega fichas + carga_ref em paralelo
     window.FICHAS_DATA=window.FICHAS_DATA||{};
     const fichaUrls=['/fichas_1.js','/fichas_2.js','/fichas_3.js','/fichas_4.js','/fichas_5.js','/fichas_6.js'];
     const [cResp,...fResps]=await Promise.all([fetch('/carga_ref.js'),...fichaUrls.map(u=>fetch(u))]);
     const [cJs,...fJsArr]=await Promise.all([cResp.text(),...fResps.map(r=>r.text())]);
-    new Function(cJs)(); // sets window.CARGA_REF
-    fJsArr.forEach(js=>new Function(js)()); // cada chunk adiciona ao window.FICHAS_DATA
+    new Function(cJs)();
+    fJsArr.forEach(js=>new Function(js)());
     console.log('✅ '+Object.keys(window.FICHAS_DATA).length+' fichas carregadas');
 
-    // Merge fichas into all alunos that are needed  
-    if(alunoSel){
-      mergeAluno(alunoSel);
-      // Update col-prog directly if we're on treinos screen
-      const cp=document.querySelector('.col-prog');
-      if(cp&&getFichas(alunoSel).length>0){
-        cp.innerHTML=renderFichasArea();
-        setupDragDrop();
-        // Update toolbar too
-        const acts=document.getElementById('tb-actions');
-        if(acts){
-          if(getFichas(alunoSel).length>1){
-            acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
-          } else {
-            acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
-          }
-        }
-      }
-    }
+    // Merge fichas em TODOS os alunos de uma vez
+    D.alunos.forEach(a=>mergeAluno(a));
+    console.log('✅ Fichas injetadas em todos os alunos');
     render();
   }catch(e){
     console.error('Erro ao carregar dados:',e);
@@ -1863,25 +1847,7 @@ function selecionarAluno(id){
         acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
       }
     }
-    autoSave();
 
-    // Wait for this student's fichas to load (may be in any of the 6 chunks)
-    const _waitMat=String(alunoSel.mat);
-    const _needsWait=!window.FICHAS_DATA||!window.FICHAS_DATA[_waitMat];
-    if(_needsWait){
-      let _attempts=0;
-      const check=setInterval(()=>{
-        _attempts++;
-        if((window.FICHAS_DATA&&window.FICHAS_DATA[_waitMat])||_attempts>50){
-          clearInterval(check);
-          if(alunoSel&&String(alunoSel.mat)===_waitMat){
-            mergeAluno(alunoSel);
-            const cp=document.querySelector('.col-prog');
-            if(cp){cp.innerHTML=renderFichasArea();setupDragDrop();}
-          }
-        }
-      },200);
-    }
   } else {
     render();
   }
