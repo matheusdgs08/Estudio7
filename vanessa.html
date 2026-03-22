@@ -1065,6 +1065,12 @@ let D={alunos:[],solicitacoes:[]};
 // Carrega dados dos alunos de forma assíncrona
 async function carregarDados(){
   try{
+    // Limpa localStorage corrompido de versões anteriores (fichas com exs:[])
+    try{
+      const old=JSON.parse(localStorage.getItem('se7e_programas')||'{}');
+      const hasEmptyExs=(old.alunos||[]).some(a=>(a.programas||[]).some(p=>(p.fichas||[]).some(f=>f.exs&&f.exs.length===0&&!f._editado)));
+      if(hasEmptyExs){localStorage.removeItem('se7e_programas');console.log('🧹 localStorage corrompido limpo');}
+    }catch(e){}
     // Load base data
     const resp=await fetch('/data.js');
     const js=await resp.text();
@@ -1277,21 +1283,34 @@ function loadSaved(){
     const saved=localStorage.getItem('se7e_programas');
     if(!saved)return;
     const snap=JSON.parse(saved);
+    // Versão: se snapshot não tem ts ou é muito antigo, ignora
+    if(snap.ts && (Date.now()-snap.ts) > 7*24*60*60*1000){
+      localStorage.removeItem('se7e_programas');
+      return;
+    }
     (snap.alunos||[]).forEach(sa=>{
       const a=D.alunos.find(x=>x.id===sa.id);
-      if(a&&sa.programas&&sa.programas.length){
-        // Restore esboço and metadata but preserve live fichas data from fichas_X.js
-        a.programas=sa.programas.map((sp,i)=>{
-          const liveProg=a.programas[i]||sp;
-          return{...sp, fichas:(sp.fichas||[]).map((sf,fi)=>{
-            const liveF=(liveProg.fichas||[])[fi]||sf;
-            // Keep live exs unless this ficha was manually edited
-            return sf._editado?sf:{...sf,exs:liveF.exs||[]};
-          })};
+      if(!a||!sa.programas||!sa.programas.length) return;
+      // Restaura APENAS esboço e metadados das fichas salvas manualmente
+      // Os exercícios (exs[]) sempre vêm dos arquivos fichas_X.js — nunca do localStorage
+      sa.programas.forEach((sp,i)=>{
+        const ap=a.programas[i];
+        if(!ap) return;
+        // Restaura nome e notas do programa se foram editados
+        if(sp.nm && sp.nm!==ap.nm) ap.nm=sp.nm;
+        if(sp.nota!==undefined) ap.nota=sp.nota;
+        // Restaura esboços editados nas fichas (sem tocar em exs[])
+        (sp.fichas||[]).forEach((sf,fi)=>{
+          const af=ap.fichas&&ap.fichas[fi];
+          if(!af) return;
+          if(sf.esboço&&sf.esboço.length) af.esboço=sf.esboço;
+          if(sf.nota!==undefined) af.nota=sf.nota;
+          if(sf._editado) af._editado=sf._editado;
+          // NÃO restaura sf.exs — isso vem de fichas_X.js
         });
-      }
+      });
     });
-    console.log('✅ Programas restaurados do localStorage');
+    console.log('✅ Esboços e metadados restaurados do localStorage');
   }catch(e){console.error('loadSaved:',e);}
 }
 
