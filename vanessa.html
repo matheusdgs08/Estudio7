@@ -1117,11 +1117,20 @@ function mergeAluno(a){
   if(!fichasData||!fichasData.length) return;
   const prog=a.programas[0];
   if(!prog) return;
-  // Sempre injeta dados reais — respeita edições manuais só se prog já tem fichas editadas
+  // Sempre injeta fichas reais do arquivo fichas_X.js no programa atual
+  // _editado só protege esboço e metadata — exs vem sempre do arquivo
   if(!prog._editado){
     prog.fichas=fichasData;
-    prog.nm=prog.nm||'Programa Atual';
+  } else {
+    // Mesmo se editado, injeta exs de fichasData se a ficha não tem exs
+    (prog.fichas||[]).forEach((f,i)=>{
+      if(!f.exs||!f.exs.length){
+        const src=fichasData[i];
+        if(src)f.exs=src.exs;
+      }
+    });
   }
+  prog.nm=prog.nm||'Programa Atual';
 }
 
 function getProg(a){return a&&a.programas.length?a.programas[0]:null;}
@@ -1253,7 +1262,11 @@ function isPendente(a){
 function countPendentes(){return D.alunos.filter(isPendente).length;}
 function autoSave(){
   try{
-    const snap={ts:Date.now(),alunos:D.alunos.map(a=>({id:a.id,programas:a.programas}))};
+    // Only save esboço, metadata and manual edits — NOT the full exs[] (those come from fichas_X.js)
+    const snap={ts:Date.now(),alunos:D.alunos.map(a=>({id:a.id,programas:a.programas.map(p=>({
+      ...p,
+      fichas:(p.fichas||[]).map(f=>({...f,exs:f._editado?f.exs:[]}))
+    }))}))};
     localStorage.setItem('se7e_programas',JSON.stringify(snap));
     const el=document.getElementById('save-indicator');
     if(el){el.style.opacity='1';setTimeout(()=>el.style.opacity='0',1500);}
@@ -1266,7 +1279,17 @@ function loadSaved(){
     const snap=JSON.parse(saved);
     (snap.alunos||[]).forEach(sa=>{
       const a=D.alunos.find(x=>x.id===sa.id);
-      if(a&&sa.programas&&sa.programas.length)a.programas=sa.programas;
+      if(a&&sa.programas&&sa.programas.length){
+        // Restore esboço and metadata but preserve live fichas data from fichas_X.js
+        a.programas=sa.programas.map((sp,i)=>{
+          const liveProg=a.programas[i]||sp;
+          return{...sp, fichas:(sp.fichas||[]).map((sf,fi)=>{
+            const liveF=(liveProg.fichas||[])[fi]||sf;
+            // Keep live exs unless this ficha was manually edited
+            return sf._editado?sf:{...sf,exs:liveF.exs||[]};
+          })};
+        });
+      }
     });
     console.log('✅ Programas restaurados do localStorage');
   }catch(e){console.error('loadSaved:',e);}
