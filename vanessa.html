@@ -1193,7 +1193,7 @@ function toggleSidebar(){
 function setMod(m,el){
   modulo=m;compareMode=false;compareFichas=[];fichaAtiva=0;
   document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('on'));
-  el.classList.add('on');
+  if(el) el.classList.add('on');
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('open');
   render();
@@ -2580,7 +2580,7 @@ function renderHistorico(){
     }).join(''):'';
 
     return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:8px">
-      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" onclick="histProgramaOpen=histProgramaOpen==='${p.id}'?null:'${p.id}';setMod('historico',null)">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" onclick="histProgramaOpen=histProgramaOpen==='${p.id}'?null:'${p.id}';render()">
         <div style="width:36px;height:36px;border-radius:8px;background:${statusBg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${status==='ativo'?'💪':status==='encerrado'?'📁':'📋'}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;color:var(--ink)">${p.nm||'Programa'}</div>
