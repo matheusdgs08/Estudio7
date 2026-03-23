@@ -2540,7 +2540,8 @@ let histProgramaOpen=null;
 function abrirHistorico(alunoId){
   histAluno=D.alunos.find(a=>a.id===alunoId);
   histProgramaOpen=null;
-  setMod('historico',null);
+  modulo='historico';
+  render();
 }
 
 function renderHistorico(){
@@ -2599,7 +2600,7 @@ function renderHistorico(){
 
   return`<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0">
-      <button onclick="setMod('treinos',document.querySelector('.sb-item'))" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:15px;padding:4px 8px">←</button>
+      <button onclick="modulo='treinos';render()" style="background:none;border:none;cursor:pointer;color:var(--ink3);font-size:15px;padding:4px 8px">←</button>
       <div class="av" style="${avStyle(a.nm)}">${ini(a.nm)}</div>
       <div>
         <div style="font-size:15px;font-weight:600;color:var(--ink)">${a.nm}</div>
