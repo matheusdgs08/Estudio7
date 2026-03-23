@@ -2557,27 +2557,32 @@ function renderHistorico(){
     const fmtData = d => d ? new Date(d+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'2-digit'}) : null;
     const vigencia = p.data_inicio ? `${fmtData(p.data_inicio)}${p.data_fim?' → '+fmtData(p.data_fim):' → atual'}` : 'Sem data';
 
-    const fichasHtml=isOpen?fichas.map(f=>{
-      const exsCount=countExs(f);
-      const temEsboço=f.esboço&&f.esboço.length>0;
-      const isPend=temEsboço&&exsCount===0;
-      return`<div style="border:1px solid var(--bg3);border-radius:8px;margin-top:6px;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg)">
-          <div style="width:22px;height:22px;border-radius:50%;background:${f.cor||'#1E40AF'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0">${f.letra}</div>
-          <div style="flex:1">
-            <div style="font-size:12px;font-weight:600;color:var(--ink)">${f.nm}</div>
-            <div style="font-size:10px;color:var(--ink3)">${exsCount} exercícios${isPend?' · <span style="color:#D97706">⏳ esboço pendente</span>':''}</div>
-          </div>
-          ${exsCount>0?`<button style="font-size:10px;padding:3px 10px;border:1px solid var(--bg3);background:var(--wh);border-radius:6px;cursor:pointer;color:var(--ink3)" onclick="verFichaHistorico('${a.id}','${p.id}','${f.id}')">Ver ficha</button>`:''}
-        </div>
-        ${isOpen&&exsCount>0?`<div style="padding:6px 14px 10px;background:var(--wh)">
-          ${(f.exs||[]).map(e=>{
-            if(e.tp==='s') return`<div style="font-size:11px;color:var(--ink2);padding:2px 0;border-bottom:1px solid var(--bg)">· ${e.n} <span style="color:var(--ink3)">${e.s}×${e.r}</span></div>`;
-            return`<div style="font-size:11px;color:#1E40AF;padding:2px 0;border-bottom:1px solid var(--bg)">[${e.grupo}] ${(e.exs||[]).map(x=>x.n).join(' + ')}</div>`;
-          }).join('')}
-        </div>`:''}
-      </div>`;
-    }).join(''):'';
+    // Programa atual (pi=0) tem fichas reais. Históricos mostram aviso.
+    const temFichasReais = pi===0 && fichas.length>0 && fichas.some(f=>countExs(f)>0);
+    const fichasHtml = isOpen ? (
+      temFichasReais
+        ? fichas.map(f=>{
+            const exsCount=countExs(f);
+            const grupos=[...new Set((f.exs||[]).flatMap(e=>
+              e.tp==='s'?[normGrupo(e.g||'')]:(e.exs||[]).map(x=>normGrupo(x.g||''))
+            ))].filter(g=>g&&g!=='?');
+            return `<div style="border:1px solid var(--bg3);border-radius:8px;margin-top:6px;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg)">
+                <div style="width:24px;height:24px;border-radius:50%;background:${f.cor||'#1E40AF'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${f.letra||'?'}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12px;font-weight:600;color:var(--ink)">${f.nm}</div>
+                  <div style="font-size:10px;color:var(--ink3);margin-top:1px">${exsCount} exercícios${grupos.length?` · ${grupos.slice(0,4).join(', ')}${grupos.length>4?'…':''}`:''}</div>
+                </div>
+                <button style="font-size:11px;padding:4px 12px;border:1px solid #BFDBFE;background:#EFF6FF;border-radius:8px;cursor:pointer;color:#1E40AF;font-weight:500"
+                  onclick="verFichaHistorico('${a.id}','${p.id}','${f.id}')">Ver ficha →</button>
+              </div>
+            </div>`;
+          }).join('')
+        : `<div style="padding:12px 4px;font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:8px">
+            <span style="font-size:18px">📦</span>
+            <span>Fichas deste programa não foram exportadas do sistema anterior. Apenas o programa atual tem fichas disponíveis.</span>
+          </div>`
+    ) : '';
 
     return`<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;overflow:hidden;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer" onclick="histProgramaOpen=histProgramaOpen==='${p.id}'?null:'${p.id}';render()">
