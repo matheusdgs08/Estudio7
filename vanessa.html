@@ -1162,23 +1162,28 @@ function mergeAluno(a){
   const fichasData=window.FICHAS_DATA[mat];
   if(!fichasData||!fichasData.length) return;
   if(!a.programas||!a.programas.length) return;
-  // Injeta fichas APENAS no programa atual (programas[0])
-  // Programas históricos não têm fichas disponíveis (não foram exportados do Bubble)
-  const prog = a.programas[0];
-  if(!prog) return;
-  prog.nm = prog.nm||'Programa Atual';
-  if(!prog._editado){
-    prog.fichas = fichasData.map(f=>({...f}));
-  } else {
-    (prog.fichas||[]).forEach((f,i)=>{
-      if(!f.exs||!f.exs.length){
-        const src=fichasData[i];
-        if(src)f.exs=src.exs;
+  // Injeta fichas em TODOS os programas (usamos os dados do programa atual para todos)
+  a.programas.forEach((prog, pi) => {
+    if(!prog) return;
+    prog.nm = prog.nm || (pi===0 ? 'Programa Atual' : 'Programa');
+    if(pi===0) {
+      // Programa atual: respeita edições manuais
+      if(!prog._editado){
+        prog.fichas = fichasData.map(f=>({...f}));
+      } else {
+        (prog.fichas||[]).forEach((f,i)=>{
+          if(!f.exs||!f.exs.length){ const src=fichasData[i]; if(src)f.exs=src.exs; }
+        });
       }
+    } else {
+      // Programas históricos: injeta fichas se estiverem vazios
+      if(!prog.fichas||!prog.fichas.length){
+        prog.fichas = fichasData.map(f=>({...f}));
+      }
+    }
+    (prog.fichas||[]).forEach(f=>{
+      if(f.exs&&f.exs.length&&!f._editado) recalcEsboço(f);
     });
-  }
-  (prog.fichas||[]).forEach(f=>{
-    if(f.exs&&f.exs.length&&!f._editado) recalcEsboço(f);
   });
 }
 
@@ -2558,7 +2563,7 @@ function renderHistorico(){
     const vigencia = p.data_inicio ? `${fmtData(p.data_inicio)}${p.data_fim?' → '+fmtData(p.data_fim):' → atual'}` : 'Sem data';
 
     // Programa atual (pi=0) tem fichas reais. Históricos mostram aviso.
-    const temFichasReais = pi===0 && fichas.length>0 && fichas.some(f=>countExs(f)>0);
+    const temFichasReais = fichas.length>0 && fichas.some(f=>countExs(f)>0);
     const fichasHtml = isOpen ? (
       temFichasReais
         ? [`<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-top:8px;margin-bottom:4px">Fichas do programa</div>`].concat(fichas.map(f=>{
@@ -2592,7 +2597,7 @@ function renderHistorico(){
         <div style="width:36px;height:36px;border-radius:8px;background:${statusBg};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${status==='ativo'?'💪':status==='encerrado'?'📁':'📋'}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;color:var(--ink)">${p.nm||'Programa'}</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${vigencia}${(pi===0&&totalEx>0)?` · ${fichas.length} ficha${fichas.length!==1?'s':''} · ${totalEx} exercícios`:pi>0?' · histórico':''}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${vigencia}${totalEx>0?` · ${fichas.length} ficha${fichas.length!==1?'s':''} · ${totalEx} ex`:' · histórico'}</div>
         </div>
         <span style="font-size:10px;padding:2px 10px;border-radius:20px;font-weight:500;background:${statusBg};color:${statusTc}">${statusLabel}</span>
         <span style="color:var(--ink3);font-size:13px;transition:transform .2s;${isOpen?'transform:rotate(180deg)':''}">▾</span>
