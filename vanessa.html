@@ -1217,7 +1217,7 @@ function render(){
   if(badge){badge.textContent=novas;badge.style.display=novas?'':'none';}
   const acts=document.getElementById('tb-actions');
   if(modulo==='treinos'&&alunoSel&&getFichas(alunoSel).length>1){
-    acts.innerHTML=`<button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
+    acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-compare ${compareMode?'on':''}" onclick="toggleCompare()">⧉ <span>Comparar</span></button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
   } else if(modulo==='treinos'&&alunoSel){
     acts.innerHTML=`<button class="btn-secondary" onclick="abrirHistorico('${alunoSel.id}')">📅 Histórico</button><button class="btn-secondary" onclick="novoPrograma()">+ Programa</button><button id="btn-gerar-ia" class="btn-secondary" style="background:linear-gradient(135deg,#6D28D9,#4F46E5);color:#fff;border-color:#6D28D9" onclick="abrirQuestionarioIA()">✨ Gerar com IA</button>`;
   } else if(modulo==='treinos'){
@@ -2627,6 +2627,7 @@ function verFichaHistorico(alunoId,progId,fichaId){
 // MÓDULO AVALIAÇÃO FÍSICA
 // ══════════════════════════════════════════════════════════
 let avalAluno = null;          // aluno selecionado na avaliação
+let avalBusca  = '';           // busca na lista de avaliação
 let avalTab = 'lista';         // lista | form | anamnese | historico
 let avalForm = {};             // formulário ativo
 let avalAnamForm = {};         // anamnese ativa
@@ -2766,6 +2767,49 @@ function calcScoreEvolucao(av, genero, idade){
   }
   if(!total) return null;
   return Math.round((pts/total)*100);
+}
+
+
+function renderAvalLista(){
+  const busca = avalBusca||'';
+  const alunos = busca
+    ? D.alunos.filter(a=>a.nm.toLowerCase().includes(busca.toLowerCase()))
+    : D.alunos;
+
+  const items = alunos.map(a=>{
+    const avals = a.avaliacoes||[];
+    const ultima = avals[avals.length-1];
+    const diasSemAval = ultima
+      ? Math.floor((Date.now()-new Date(ultima.data+'T12:00'))/(864e5))
+      : null;
+    const alerta = diasSemAval===null?'⚠️':diasSemAval>90?'🔴':diasSemAval>60?'🟡':'✅';
+    const textoAval = diasSemAval===null
+      ? 'Nunca avaliado'
+      : diasSemAval===0 ? 'Hoje'
+      : `${diasSemAval}d atrás`;
+    const ultimoGord = ultima&&ultima.gord_pct ? `${ultima.gord_pct}%` : '';
+    return `<div
+      style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer"
+      onclick="avalAluno=D.alunos.find(a=>a.id==='${a.id}');avalTab='form';avalForm=initAvalForm();render()">
+      <div style="${avStyle(a.nm)};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0">${ini(a.nm)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nm}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${alerta} ${textoAval}${avals.length?` · ${avals.length} avaliação${avals.length!==1?'ões':''}`:''}</div>
+      </div>
+      ${ultimoGord?`<div style="text-align:right;flex-shrink:0"><div style="font-size:16px;font-weight:700;color:var(--purple)">${ultimoGord}</div><div style="font-size:10px;color:var(--ink3)">gordura</div></div>`:''}
+      <span style="color:var(--ink3);font-size:18px">›</span>
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--bg3);flex-shrink:0">
+      <input class="mi" placeholder="Buscar aluno…" value="${busca}"
+        oninput="avalBusca=this.value;render()" style="font-size:13px">
+    </div>
+    <div style="padding:12px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px">
+      ${items||'<div style="text-align:center;padding:40px;color:var(--ink3)">Nenhum aluno encontrado</div>'}
+    </div>
+  </div>`;
 }
 
 function renderAvalForm(){
