@@ -2561,7 +2561,7 @@ function renderHistorico(){
     const temFichasReais = pi===0 && fichas.length>0 && fichas.some(f=>countExs(f)>0);
     const fichasHtml = isOpen ? (
       temFichasReais
-        ? fichas.map(f=>{
+        ? [`<div style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-top:8px;margin-bottom:4px">Fichas do programa</div>`].concat(fichas.map(f=>{
             const exsCount=countExs(f);
             const grupos=[...new Set((f.exs||[]).flatMap(e=>
               e.tp==='s'?[normGrupo(e.g||'')]:(e.exs||[]).map(x=>normGrupo(x.g||''))
@@ -2577,10 +2577,13 @@ function renderHistorico(){
                   onclick="verFichaHistorico('${a.id}','${p.id}','${f.id}')">Ver ficha →</button>
               </div>
             </div>`;
-          }).join('')
-        : `<div style="padding:12px 4px;font-size:12px;color:var(--ink3);display:flex;align-items:center;gap:8px">
-            <span style="font-size:18px">📦</span>
-            <span>Fichas deste programa não foram exportadas do sistema anterior. Apenas o programa atual tem fichas disponíveis.</span>
+          })).join('')
+        : `<div style="padding:14px 12px;font-size:12px;color:#6B5E52;background:#F5F0E8;border-radius:8px;display:flex;align-items:flex-start;gap:10px;margin-top:6px">
+            <span style="font-size:20px;flex-shrink:0">📦</span>
+            <div>
+              <div style="font-weight:600;color:#4A453F;margin-bottom:2px">Fichas históricas não disponíveis</div>
+              <div>As fichas deste período não foram exportadas do sistema anterior (Bubble/Tecnofit). Apenas o programa atual tem exercícios disponíveis.</div>
+            </div>
           </div>`
     ) : '';
 
