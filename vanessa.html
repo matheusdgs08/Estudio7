@@ -1161,25 +1161,29 @@ function mergeAluno(a){
   const mat=String(a.mat);
   const fichasData=window.FICHAS_DATA[mat];
   if(!fichasData||!fichasData.length) return;
-  const prog=a.programas[0];
-  if(!prog) return;
-  if(mat==='23'){const dbg=document.getElementById('dbg');if(dbg){const p=document.createElement('div');p.style.color='#facc15';p.textContent='mergeAluno mat=23 fichasData:'+fichasData.length+' prog._editado:'+prog._editado+' exs0:'+fichasData[0]?.exs?.length;dbg.appendChild(p);dbg.scrollTop=dbg.scrollHeight;}}
-  // Sempre injeta fichas reais do arquivo fichas_X.js no programa atual
-  // _editado só protege esboço e metadata — exs vem sempre do arquivo
-  if(!prog._editado){
-    prog.fichas=fichasData;
-  } else {
-    (prog.fichas||[]).forEach((f,i)=>{
-      if(!f.exs||!f.exs.length){
-        const src=fichasData[i];
-        if(src)f.exs=src.exs;
-      }
+  if(!a.programas||!a.programas.length) return;
+  // Injeta fichas em TODOS os programas que estão vazios
+  // (dados vêm de fichas_X.js — mesmo conjunto para todos os programas históricos)
+  a.programas.forEach((prog, pi) => {
+    if(!prog) return;
+    // Programa atual (pi=0): sempre injeta
+    // Programas históricos: injeta apenas se estiverem vazios
+    const shouldInject = pi===0 ? !prog._editado : (!prog.fichas||!prog.fichas.length);
+    if(shouldInject){
+      prog.fichas = fichasData.map(f=>({...f})); // cópia para não compartilhar referência
+    } else {
+      (prog.fichas||[]).forEach((f,i)=>{
+        if(!f.exs||!f.exs.length){
+          const src=fichasData[i];
+          if(src)f.exs=src.exs;
+        }
+      });
+    }
+    prog.nm = prog.nm||'Programa';
+    // Recalcula esboço de cada ficha
+    (prog.fichas||[]).forEach(f=>{
+      if(f.exs&&f.exs.length&&!f._editado) recalcEsboço(f);
     });
-  }
-  prog.nm=prog.nm||'Programa Atual';
-  // Recalcula esboço de cada ficha a partir dos exercícios reais
-  (prog.fichas||[]).forEach(f=>{
-    if(f.exs&&f.exs.length&&!f._editado) recalcEsboço(f);
   });
 }
 
@@ -2554,7 +2558,8 @@ function renderHistorico(){
     const statusBg=status==='ativo'?'#ECFDF5':status==='encerrado'?'#FEF2F2':'#F3F4F6';
     const statusTc=status==='ativo'?'#065F46':status==='encerrado'?'#991B1B':'#6B7280';
     const statusLabel=status==='ativo'?'✓ Ativo':status==='encerrado'?'Encerrado':'Anterior';
-    const vigencia=p.data_inicio?`${p.data_inicio}${p.data_fim?' → '+p.data_fim:' → hoje'}`:'Sem data';
+    const fmtData = d => d ? new Date(d+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'2-digit'}) : null;
+    const vigencia = p.data_inicio ? `${fmtData(p.data_inicio)}${p.data_fim?' → '+fmtData(p.data_fim):' → atual'}` : 'Sem data';
 
     const fichasHtml=isOpen?fichas.map(f=>{
       const exsCount=countExs(f);
