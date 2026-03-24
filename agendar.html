@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agendar Avaliação Física — Estúdio Se7e</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{--purple:#6D28D9;--green:#16A34A;--ink:#1C1916;--ink2:#4A453F;--ink3:#8A8278;--bg:#F5F0E8;--wh:#FFFEF9;--r:12px}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  .header{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;padding:28px 20px 24px;text-align:center}
+  .header h1{font-size:20px;font-weight:800;margin-bottom:4px}
+  .header .sub{font-size:13px;opacity:.8}
+  .container{max-width:500px;margin:0 auto;padding:20px 16px}
+  .card{background:var(--wh);border-radius:var(--r);padding:16px;margin-bottom:12px;border:1px solid #E8E3DC}
+  .step-title{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--ink)}
+  .week-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .week-btn{width:36px;height:36px;border:1px solid #E8E3DC;background:var(--wh);border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+  .week-label{font-size:13px;font-weight:600}
+  .day-section{margin-bottom:14px}
+  .day-label{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+  .slot-btn{width:100%;padding:12px 14px;background:var(--wh);border:2px solid #E8E3DC;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;color:var(--ink);text-align:left;margin-bottom:6px;display:flex;align-items:center;gap:10px;transition:all .15s}
+  .slot-btn:hover,.slot-btn.selected{background:#EFF6FF;border-color:#6D28D9;color:#1E40AF}
+  .slot-btn.ocupado{background:#F9F7F4;border-color:#E8E3DC;color:#8A8278;cursor:not-allowed}
+  .btn-confirmar{width:100%;padding:16px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:700;cursor:pointer;margin-top:8px}
+  .btn-confirmar:disabled{background:#D4C9B8;cursor:not-allowed}
+  .success-screen{text-align:center;padding:40px 20px}
+  .success-ico{font-size:60px;margin-bottom:16px}
+  .success-title{font-size:22px;font-weight:800;margin-bottom:8px}
+  .success-sub{font-size:14px;color:var(--ink2);line-height:1.6}
+  .regra{background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:10px 14px;font-size:12px;color:#92400E;margin-bottom:14px}
+  .empty{text-align:center;padding:30px;color:var(--ink3);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div style="font-size:28px;margin-bottom:8px">🏋️</div>
+  <h1>Agendar Avaliação Física</h1>
+  <div class="sub" id="sub-nome">Estúdio Se7e · Vanessa Ramos</div>
+</div>
+
+<div class="container" id="app">
+  <div style="text-align:center;padding:40px;color:#8A8278">Carregando…</div>
+</div>
+
+<script>
+// Parse URL params
+const params = new URLSearchParams(window.location.search);
+const ALUNO_MAT = params.get('aluno')||'';
+const ALUNO_NM  = params.get('nm')||'Aluno';
+const ALUNO_PHONE = params.get('phone')||'';
+
+if(ALUNO_NM) {
+  document.getElementById('sub-nome').textContent = `Olá, ${ALUNO_NM.split(' ')[0]}! · Estúdio Se7e`;
+}
+
+let state = {
+  weekOffset: 0,
+  selectedSlot: null,   // {data, hora}
+  step: 'escolher',     // 'escolher' | 'confirmar' | 'sucesso'
+};
+
+// ── Dados da agenda (lidos do localStorage do admin — mesmo domínio) ──
+function getAgendaData(){
+  try {
+    const raw = localStorage.getItem('se7e_agenda_aval');
+    return raw ? JSON.parse(raw) : {slots_fixos:[],excecoes:[],agendamentos:[]};
+  } catch(e){ return {slots_fixos:[],excecoes:[],agendamentos:[]}; }
+}
+
+function saveAgendaData(d){
+  localStorage.setItem('se7e_agenda_aval', JSON.stringify(d));
+}
+
+function getSlotsParaSemana(weekOffset){
+  const data = getAgendaData();
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const minDate = new Date(hoje.getTime() + 48*3600*1000);
+
+  const seg = new Date(hoje);
+  seg.setDate(seg.getDate() - seg.getDay() + 1 + weekOffset*7);
+
+  const dias = [];
+  for(let d=0;d<7;d++){
+    const dia = new Date(seg);
+    dia.setDate(seg.getDate()+d);
+    const isoDate = dia.toISOString().slice(0,10);
+    const wd = dia.getDay();
+
+    const fixos = data.slots_fixos.filter(s=>s.ativo&&s.weekday===wd);
+    const removidos = data.excecoes.filter(e=>e.data===isoDate&&e.tipo==='remove').map(e=>e.hora);
+    const adicionados = data.excecoes.filter(e=>e.data===isoDate&&e.tipo==='add').map(e=>({id:'ex_'+e.id,hora:e.hora}));
+    let slots = [
+      ...fixos.filter(s=>!removidos.includes(s.hora)).map(s=>({id:s.id,hora:s.hora})),
+      ...adicionados,
+    ].sort((a,b)=>a.hora.localeCompare(b.hora));
+    const horasVistas=new Set();
+    slots=slots.filter(s=>{ if(horasVistas.has(s.hora)) return false; horasVistas.add(s.hora); return true; });
+
+    slots = slots.map(slot=>{
+      const slotDT = new Date(isoDate+'T'+slot.hora);
+      const agend = data.agendamentos.find(a=>a.data===isoDate&&a.hora===slot.hora&&a.status==='agendado');
+      const disponivel = slotDT >= minDate && !agend;
+      return {...slot, disponivel, ocupado:!!agend, passado:slotDT<minDate};
+    }).filter(s=>!s.passado); // hide past slots for public view
+
+    if(slots.length) dias.push({data:isoDate,weekday:wd,
+      label:dia.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'}), slots});
+  }
+  return {dias, seg};
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(state.step==='sucesso'){ app.innerHTML = renderSucesso(); return; }
+  if(state.step==='confirmar'){ app.innerHTML = renderConfirmar(); return; }
+  app.innerHTML = renderEscolher();
+}
+
+function renderEscolher(){
+  const {dias,seg} = getSlotsParaSemana(state.weekOffset);
+  const fimSem = new Date(seg); fimSem.setDate(seg.getDate()+6);
+  const semLabel = seg.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' – '+fimSem.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+
+  const diasHtml = dias.map(dia=>{
+    const slotsHtml = dia.slots.map(slot=>{
+      if(slot.ocupado) return `<button class="slot-btn ocupado" disabled>🔴 ${slot.hora} — Ocupado</button>`;
+      const sel = state.selectedSlot?.data===dia.data&&state.selectedSlot?.hora===slot.hora;
+      return `<button class="slot-btn ${sel?'selected':''}" onclick="selecionarSlot('${dia.data}','${slot.hora}')">
+        ${sel?'✅':'🟢'} ${slot.hora}
+        ${sel?'<span style="margin-left:auto;font-size:12px;color:#6D28D9;font-weight:600">Selecionado</span>':'<span style="margin-left:auto;font-size:12px;color:#8A8278">Disponível</span>'}
+      </button>`;
+    }).join('');
+    return `<div class="day-section">
+      <div class="day-label">${dia.label}</div>
+      ${slotsHtml}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="regra">⏰ O agendamento deve ser feito com <strong>48h de antecedência</strong>. Apenas horários disponíveis são exibidos.</div>
+    
+    <div class="card">
+      <div class="week-nav">
+        <button class="week-btn" onclick="state.weekOffset=Math.max(0,state.weekOffset-1);render()">‹</button>
+        <span class="week-label">${semLabel}</span>
+        <button class="week-btn" onclick="state.weekOffset++;render()">›</button>
+      </div>
+      ${diasHtml||'<div class="empty">Sem horários disponíveis nesta semana.<br>Avance para a próxima semana.</div>'}
+    </div>
+
+    <button class="btn-confirmar" ${state.selectedSlot?'':'disabled'} onclick="state.step='confirmar';render()">
+      ${state.selectedSlot?`Confirmar: ${new Date(state.selectedSlot.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})} às ${state.selectedSlot.hora}`:'Selecione um horário acima'}
+    </button>`;
+}
+
+function renderConfirmar(){
+  const {data,hora} = state.selectedSlot;
+  const dataFmt = new Date(data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  return `
+    <div class="card">
+      <div class="step-title">Confirmar agendamento</div>
+      <div style="background:#EFF6FF;border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="font-size:24px;font-weight:800;color:#1E40AF">${hora}</div>
+        <div style="font-size:14px;color:#1E40AF;margin-top:4px">${dataFmt}</div>
+        <div style="font-size:12px;color:#3B82F6;margin-top:6px">Avaliação física · Estúdio Se7e · Vanessa Ramos</div>
+      </div>
+      <div style="font-size:13px;color:var(--ink2);line-height:1.6;margin-bottom:16px">
+        Ao confirmar, seu horário ficará reservado. Caso precise cancelar, entre em contato pelo WhatsApp do estúdio com <strong>24h de antecedência</strong>.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="state.step='escolher';render()" style="flex:1;padding:12px;background:var(--bg);border:1.5px solid #E8E3DC;border-radius:10px;font-size:14px;cursor:pointer">← Voltar</button>
+        <button onclick="confirmarAgendamento()" style="flex:2;padding:12px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">✓ Confirmar</button>
+      </div>
+    </div>`;
+}
+
+function renderSucesso(){
+  const {data,hora} = state.selectedSlot;
+  const dataFmt = new Date(data+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  return `<div class="success-screen">
+    <div class="success-ico">🎉</div>
+    <div class="success-title">Agendado!</div>
+    <div class="success-sub">
+      Sua avaliação física está confirmada para<br>
+      <strong>${dataFmt} às ${hora}</strong><br><br>
+      Qualquer dúvida, entre em contato com a recepção do Estúdio Se7e pelo WhatsApp.
+    </div>
+    <div style="margin-top:24px;padding:14px;background:#F0FDF4;border-radius:var(--r);border:1px solid #86EFAC;font-size:13px;color:#166534">
+      📍 Estúdio Se7e · Vanessa Ramos<br>Vila Mariana, São Paulo
+    </div>
+  </div>`;
+}
+
+function selecionarSlot(data, hora){
+  state.selectedSlot = {data, hora};
+  render();
+}
+
+function confirmarAgendamento(){
+  const d = getAgendaData();
+  // Verifica se ainda está disponível
+  const jaOcupado = d.agendamentos.find(a=>
+    a.data===state.selectedSlot.data &&
+    a.hora===state.selectedSlot.hora &&
+    a.status==='agendado'
+  );
+  if(jaOcupado){ alert('Este horário acabou de ser reservado. Por favor, escolha outro.'); state.step='escolher'; state.selectedSlot=null; render(); return; }
+
+  d.agendamentos.push({
+    id:'ag'+Date.now(),
+    data: state.selectedSlot.data,
+    hora: state.selectedSlot.hora,
+    aluno_id: ALUNO_MAT,
+    aluno_nm: ALUNO_NM,
+    aluno_phone: ALUNO_PHONE,
+    status:'agendado',
+    criado_em: new Date().toISOString()
+  });
+  saveAgendaData(d);
+  state.step='sucesso';
+  render();
+}
+
+// Init
+render();
+</script>
+</body>
+</html>

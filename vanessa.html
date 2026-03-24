@@ -322,6 +322,7 @@ button{cursor:pointer}
       <button class="sb-item" onclick="setMod('pendentes',this)"><span class="sb-ico">⏳</span> Pendentes<span class="sb-badge" id="badge-pendentes" style="background:rgba(217,119,6,.35);color:#FCD34D">0</span></button>
       <div class="sb-section">Alunos</div>
       <button class="sb-item" onclick="setMod('avaliacao',this)"><span class="sb-ico">📊</span> Avaliação física</button>
+      <button class="sb-item" onclick="setMod('agenda_aval',this)"><span class="sb-ico">📅</span> Agenda de avaliação</button>
       <button class="sb-item" onclick="setMod('evolucao',this)"><span class="sb-ico">📈</span> Evolução</button>
     </nav>
     <div class="sb-bottom"><button class="btn-logout-sb">✕ &nbsp;Sair</button></div>
@@ -1239,7 +1240,7 @@ function setMod(m,el){
 
 function toggleSketch(id){sketchOpen[id]=sketchOpen[id]!==false?false:true;render();}
 function render(){
-  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],pendentes:['Esboços pendentes','Fichas com cabeçalho feito — aguardando exercícios'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho'],historico:['Histórico de treinos','Programas anteriores do aluno']};
+  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],pendentes:['Esboços pendentes','Fichas com cabeçalho feito — aguardando exercícios'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho'],historico:['Histórico de treinos','Programas anteriores do aluno'],agenda_aval:['Agenda de Avaliação','Gerencie horários e links para os alunos'],agenda_aval:['Agenda de Avaliação','Gerencie horários e links para os alunos']};
   // Badge pendentes
   const nPend=countPendentes();
   const bpend=document.getElementById('badge-pendentes');
@@ -1273,6 +1274,8 @@ function render(){
     modulo==='pendentes'?renderPendentes():
     modulo==='historico'?renderHistorico():
     modulo==='avaliacao'?renderAvaliacao():
+    modulo==='agenda_aval'?renderAgendaAval():
+    modulo==='agenda_aval'?renderAgendaAval():
     `<div class="empty-state"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div></div>`;
   setupDragDrop();
   const _newListEl=document.querySelector('.alunos-list');
@@ -3517,6 +3520,473 @@ function gerarPDFAvaliacao(){
   w.document.close();
   setTimeout(()=>w.print(),700);
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// AGENDA DE AVALIAÇÃO FÍSICA
+// ══════════════════════════════════════════════════════════════
+
+// Estado da agenda
+let agendaState = {
+  view: 'calendario',  // 'calendario' | 'slots' | 'agendamentos' | 'enviar'
+  weekOffset: 0,
+  slotEditando: null,
+  alunoEnvio: null,
+};
+
+// Dados da agenda (persistidos em localStorage)
+function getAgendaData(){
+  try {
+    const raw = localStorage.getItem('se7e_agenda_aval');
+    if(raw) return JSON.parse(raw);
+  } catch(e){}
+  return {
+    // Slots recorrentes: [{id, weekday(0=dom..6=sab), hora:'08:00', ativo:true}]
+    slots_fixos: [
+      {id:'sf1', weekday:1, hora:'08:00', ativo:true},
+      {id:'sf2', weekday:1, hora:'09:00', ativo:true},
+      {id:'sf3', weekday:3, hora:'08:00', ativo:true},
+      {id:'sf4', weekday:3, hora:'09:00', ativo:true},
+      {id:'sf5', weekday:5, hora:'08:00', ativo:true},
+    ],
+    // Exceções: [{id, data:'2026-03-25', hora:'08:00', tipo:'add'|'remove', motivo:''}]
+    excecoes: [],
+    // Agendamentos: [{id, data, hora, aluno_id, aluno_nm, aluno_phone, status:'agendado'|'realizado'|'cancelado', criado_em}]
+    agendamentos: [],
+    // Config Z-API
+    zapi_instance: '',
+    zapi_token: '',
+  };
+}
+
+function saveAgendaData(data){
+  localStorage.setItem('se7e_agenda_aval', JSON.stringify(data));
+}
+
+// Gera os slots disponíveis de uma semana (weekOffset relativo a hoje)
+function getSlotsParaSemana(weekOffset){
+  const data = getAgendaData();
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const minDate = new Date(hoje.getTime() + 48*3600*1000); // 48h mínimo
+
+  // Segunda da semana alvo
+  const seg = new Date(hoje);
+  seg.setDate(seg.getDate() - seg.getDay() + 1 + weekOffset*7);
+
+  const dias = [];
+  for(let d=0; d<7; d++){
+    const dia = new Date(seg);
+    dia.setDate(seg.getDate() + d);
+    const isoDate = dia.toISOString().slice(0,10);
+    const wd = dia.getDay();
+
+    // Slots fixos para este dia da semana
+    const fixos = data.slots_fixos.filter(s=>s.ativo && s.weekday===wd);
+
+    // Exceções do tipo 'remove' para este dia
+    const removidos = data.excecoes
+      .filter(e=>e.data===isoDate && e.tipo==='remove')
+      .map(e=>e.hora);
+
+    // Exceções do tipo 'add' para este dia
+    const adicionados = data.excecoes
+      .filter(e=>e.data===isoDate && e.tipo==='add')
+      .map(e=>({id:'ex_'+e.id, hora:e.hora}));
+
+    // Monta slots do dia
+    let slots = [
+      ...fixos.filter(s=>!removidos.includes(s.hora)).map(s=>({id:s.id, hora:s.hora, tipo:'fixo'})),
+      ...adicionados.map(s=>({...s, tipo:'extra'})),
+    ].sort((a,b)=>a.hora.localeCompare(b.hora));
+
+    // Remove duplicatas de hora
+    const horasVistas = new Set();
+    slots = slots.filter(s=>{ if(horasVistas.has(s.hora)) return false; horasVistas.add(s.hora); return true; });
+
+    // Marca cada slot como disponível, agendado ou passado
+    slots = slots.map(slot=>{
+      const slotDT = new Date(isoDate+'T'+slot.hora);
+      const agend = data.agendamentos.find(a=>a.data===isoDate && a.hora===slot.hora && a.status==='agendado');
+      const status = slotDT < minDate ? 'passado' : agend ? 'ocupado' : 'disponivel';
+      return {...slot, status, agendamento: agend||null};
+    });
+
+    dias.push({data:isoDate, weekday:wd, label:dia.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}), slots});
+  }
+  return {dias, seg};
+}
+
+// ── Render principal ──
+function renderAgendaAval(){
+  const s = agendaState;
+  if(s.view==='slots') return renderGerenciarSlots();
+  if(s.view==='agendamentos') return renderListaAgendamentos();
+  if(s.view==='enviar') return renderEnviarLink();
+  return renderCalendarioAval();
+}
+
+// ── Calendário semanal ──
+function renderCalendarioAval(){
+  const s = agendaState;
+  const {dias, seg} = getSlotsParaSemana(s.weekOffset);
+  const semLabel = seg.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+  const fimSem = new Date(seg); fimSem.setDate(seg.getDate()+6);
+  const fimLabel = fimSem.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+
+  const diasHtml = dias.map(dia=>{
+    if(!dia.slots.length && dia.weekday===0) return ''; // domingo sem slots
+    const slotsHtml = dia.slots.length ? dia.slots.map(slot=>{
+      const cores = {
+        disponivel: {bg:'#F0FDF4',bc:'#86EFAC',tc:'#166534',dot:'#22C55E'},
+        ocupado:    {bg:'#EFF6FF',bc:'#BFDBFE',tc:'#1E40AF',dot:'#3B82F6'},
+        passado:    {bg:'#F9F7F4',bc:'#E8E3DC',tc:'#8A8278',dot:'#D4C9B8'},
+      };
+      const c = cores[slot.status]||cores.passado;
+      const agend = slot.agendamento;
+      return `<div style="background:${c.bg};border:1.5px solid ${c.bc};border-radius:8px;padding:7px 10px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${c.dot};flex-shrink:0"></div>
+          <span style="font-size:13px;font-weight:700;color:${c.tc}">${slot.hora}</span>
+          <span style="font-size:11px;color:${c.tc};flex:1">${slot.status==='disponivel'?'Disponível':slot.status==='ocupado'?'Ocupado':'Passado'}</span>
+          ${slot.status==='disponivel'?`<button onclick="agendarManual('${dia.data}','${slot.hora}')" style="font-size:10px;padding:2px 8px;background:#fff;border:1px solid ${c.bc};border-radius:6px;cursor:pointer;color:${c.tc}">+ Agendar</button>`:''}
+          ${slot.status!=='passado'?`<button onclick="removerSlotData('${dia.data}','${slot.hora}')" style="font-size:10px;padding:2px 6px;background:transparent;border:none;cursor:pointer;color:#DC2626">✕</button>`:''}
+        </div>
+        ${agend?`<div style="font-size:11px;color:#1E40AF;margin-top:4px;padding-left:16px">👤 ${agend.aluno_nm}</div>`:''}
+      </div>`;
+    }).join('') : `<div style="font-size:11px;color:var(--ink3);padding:4px 0">Sem horários</div>`;
+
+    return `<div style="min-width:140px;flex:1">
+      <div style="font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--bg3)">${dia.label}</div>
+      ${slotsHtml}
+      <button onclick="adicionarSlotData('${dia.data}')" style="width:100%;margin-top:4px;padding:5px;border:1.5px dashed var(--bg3);border-radius:8px;background:transparent;cursor:pointer;font-size:11px;color:var(--ink3)">+ Horário extra</button>
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <!-- Toolbar -->
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="agendaState.weekOffset--;render()" style="border:1px solid var(--bg3);background:var(--bg);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:14px">‹</button>
+        <span style="font-size:13px;font-weight:600;min-width:130px;text-align:center">${semLabel} – ${fimLabel}</span>
+        <button onclick="agendaState.weekOffset++;render()" style="border:1px solid var(--bg3);background:var(--bg);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:14px">›</button>
+        ${s.weekOffset!==0?`<button onclick="agendaState.weekOffset=0;render()" style="font-size:11px;padding:4px 10px;border:1px solid var(--bg3);background:var(--bg);border-radius:8px;cursor:pointer;color:var(--ink3)">Hoje</button>`:''}
+      </div>
+      <div style="flex:1"></div>
+      <button onclick="agendaState.view='enviar';render()" style="font-size:12px;padding:7px 14px;background:#25D366;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">📲 Enviar link</button>
+      <button onclick="agendaState.view='agendamentos';render()" style="font-size:12px;padding:7px 14px;border:1px solid var(--bg3);background:var(--bg);border-radius:8px;cursor:pointer">📋 Agendamentos</button>
+      <button onclick="agendaState.view='slots';render()" style="font-size:12px;padding:7px 14px;border:1px solid var(--bg3);background:var(--bg);border-radius:8px;cursor:pointer">⚙️ Configurar</button>
+    </div>
+
+    <!-- Legenda -->
+    <div style="padding:8px 16px;border-bottom:1px solid var(--bg3);display:flex;gap:12px;font-size:11px;color:var(--ink3);background:var(--bg);flex-shrink:0">
+      <span>🟢 Disponível</span><span>🔵 Ocupado</span><span>⚪ Passado / bloqueado</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--ink3)">Mínimo 48h de antecedência para agendamento pelo aluno</span>
+    </div>
+
+    <!-- Grade semanal -->
+    <div style="padding:16px;overflow:auto;flex:1">
+      <div style="display:flex;gap:12px;min-width:700px">${diasHtml}</div>
+    </div>
+  </div>`;
+}
+
+// ── Configurar slots fixos ──
+function renderGerenciarSlots(){
+  const data = getAgendaData();
+  const dias_nome = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  const fixosHtml = data.slots_fixos.length ? data.slots_fixos.map(s=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--wh);border:1px solid var(--bg3);border-radius:10px">
+      <div style="width:32px;height:32px;border-radius:8px;background:${s.ativo?'#EFF6FF':'#F3F4F6'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${s.ativo?'#1E40AF':'#6B7280'}">${dias_nome[s.weekday]}</div>
+      <span style="font-size:14px;font-weight:600;color:var(--ink)">${s.hora}</span>
+      <span style="font-size:11px;color:var(--ink3);flex:1">${s.ativo?'Ativo':'Desativado'}</span>
+      <button onclick="toggleSlotFixo('${s.id}')" style="font-size:11px;padding:4px 10px;border:1px solid var(--bg3);border-radius:8px;background:var(--bg);cursor:pointer;color:${s.ativo?'#DC2626':'#059669'}">${s.ativo?'Desativar':'Ativar'}</button>
+      <button onclick="removerSlotFixo('${s.id}')" style="font-size:11px;padding:4px 8px;border:none;background:transparent;cursor:pointer;color:#DC2626">🗑</button>
+    </div>`).join('') : '<div style="color:var(--ink3);font-size:13px;padding:12px">Nenhum slot fixo configurado.</div>';
+
+  const diasOpts = dias_nome.map((d,i)=>`<option value="${i}">${d}</option>`).join('');
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="agendaState.view='calendario';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+      <div><div style="font-size:14px;font-weight:600">Configurar horários fixos</div>
+        <div style="font-size:11px;color:var(--ink3)">Horários recorrentes toda semana</div></div>
+    </div>
+    <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;flex-direction:column;gap:8px">${fixosHtml}</div>
+      
+      <!-- Adicionar novo slot fixo -->
+      <div style="background:#F5F0E8;border:1.5px dashed #D4C9B8;border-radius:12px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px">+ Adicionar horário fixo</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:4px">Dia</label>
+            <select id="novo-slot-dia" class="mi" style="height:36px;width:100px">
+              ${diasOpts}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:4px">Horário</label>
+            <input type="time" id="novo-slot-hora" value="08:00" class="mi" style="height:36px;width:110px">
+          </div>
+          <button onclick="adicionarSlotFixo()" style="height:36px;padding:0 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Adicionar</button>
+        </div>
+      </div>
+
+      <!-- Config Z-API -->
+      <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;padding:14px">
+        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px">📲 Configuração Z-API (WhatsApp)</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div><label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:3px">Instance ID</label>
+            <input class="mi" id="zapi-inst" value="${getAgendaData().zapi_instance||''}" placeholder="Ex: 3C4B2A1..." oninput="salvarZapiConfig()"></div>
+          <div><label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:3px">Token</label>
+            <input class="mi" id="zapi-tok" type="password" value="${getAgendaData().zapi_token||''}" placeholder="Token de acesso" oninput="salvarZapiConfig()"></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Lista de agendamentos ──
+function renderListaAgendamentos(){
+  const data = getAgendaData();
+  const agends = data.agendamentos.slice().sort((a,b)=>a.data.localeCompare(b.data)||a.hora.localeCompare(b.hora));
+  const hoje = new Date().toISOString().slice(0,10);
+
+  const STATUS_CORES = {
+    agendado:  {bg:'#EFF6FF',tc:'#1E40AF',bc:'#BFDBFE'},
+    realizado: {bg:'#F0FDF4',tc:'#166534',bc:'#86EFAC'},
+    cancelado: {bg:'#FEF2F2',tc:'#991B1B',bc:'#FECACA'},
+  };
+
+  const rows = agends.length ? agends.map(a=>{
+    const c = STATUS_CORES[a.status]||STATUS_CORES.agendado;
+    const dataFmt = new Date(a.data+'T12:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'});
+    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="background:${c.bg};border:1px solid ${c.bc};border-radius:8px;padding:6px 10px;text-align:center;flex-shrink:0;min-width:70px">
+        <div style="font-size:16px;font-weight:800;color:${c.tc}">${a.hora}</div>
+        <div style="font-size:10px;color:${c.tc}">${dataFmt}</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.aluno_nm}</div>
+        <div style="font-size:11px;color:var(--ink3)">${a.aluno_phone||''}</div>
+      </div>
+      <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:${c.bg};color:${c.tc};border:1px solid ${c.bc};white-space:nowrap">${a.status}</span>
+      ${a.status==='agendado'?`
+        <button onclick="marcarRealizado('${a.id}')" style="font-size:11px;padding:4px 10px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;cursor:pointer;color:#166534">✓ Realizado</button>
+        <button onclick="cancelarAgendamento('${a.id}')" style="font-size:11px;padding:4px 8px;border:none;background:transparent;cursor:pointer;color:#DC2626">✕</button>
+      `:''}
+    </div>`;
+  }).join('') : '<div style="text-align:center;padding:40px;color:var(--ink3)">Nenhum agendamento ainda.</div>';
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="agendaState.view='calendario';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+      <div style="flex:1"><div style="font-size:14px;font-weight:600">Agendamentos</div>
+        <div style="font-size:11px;color:var(--ink3)">${agends.length} total</div></div>
+    </div>
+    <div style="padding:12px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px">${rows}</div>
+  </div>`;
+}
+
+// ── Enviar link para aluno ──
+function renderEnviarLink(){
+  const busca = agendaState.buscaEnvio||'';
+  const alunos = busca ? D.alunos.filter(a=>a.nm.toLowerCase().includes(busca.toLowerCase())).slice(0,8) : [];
+  const sel = agendaState.alunoEnvio;
+
+  const baseUrl = window.location.origin + '/agendar';
+  const link = sel ? `${baseUrl}?aluno=${sel.mat}&nm=${encodeURIComponent(sel.nm)}&phone=${encodeURIComponent(sel.phone||'')}&ts=${Date.now()}` : '';
+
+  const msg = sel ? `Olá, ${sel.nm.split(' ')[0]}! 😊\n\nA Vanessa está com agenda aberta para avaliação física. Clique no link abaixo para escolher o melhor horário para você:\n\n${link}\n\n_Estúdio Se7e_` : '';
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="agendaState.view='calendario';agendaState.alunoEnvio=null;render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+      <div><div style="font-size:14px;font-weight:600">📲 Enviar link de avaliação</div>
+        <div style="font-size:11px;color:var(--ink3)">Selecione o aluno e envie via WhatsApp</div></div>
+    </div>
+    <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
+      
+      <!-- Busca aluno -->
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Selecionar aluno</label>
+        <input class="mi" placeholder="Buscar por nome…" value="${busca}"
+          oninput="agendaState.buscaEnvio=this.value;agendaState.alunoEnvio=null;render()">
+        ${alunos.length&&!sel?`<div style="border:1px solid var(--bg3);border-radius:10px;overflow:hidden;margin-top:4px">
+          ${alunos.map(a=>`<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--bg3);font-size:13px;display:flex;align-items:center;gap:8px"
+            onclick="agendaState.alunoEnvio=${JSON.stringify({id:a.id,mat:a.mat,nm:a.nm,phone:a.phone||''})};agendaState.buscaEnvio=a.nm;render()">
+            <div style="${avStyle(a.nm)};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff">${ini(a.nm)}</div>
+            <span>${a.nm}</span><span style="font-size:11px;color:var(--ink3);margin-left:auto">${a.phone||'Sem telefone'}</span>
+          </div>`).join('')}
+        </div>`:''}
+      </div>
+
+      ${sel?`
+      <!-- Aluno selecionado -->
+      <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
+        <div style="${avStyle(sel.nm)};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff">${ini(sel.nm)}</div>
+        <div><div style="font-size:14px;font-weight:600">${sel.nm}</div>
+          <div style="font-size:12px;color:#166534">${sel.phone||'⚠️ Sem telefone cadastrado'}</div></div>
+        <button onclick="agendaState.alunoEnvio=null;render()" style="margin-left:auto;border:none;background:transparent;cursor:pointer;color:#6B5E52;font-size:18px">✕</button>
+      </div>
+
+      <!-- Preview da mensagem -->
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Preview da mensagem</label>
+        <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink);line-height:1.6;white-space:pre-wrap">${msg}</div>
+      </div>
+
+      <!-- Link direto -->
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Link de agendamento</label>
+        <div style="display:flex;gap:8px">
+          <input class="mi" readonly value="${link}" style="font-size:12px;flex:1;background:#F9F7F4">
+          <button onclick="navigator.clipboard.writeText('${link}').then(()=>alert('Link copiado!'))" style="padding:8px 14px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:12px">📋 Copiar</button>
+        </div>
+      </div>
+
+      <!-- Botão WhatsApp -->
+      <div style="display:flex;gap:8px">
+        <button onclick="enviarLinkWhatsApp()" style="flex:1;padding:14px;background:#25D366;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.125.553 4.12 1.522 5.852L.036 23.964l6.305-1.654A11.954 11.954 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.003-1.364l-.359-.213-3.722.977.993-3.63-.234-.374A9.818 9.818 0 1112 21.818z"/></svg>
+          Enviar via WhatsApp
+        </button>
+        <button onclick="window.open('${link}','_blank')" style="padding:14px 18px;background:var(--bg);border:1.5px solid var(--bg3);border-radius:12px;cursor:pointer;font-size:13px;color:var(--ink2)">👁 Prévia</button>
+      </div>
+      `:'<div style="text-align:center;padding:30px;color:var(--ink3);font-size:13px">Busque e selecione um aluno acima para gerar o link.</div>'}
+    </div>
+  </div>`;
+}
+
+// ── Actions ──
+function adicionarSlotFixo(){
+  const dia = parseInt(document.getElementById('novo-slot-dia').value);
+  const hora = document.getElementById('novo-slot-hora').value;
+  if(!hora) return;
+  const data = getAgendaData();
+  data.slots_fixos.push({id:'sf'+Date.now(), weekday:dia, hora, ativo:true});
+  saveAgendaData(data);
+  render();
+}
+
+function toggleSlotFixo(id){
+  const data = getAgendaData();
+  const s = data.slots_fixos.find(x=>x.id===id);
+  if(s) s.ativo = !s.ativo;
+  saveAgendaData(data);
+  render();
+}
+
+function removerSlotFixo(id){
+  if(!confirm('Remover este horário fixo?')) return;
+  const data = getAgendaData();
+  data.slots_fixos = data.slots_fixos.filter(x=>x.id!==id);
+  saveAgendaData(data);
+  render();
+}
+
+function adicionarSlotData(dataStr){
+  const hora = prompt('Horário extra (ex: 10:00):','10:00');
+  if(!hora||!/^\d{2}:\d{2}$/.test(hora)) return;
+  const d = getAgendaData();
+  d.excecoes.push({id:'ex'+Date.now(), data:dataStr, hora, tipo:'add', motivo:'Manual'});
+  saveAgendaData(d);
+  render();
+}
+
+function removerSlotData(dataStr, hora){
+  if(!confirm(`Remover horário ${hora} do dia ${dataStr}?`)) return;
+  const d = getAgendaData();
+  // Se é um slot fixo, adiciona exceção de remoção
+  const fixo = d.slots_fixos.find(s=>{
+    const dt = new Date(dataStr+'T12:00');
+    return s.ativo && s.weekday===dt.getDay() && s.hora===hora;
+  });
+  if(fixo){
+    d.excecoes.push({id:'rm'+Date.now(), data:dataStr, hora, tipo:'remove', motivo:'Manual'});
+  } else {
+    // Remove exceção do tipo add
+    d.excecoes = d.excecoes.filter(e=>!(e.data===dataStr&&e.hora===hora&&e.tipo==='add'));
+  }
+  saveAgendaData(d);
+  render();
+}
+
+function agendarManual(dataStr, hora){
+  const busca = prompt('Nome do aluno (ou deixe vazio para selecionar depois):');
+  if(busca===null) return;
+  const aluno = D.alunos.find(a=>a.nm.toLowerCase().includes(busca.toLowerCase()));
+  const d = getAgendaData();
+  d.agendamentos.push({
+    id:'ag'+Date.now(),
+    data: dataStr, hora,
+    aluno_id: aluno?.id||'',
+    aluno_nm: aluno?.nm||busca||'Aluno manual',
+    aluno_phone: aluno?.phone||'',
+    status:'agendado',
+    criado_em: new Date().toISOString()
+  });
+  saveAgendaData(d);
+  render();
+}
+
+function marcarRealizado(id){
+  const d = getAgendaData();
+  const a = d.agendamentos.find(x=>x.id===id);
+  if(a) a.status='realizado';
+  saveAgendaData(d);
+  render();
+}
+
+function cancelarAgendamento(id){
+  if(!confirm('Cancelar este agendamento?')) return;
+  const d = getAgendaData();
+  const a = d.agendamentos.find(x=>x.id===id);
+  if(a) a.status='cancelado';
+  saveAgendaData(d);
+  render();
+}
+
+function salvarZapiConfig(){
+  const inst = document.getElementById('zapi-inst')?.value||'';
+  const tok  = document.getElementById('zapi-tok')?.value||'';
+  const d = getAgendaData();
+  d.zapi_instance = inst;
+  d.zapi_token = tok;
+  saveAgendaData(d);
+}
+
+async function enviarLinkWhatsApp(){
+  const sel = agendaState.alunoEnvio;
+  if(!sel?.phone){ alert('Este aluno não tem telefone cadastrado.'); return; }
+  const d = getAgendaData();
+  if(!d.zapi_instance||!d.zapi_token){
+    // Fallback: abre WhatsApp Web
+    const link = `${window.location.origin}/agendar?aluno=${sel.mat}&nm=${encodeURIComponent(sel.nm)}&phone=${encodeURIComponent(sel.phone||'')}&ts=${Date.now()}`;
+    const msg = `Olá, ${sel.nm.split(' ')[0]}! 😊\n\nA Vanessa está com agenda aberta para avaliação física. Clique no link abaixo para escolher o melhor horário:\n\n${link}\n\n_Estúdio Se7e_`;
+    const phone = sel.phone.replace(/\D/g,'');
+    window.open(`https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    return;
+  }
+  // Envio via Z-API
+  const link = `${window.location.origin}/agendar?aluno=${sel.mat}&nm=${encodeURIComponent(sel.nm)}&phone=${encodeURIComponent(sel.phone||'')}&ts=${Date.now()}`;
+  const msg = `Olá, ${sel.nm.split(' ')[0]}! 😊\n\nA Vanessa está com agenda aberta para avaliação física. Clique no link abaixo para escolher o melhor horário:\n\n${link}\n\n_Estúdio Se7e_`;
+  const phone = sel.phone.replace(/\D/g,'');
+  try {
+    const resp = await fetch(`https://api.z-api.io/instances/${d.zapi_instance}/token/${d.zapi_token}/send-text`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({phone:`55${phone}`, message:msg})
+    });
+    const json = await resp.json();
+    if(resp.ok){ alert('✅ Mensagem enviada com sucesso!'); }
+    else { alert('Erro Z-API: '+JSON.stringify(json)); }
+  } catch(e){
+    alert('Erro ao enviar: '+e.message);
+  }
+}
+
 
 function renderFila(){
   const novas=D.solicitacoes.filter(s=>s.status==='nova');

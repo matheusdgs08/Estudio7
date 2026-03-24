@@ -8,6 +8,7 @@ const ROUTES = {
   '/professor': 'index.html',
   '/vanessa': 'vanessa.html',
   '/coordenacao': 'vanessa.html',
+  '/agendar': 'agendar.html',
 };
 
 const MIME = {
