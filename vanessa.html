@@ -2502,14 +2502,16 @@ function renderCatModal(){
         <div class="mf"><label class="ml">Nome do exercício</label>
           <input class="mi" id="cat-nome-inp" value="${ex.n}" placeholder="GRUPO - APARELHO - EXERCÍCIO" oninput="catalogoModalEx.n=this.value.toUpperCase()">
         </div>
-        <div class="mf"><label class="ml">Grupo muscular</label>
-          <select class="mi" style="height:38px" onchange="catalogoModalEx.g=this.value">
+        <div class="mf">
+          <label class="ml">Grupo muscular</label>
+          <select class="mi" style="height:42px;font-size:14px;background:#fff;color:#1C1916;border:1.5px solid #D4C9B8;border-radius:8px;padding:0 10px;cursor:pointer" onchange="catalogoModalEx.g=this.value">
             <option value="">— Selecionar —</option>
             ${grupoOpts}
           </select>
         </div>
-        <div class="mf"><label class="ml">Ou grupo novo</label>
-          <input class="mi" placeholder="Ex: ANTEBRAÇO" oninput="catalogoModalEx.g=this.value.toUpperCase()">
+        <div class="mf" style="margin-top:-4px">
+          <label class="ml" style="color:var(--ink3)">Ou escreva um grupo novo</label>
+          <input class="mi" style="font-size:13px" placeholder="Ex: ANTEBRAÇO" oninput="catalogoModalEx.g=this.value.toUpperCase()">
         </div>
       </div>
       <div class="modal-footer">
