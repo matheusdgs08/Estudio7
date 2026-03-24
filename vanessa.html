@@ -1529,8 +1529,30 @@ function renderCabecalhoPrograma(){
       <div style="flex:1;min-width:110px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Estímulo geral</label>
         <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.estimulo_padrao=this.value">${estOpts}</select></div>
     </div>
-    <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Restrições</label>
-      <input class="mi" style="height:34px;font-size:12px" value="${a.restricoes||''}" placeholder="Joelho: Desgaste · Lombar: Hernia…" onchange="alunoSel.restricoes=this.value"></div>
+    <div>
+      <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Restrições por região</label>
+      ${(()=>{
+        const rObj=parseRestricoesStr(a.restricoes||'');
+        return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          ${REGIOES.map(reg=>{
+            const current=rObj[reg]||'';
+            const opts=RESTRICOES_MAP[reg];
+            const selectOpts=[`<option value="">Sem Restrição</option>`,...opts.map(o=>`<option value="${o}" ${current===o?'selected':''}>${o}</option>`)].join('');
+            const hasRestr=!!current;
+            const isSevere=hasRestr&&['Hernia','Ruptura','Ruptura Ligamento','Cirurgia','Protese'].includes(current);
+            const bc=isSevere?'#FECACA':hasRestr?'#FCD34D':'var(--bg3)';
+            const bg=isSevere?'#FFF5F5':hasRestr?'#FFFBEB':'var(--wh)';
+            return `<div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:10px;font-weight:700;color:var(--ink3)">${reg}</span>
+              <select style="border:1.5px solid ${bc};border-radius:8px;padding:5px 8px;font-size:12px;background:${bg};color:var(--ink);outline:none;cursor:pointer"
+                onchange="(()=>{const o=parseRestricoesStr(alunoSel.restricoes||'');if(this.value)o['${reg}']=this.value;else delete o['${reg}'];alunoSel.restricoes=restricoesObjToStr(o);})()">
+                ${selectOpts}
+              </select>
+            </div>`;
+          }).join('')}
+        </div>`;
+      })()}
+    </div>
     <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Descrição / Observações</label>
       <input class="mi" style="height:34px;font-size:12px" value="${a.descricao||''}" placeholder="Observações gerais sobre o aluno…" onchange="alunoSel.descricao=this.value"></div>
     <div style="display:flex;gap:8px">
