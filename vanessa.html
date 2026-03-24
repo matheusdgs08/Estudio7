@@ -3584,15 +3584,21 @@ function getSlotsParaSemana(weekOffset){
     // Slots fixos para este dia da semana
     const fixos = data.slots_fixos.filter(s=>s.ativo && s.weekday===wd);
 
-    // Exceções do tipo 'remove' para este dia
+    // Exceções do tipo 'remove' para este dia (pontual ou a partir de)
     const removidos = data.excecoes
-      .filter(e=>e.data===isoDate && e.tipo==='remove')
-      .map(e=>e.hora);
+      .filter(e=>{
+        if(e.tipo==='remove') return e.data===isoDate;
+        if(e.tipo==='remove_from') return e.weekday===wd && e.data_inicio<=isoDate && e.hora;
+        return false;
+      }).map(e=>e.hora);
 
-    // Exceções do tipo 'add' para este dia
+    // Exceções do tipo 'add' para este dia (pontual ou a partir de)
     const adicionados = data.excecoes
-      .filter(e=>e.data===isoDate && e.tipo==='add')
-      .map(e=>({id:'ex_'+e.id, hora:e.hora}));
+      .filter(e=>{
+        if(e.tipo==='add') return e.data===isoDate;
+        if(e.tipo==='add_from') return e.weekday===wd && e.data_inicio<=isoDate;
+        return false;
+      }).map(e=>({id:'ex_'+e.id, hora:e.hora}));
 
     // Monta slots do dia
     let slots = [
@@ -3890,25 +3896,119 @@ function removerSlotFixo(id){
 function adicionarSlotData(dataStr){
   const hora = prompt('Horário extra (ex: 10:00):','10:00');
   if(!hora||!/^\d{2}:\d{2}$/.test(hora)) return;
+  modalEscopoAdicionar(dataStr, hora);
+}
+
+function modalEscopoAdicionar(dataStr, hora){
+  const wd = new Date(dataStr+'T12:00').getDay();
+  const dias_nome = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  const diaNm = dias_nome[wd];
+  const root = document.getElementById('modal-root');
+  if(!root) return;
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg')){document.getElementById('modal-root').innerHTML=''}">
+    <div class="modal-box" onclick="event.stopPropagation()" style="max-width:380px">
+      <div class="modal-hdr">
+        <div class="modal-title">Adicionar ${hora} — Qual escopo?</div>
+        <button class="modal-close" onclick="document.getElementById('modal-root').innerHTML=''">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+        <button onclick="confirmarAdicionar('${dataStr}','${hora}','pontual')" style="padding:14px 16px;background:#F5F0E8;border:1.5px solid #D4C9B8;border-radius:10px;cursor:pointer;text-align:left;font-size:14px">
+          <div style="font-weight:700;color:#1C1916">📌 Só este dia</div>
+          <div style="font-size:12px;color:#6B5E52;margin-top:2px">${new Date(dataStr+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+        </button>
+        <button onclick="confirmarAdicionar('${dataStr}','${hora}','frente')" style="padding:14px 16px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:10px;cursor:pointer;text-align:left;font-size:14px">
+          <div style="font-weight:700;color:#1E40AF">➡️ Deste dia em diante</div>
+          <div style="font-size:12px;color:#3B82F6;margin-top:2px">Toda ${diaNm} às ${hora}, a partir desta data</div>
+        </button>
+        <button onclick="confirmarAdicionar('${dataStr}','${hora}','fixo')" style="padding:14px 16px;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:10px;cursor:pointer;text-align:left;font-size:14px">
+          <div style="font-weight:700;color:#166534">🔁 Toda semana (slot fixo)</div>
+          <div style="font-size:12px;color:#16A34A;margin-top:2px">Adiciona toda ${diaNm} às ${hora} permanentemente</div>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function confirmarAdicionar(dataStr, hora, escopo){
+  document.getElementById('modal-root').innerHTML='';
   const d = getAgendaData();
-  d.excecoes.push({id:'ex'+Date.now(), data:dataStr, hora, tipo:'add', motivo:'Manual'});
+  const wd = new Date(dataStr+'T12:00').getDay();
+
+  if(escopo==='pontual'){
+    d.excecoes.push({id:'ex'+Date.now(), data:dataStr, hora, tipo:'add', motivo:'Pontual'});
+  } else if(escopo==='frente'){
+    // Adiciona exceção 'add_from' que vale a partir daquela data
+    d.excecoes.push({id:'exf'+Date.now(), data_inicio:dataStr, weekday:wd, hora, tipo:'add_from', motivo:'A partir de'});
+  } else if(escopo==='fixo'){
+    // Verifica se já existe
+    const jaExiste = d.slots_fixos.find(s=>s.weekday===wd&&s.hora===hora&&s.ativo);
+    if(!jaExiste){
+      d.slots_fixos.push({id:'sf'+Date.now(), weekday:wd, hora, ativo:true});
+    } else {
+      alert('Este horário já existe como slot fixo.');
+      saveAgendaData(d); render(); return;
+    }
+  }
   saveAgendaData(d);
   render();
 }
 
 function removerSlotData(dataStr, hora){
-  if(!confirm(`Remover horário ${hora} do dia ${dataStr}?`)) return;
+  modalEscopoRemover(dataStr, hora);
+}
+
+function modalEscopoRemover(dataStr, hora){
+  const wd = new Date(dataStr+'T12:00').getDay();
+  const dias_nome = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+  const diaNm = dias_nome[wd];
   const d = getAgendaData();
-  // Se é um slot fixo, adiciona exceção de remoção
-  const fixo = d.slots_fixos.find(s=>{
-    const dt = new Date(dataStr+'T12:00');
-    return s.ativo && s.weekday===dt.getDay() && s.hora===hora;
-  });
-  if(fixo){
-    d.excecoes.push({id:'rm'+Date.now(), data:dataStr, hora, tipo:'remove', motivo:'Manual'});
-  } else {
-    // Remove exceção do tipo add
-    d.excecoes = d.excecoes.filter(e=>!(e.data===dataStr&&e.hora===hora&&e.tipo==='add'));
+  const temFixo = d.slots_fixos.find(s=>s.ativo&&s.weekday===wd&&s.hora===hora);
+  const root = document.getElementById('modal-root');
+  if(!root) return;
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg')){document.getElementById('modal-root').innerHTML=''}">
+    <div class="modal-box" onclick="event.stopPropagation()" style="max-width:380px">
+      <div class="modal-hdr">
+        <div class="modal-title">Remover ${hora} — Qual escopo?</div>
+        <button class="modal-close" onclick="document.getElementById('modal-root').innerHTML=''">✕</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:10px">
+        <button onclick="confirmarRemover('${dataStr}','${hora}','pontual')" style="padding:14px 16px;background:#FEF3C7;border:1.5px solid #FCD34D;border-radius:10px;cursor:pointer;text-align:left;font-size:14px">
+          <div style="font-weight:700;color:#92400E">📌 Só este dia</div>
+          <div style="font-size:12px;color:#B45309;margin-top:2px">${new Date(dataStr+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+        </button>
+        <button onclick="confirmarRemover('${dataStr}','${hora}','frente')" style="padding:14px 16px;background:#FFEDD5;border:1.5px solid #FED7AA;border-radius:10px;cursor:pointer;text-align:left;font-size:14px">
+          <div style="font-weight:700;color:#C2410C">➡️ Deste dia em diante</div>
+          <div style="font-size:12px;color:#EA580C;margin-top:2px">Bloqueia toda ${diaNm} às ${hora} a partir desta data</div>
+        </button>
+        ${temFixo?`<button onclick="confirmarRemover('${dataStr}','${hora}','permanente')" style="padding:14px 16px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:10px;cursor:pointer;text-align:left;font-size:14px">
+          <div style="font-weight:700;color:#991B1B">🗑 Permanente (remover slot fixo)</div>
+          <div style="font-size:12px;color:#DC2626;margin-top:2px">Remove toda ${diaNm} às ${hora} da grade fixa</div>
+        </button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function confirmarRemover(dataStr, hora, escopo){
+  document.getElementById('modal-root').innerHTML='';
+  const d = getAgendaData();
+  const wd = new Date(dataStr+'T12:00').getDay();
+
+  if(escopo==='pontual'){
+    // Remove exceção 'add' se existir, senão cria exceção 'remove'
+    const eraExtra = d.excecoes.find(e=>e.data===dataStr&&e.hora===hora&&e.tipo==='add');
+    if(eraExtra){
+      d.excecoes = d.excecoes.filter(e=>!(e.data===dataStr&&e.hora===hora&&e.tipo==='add'));
+    } else {
+      d.excecoes.push({id:'rm'+Date.now(), data:dataStr, hora, tipo:'remove', motivo:'Pontual'});
+    }
+  } else if(escopo==='frente'){
+    // Bloqueia esse dia da semana a partir desta data
+    d.excecoes.push({id:'rmf'+Date.now(), data_inicio:dataStr, weekday:wd, hora, tipo:'remove_from', motivo:'A partir de'});
+  } else if(escopo==='permanente'){
+    // Desativa o slot fixo
+    const fixo = d.slots_fixos.find(s=>s.ativo&&s.weekday===wd&&s.hora===hora);
+    if(fixo) fixo.ativo = false;
   }
   saveAgendaData(d);
   render();

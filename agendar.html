@@ -89,8 +89,16 @@ function getSlotsParaSemana(weekOffset){
     const wd = dia.getDay();
 
     const fixos = data.slots_fixos.filter(s=>s.ativo&&s.weekday===wd);
-    const removidos = data.excecoes.filter(e=>e.data===isoDate&&e.tipo==='remove').map(e=>e.hora);
-    const adicionados = data.excecoes.filter(e=>e.data===isoDate&&e.tipo==='add').map(e=>({id:'ex_'+e.id,hora:e.hora}));
+    const removidos = data.excecoes.filter(e=>{
+      if(e.tipo==='remove') return e.data===isoDate;
+      if(e.tipo==='remove_from') return e.weekday===wd && e.data_inicio<=isoDate;
+      return false;
+    }).map(e=>e.hora);
+    const adicionados = data.excecoes.filter(e=>{
+      if(e.tipo==='add') return e.data===isoDate;
+      if(e.tipo==='add_from') return e.weekday===wd && e.data_inicio<=isoDate;
+      return false;
+    }).map(e=>({id:'ex_'+e.id,hora:e.hora}));
     let slots = [
       ...fixos.filter(s=>!removidos.includes(s.hora)).map(s=>({id:s.id,hora:s.hora})),
       ...adicionados,
