@@ -2855,6 +2855,21 @@ function calcScoreEvolucao(av, genero, idade){
 }
 
 
+function renderAvaliacao(){
+  // Dispatcher principal do módulo avaliação
+  if(avalTab==='anamnese') return renderAnamneseForm();
+  if(avalTab==='historico') return renderAvalHistorico();
+  if(avalAluno) return renderAvalForm();
+  return renderAvalLista();
+}
+
+function renderAvaliacao(){
+  if(avalTab==='anamnese') return renderAnamneseForm();
+  if(avalTab==='historico') return renderAvalHistorico();
+  if(avalAluno) return renderAvalForm();
+  return renderAvalLista();
+}
+
 function renderAvalLista(){
   const busca = avalBusca||'';
   const alunos = busca
