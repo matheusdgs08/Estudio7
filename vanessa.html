@@ -3279,6 +3279,245 @@ function salvarAvaliacao(){
 }
 
 
+
+// ── Anamnese ──
+function renderAnamneseForm(){
+  const a=avalAluno;
+  const f=avalAnamForm;
+  const inp=(campo,label,ph)=>`<div style="display:flex;flex-direction:column;gap:4px">
+    <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${label}</label>
+    <input class="mi" style="font-size:13px" placeholder="${ph||''}" value="${f[campo]||''}" oninput="avalAnamForm['${campo}']=this.value">
+  </div>`;
+  const ta=(campo,label,ph)=>`<div style="display:flex;flex-direction:column;gap:4px">
+    <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">${label}</label>
+    <textarea class="nota-textarea" rows="2" placeholder="${ph||''}" oninput="avalAnamForm['${campo}']=this.value">${f[campo]||''}</textarea>
+  </div>`;
+  const chk=(campo,label)=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--ink)">
+    <input type="checkbox" ${f[campo]?'checked':''} onchange="avalAnamForm['${campo}']=this.checked"
+      style="width:16px;height:16px;cursor:pointer;accent-color:var(--purple)">
+    ${label}
+  </label>`;
+
+  const dias=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const semana=f.semana||{};
+  const gradeHtml=dias.map(d=>`<div style="display:flex;flex-direction:column;gap:3px">
+    <div style="font-size:10px;font-weight:700;color:var(--ink3);text-align:center">${d}</div>
+    <input style="width:100%;padding:5px 4px;border:1.5px solid var(--bg3);border-radius:6px;font-size:11px;text-align:center;outline:none;color:var(--ink);background:var(--bg)"
+      placeholder="—" value="${semana[d]||''}"
+      oninput="if(!avalAnamForm.semana)avalAnamForm.semana={};avalAnamForm.semana['${d}']=this.value">
+  </div>`).join('');
+
+  const secLbl=(t)=>`<div style="font-size:11px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.8px;padding:8px 0 4px;border-bottom:1px solid var(--bg3)">${t}</div>`;
+
+  return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <button onclick="avalTab='form';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+      <div><div style="font-size:14px;font-weight:600">Anamnese — ${a.nm.split(' ')[0]}</div>
+        <div style="font-size:11px;color:var(--ink3)">Histórico e perfil do aluno</div></div>
+    </div>
+    <div style="padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px">
+
+      ${secLbl('Objetivo e Perfil')}
+      ${inp('objetivo_vida','Objetivo principal','Ex: Emagrecer, hipertrofiar, correr 5km…')}
+      ${inp('profissao','Profissão','Ex: Trabalha sentado 8h/dia')}
+      ${ta('historico_af','Histórico de atividade física','Ex: Fez musculação por 2 anos, parou por lesão…')}
+      ${inp('af_atual','Atividade física atual (além do estúdio)','Ex: Pilates terça e quinta')}
+
+      ${secLbl('Saúde')}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${chk('diabetes','Diabetes')}
+        ${chk('hipertensao','Hipertensão')}
+        ${chk('hipotireoidismo','Hipotireoidismo')}
+        ${chk('hipotensao','Hipotensão')}
+        ${chk('fibromialgia','Fibromialgia')}
+        ${chk('depressao','Depressão / Ansiedade')}
+      </div>
+      ${inp('outras_doencas','Outras condições de saúde','Ex: Gastrite, insônia crônica…')}
+      ${inp('sono','Qualidade do sono','Ex: Dorme mal, 5h/noite, insônia')}
+      ${inp('alimentacao','Alimentação geral','Ex: Come pouco, compulsão noturna, faz jejum')}
+
+      ${secLbl('Medicação')}
+      <div style="background:#FFF5F5;border:1.5px solid #FECACA;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:12px;color:#991B1B;font-weight:600">💊 Uso de medicamentos</div>
+        ${chk('usa_medicacao','Faz uso de medicação contínua')}
+        ${f.usa_medicacao?`
+          ${inp('medicacao_nome','Nome dos medicamentos','Ex: Levotiroxina 50mcg, Rivotril 0,5mg')}
+          ${inp('medicacao_frequencia','Frequência / dosagem','Ex: 1x ao dia em jejum')}
+          ${ta('medicacao_obs','Observações sobre a medicação','Ex: Pode impactar FC, perda de peso, cansaço…')}
+        `:'<div style="font-size:12px;color:#6B5E52">Marque acima se o aluno usa medicação.</div>'}
+      </div>
+
+      ${secLbl('Organização Semanal')}
+      <div style="font-size:11px;color:var(--ink3)">Atividades fitness durante a semana</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${gradeHtml}</div>
+      ${ta('combinados','Combinados / metas','Ex: 3x na semana no estúdio + 2 caminhadas')}
+      ${ta('obs_interna','Observações internas (só Vanessa)','Notas pessoais sobre o aluno')}
+
+      <div style="display:flex;gap:8px;padding-bottom:20px">
+        <button onclick="avalAluno.anamnese={...avalAnamForm};autoSave();avalTab='form';render()"
+          style="flex:1;padding:12px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer">✓ Salvar anamnese</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Gerar PDF de avaliação (relatório para WhatsApp) ──
+function gerarPDFAvaliacao(){
+  const a=avalAluno;
+  const f=avalForm;
+  const genero=f.genero||a.genero||'Feminino';
+  const idade=a.idade||30;
+  const data=new Date(f.data+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'});
+  const rcq=calcRCQ(f.cintura,f.quadril,genero);
+  const ica=calcICA(f.cintura,f.altura);
+  const tmb=calcTMB(f.peso,f.altura,idade,genero);
+  const pesoId=calcPesoIdeal(f.altura);
+  const score=calcScoreEvolucao(f,genero,idade);
+  const clsG=f.gord_pct?classGordura(f.gord_pct,genero,idade):null;
+  const clsI=f.imc?classIMC(f.imc):null;
+  const anam=a.anamnese||{};
+
+  const card=(val,lbl,cor,sub)=>`<div style="background:#F5F0E8;border-radius:10px;padding:10px 14px;flex:1;min-width:110px">
+    <div style="font-size:26px;font-weight:800;color:${cor||'#1C1916'};line-height:1.1">${val}</div>
+    <div style="font-size:10px;color:#8A8278;text-transform:uppercase;letter-spacing:.8px;margin-top:3px">${lbl}</div>
+    ${sub?`<div style="font-size:11px;color:${cor||'#6B5E52'};margin-top:3px;font-weight:600">${sub}</div>`:''}
+  </div>`;
+
+  const med=anam.usa_medicacao&&anam.medicacao_nome?`
+    <div style="background:#FFF5F5;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">💊 Medicação em uso</div>
+      <div style="font-size:13px;color:#1C1916">${anam.medicacao_nome}</div>
+      ${anam.medicacao_frequencia?`<div style="font-size:12px;color:#6B5E52;margin-top:2px">${anam.medicacao_frequencia}</div>`:''}
+      ${anam.medicacao_obs?`<div style="font-size:12px;color:#6B5E52;font-style:italic;margin-top:4px">${anam.medicacao_obs}</div>`:''}
+    </div>`:'';
+
+  const biRow=(lbl,d,e)=>(d||e)?`<tr><td style="padding:5px 10px;font-size:12px;color:#6B5E52">${lbl}</td>
+    <td style="padding:5px 10px;font-size:12px;text-align:right">${d||'-'} cm</td>
+    <td style="padding:5px 10px;font-size:12px;text-align:right">${e||'-'} cm</td></tr>`:'';
+
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Avaliação Física — ${a.nm}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;color:#1C1916;background:#fff;max-width:680px;margin:0 auto;padding:0}
+    .page{padding:32px}
+    .header{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;padding:28px 32px;border-radius:0 0 24px 24px;margin-bottom:28px}
+    .header h1{font-size:22px;font-weight:800;margin-bottom:4px}
+    .header .sub{font-size:13px;opacity:.8}
+    .sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#8A8278;margin:24px 0 12px;padding-bottom:6px;border-bottom:2px solid #E8E3DC}
+    .cards{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+    .score-box{background:linear-gradient(135deg,#1E40AF,#6D28D9);color:#fff;border-radius:14px;padding:18px 22px;display:flex;align-items:center;gap:20px;margin-bottom:20px}
+    .score-num{font-size:60px;font-weight:900;line-height:1}
+    .score-bar{background:rgba(255,255,255,.25);border-radius:20px;height:10px;margin-top:8px}
+    .score-fill{background:#fff;border-radius:20px;height:10px}
+    .risk-badge{display:inline-block;font-size:12px;font-weight:600;border-radius:20px;padding:4px 12px;border:1px solid;margin-right:6px;margin-bottom:6px}
+    table{width:100%;border-collapse:collapse}
+    tr:nth-child(even){background:#F9F7F4}
+    .obs-box{background:#FFFBEB;border:1px solid #FCD34D;border-radius:10px;padding:14px;margin-top:8px}
+    .goal-box{background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;padding:14px;margin-top:8px}
+    .footer{text-align:center;padding:20px;font-size:11px;color:#8A8278;border-top:1px solid #E8E3DC;margin-top:32px}
+    @media print{body{padding:0}.page{padding:20px}}
+  </style></head><body>
+
+  <div class="header">
+    <div style="font-size:12px;opacity:.7;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Estúdio Se7e · Relatório de Avaliação Física</div>
+    <h1>${a.nm}</h1>
+    <div class="sub">Mat. ${a.mat} · ${data} · ${genero} · ${idade} anos</div>
+  </div>
+
+  <div class="page">
+    ${score!==null?`
+    <div class="score-box">
+      <div class="score-num">${score}</div>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px">Score de Evolução</div>
+        <div style="font-size:13px;opacity:.85;margin-bottom:10px">Composição corporal + Índices de risco cardiometabólico</div>
+        <div class="score-bar"><div class="score-fill" style="width:${score}%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;opacity:.6;margin-top:4px"><span>0</span><span>50</span><span>100</span></div>
+      </div>
+    </div>`:''}
+
+    ${f.gord_pct?`
+    <div class="sec-title">Composição Corporal</div>
+    <div class="cards">
+      ${card(f.gord_pct+'%','Gordura',clsG?clsG.cor:null,clsG?clsG.label:null)}
+      ${f.massa_magra?card(f.massa_magra+'kg','Massa magra','#1E40AF',null):''}
+      ${f.massa_gorda?card(f.massa_gorda+'kg','Massa gorda','#DC2626',null):''}
+    </div>`:''}
+
+    ${f.peso||f.imc?`
+    <div class="sec-title">Peso e IMC</div>
+    <div class="cards">
+      ${f.peso?card(f.peso+'kg','Peso',null,null):''}
+      ${f.imc?card(f.imc,'IMC',clsI?clsI.cor:null,clsI?clsI.label:null):''}
+      ${pesoId?card(pesoId.min+'–'+pesoId.max+'kg','Peso ideal','#059669','IMC saudável'):''}
+    </div>
+    ${tmb?`<div style="background:#F5F0E8;border-radius:10px;padding:10px 14px;font-size:13px;color:#1C1916">
+      🔥 <strong>TMB (Mifflin):</strong> ${tmb} kcal/dia &nbsp;·&nbsp; Sedentária: ${Math.round(tmb*1.2)} &nbsp;·&nbsp; Ativa: ${Math.round(tmb*1.55)} kcal
+    </div>`:''}
+    `:''}
+
+    ${rcq||ica?`
+    <div class="sec-title">Risco Cardiometabólico</div>
+    <div style="margin-bottom:8px">
+      ${rcq?`<span class="risk-badge" style="background:${rcq.bg};color:${rcq.cor};border-color:${rcq.cor}44">RCQ ${rcq.valor} · ${rcq.label}</span>`:''}
+      ${ica?`<span class="risk-badge" style="background:${ica.bg};color:${ica.cor};border-color:${ica.cor}44">ICA ${ica.valor} · ${ica.label}</span>`:''}
+    </div>`:''}
+
+    ${(f.cintura||f.quadril||f.braco_rel_d)?`
+    <div class="sec-title">Circunferências</div>
+    <table>
+      <thead><tr style="background:#F5F0E8">
+        <th style="padding:7px 10px;text-align:left;font-size:11px;color:#8A8278;font-weight:600">Medida</th>
+        <th style="padding:7px 10px;text-align:right;font-size:11px;color:#8A8278;font-weight:600">Direito</th>
+        <th style="padding:7px 10px;text-align:right;font-size:11px;color:#8A8278;font-weight:600">Esquerdo</th>
+      </tr></thead>
+      <tbody>
+        ${f.cintura?`<tr><td style="padding:5px 10px;font-size:12px;color:#6B5E52">Cintura</td><td colspan="2" style="padding:5px 10px;font-size:12px;text-align:right">${f.cintura} cm</td></tr>`:''}
+        ${f.abdominal_circ?`<tr><td style="padding:5px 10px;font-size:12px;color:#6B5E52">Abdominal</td><td colspan="2" style="padding:5px 10px;font-size:12px;text-align:right">${f.abdominal_circ} cm</td></tr>`:''}
+        ${f.quadril?`<tr><td style="padding:5px 10px;font-size:12px;color:#6B5E52">Quadril</td><td colspan="2" style="padding:5px 10px;font-size:12px;text-align:right">${f.quadril} cm</td></tr>`:''}
+        ${biRow('Braço Relaxado',f.braco_rel_d,f.braco_rel_e)}
+        ${biRow('Braço Contraído',f.braco_con_d,f.braco_con_e)}
+        ${biRow('Antebraço',f.antebraco_d,f.antebraco_e)}
+        ${biRow('Coxa Relaxada',f.coxa_rel_d,f.coxa_rel_e)}
+        ${biRow('Coxa Contraída',f.coxa_con_d,f.coxa_con_e)}
+        ${biRow('Panturrilha',f.panturrilha_d,f.panturrilha_e)}
+      </tbody>
+    </table>`:''}
+
+    ${(f.peitoral||f.triceps)?`
+    <div class="sec-title">Dobras Cutâneas — Pollock 7</div>
+    <table>
+      <tbody>
+        ${[['peitoral','Peitoral'],['abdominal','Abdominal'],['coxa','Coxa'],['triceps','Tríceps'],['subescapular','Subescapular'],['suprailiaca','Supra-ilíaca'],['axilar','Axilar média']].filter(([k])=>f[k]).map(([k,l])=>`<tr><td style="padding:5px 10px;font-size:12px;color:#6B5E52">${l}</td><td style="padding:5px 10px;font-size:12px;text-align:right">${f[k]} mm</td></tr>`).join('')}
+      </tbody>
+    </table>`:''}
+
+    ${f.meta_peso||f.meta_gord||f.meta_obs?`
+    <div class="sec-title">Objetivo / Meta</div>
+    <div class="goal-box">
+      ${f.meta_peso?`<div style="font-size:13px;margin-bottom:4px">🎯 Peso alvo: <strong>${f.meta_peso} kg</strong></div>`:''}
+      ${f.meta_gord?`<div style="font-size:13px;margin-bottom:4px">🎯 Gordura alvo: <strong>${f.meta_gord}%</strong></div>`:''}
+      ${f.meta_data?`<div style="font-size:13px;margin-bottom:4px">📅 Data meta: <strong>${new Date(f.meta_data+'T12:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'})}</strong></div>`:''}
+      ${f.meta_obs?`<div style="font-size:13px;color:#166534;margin-top:6px;font-style:italic">"${f.meta_obs}"</div>`:''}
+    </div>`:''}
+
+    ${med}
+
+    ${f.obs_aval?`<div class="obs-box"><strong>Observações:</strong> ${f.obs_aval}</div>`:''}
+
+    <div class="footer">
+      Estúdio Se7e · Avaliação realizada por Vanessa Ramos · ${data}
+    </div>
+  </div>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=780,height=900');
+  w.document.write(html);
+  w.document.close();
+  setTimeout(()=>w.print(),700);
+}
+
 function renderFila(){
   const novas=D.solicitacoes.filter(s=>s.status==='nova');
   const hist=D.solicitacoes.filter(s=>s.status!=='nova');
