@@ -3039,14 +3039,18 @@ function renderAvalForm(){
 
     <div style="padding:14px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px">
       <!-- Data e gênero -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Data</label>
-          <input type="date" value="${f.data}" class="mi" style="margin-top:4px" oninput="avalForm.data=this.value"></div>
-        <div><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sexo</label>
-          <select class="mi" style="margin-top:4px;height:38px" oninput="avalForm.genero=this.value;render()">
-            <option value="Feminino" ${genero==='Feminino'?'selected':''}>Feminino</option>
-            <option value="Masculino" ${genero==='Masculino'?'selected':''}>Masculino</option>
-          </select></div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:8px;align-items:end">
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Data</label>
+          <input type="date" value="${f.data}" class="mi" style="height:38px" oninput="avalForm.data=this.value">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Sexo</label>
+          <select class="mi" style="height:38px;font-size:13px" oninput="avalForm.genero=this.value;render()">
+            <option value="Feminino" ${genero==='Feminino'?'selected':''}>♀ Feminino</option>
+            <option value="Masculino" ${genero==='Masculino'?'selected':''}>♂ Masculino</option>
+          </select>
+        </div>
       </div>
 
       <!-- Medidas básicas -->
