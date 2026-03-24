@@ -1517,20 +1517,24 @@ function renderCabecalhoPrograma(){
   const nivOpts=['Iniciante','Intermediario','Avancado'].map(n=>`<option value="${n}" ${(a.nivel||'')==n?'selected':''}>${n}</option>`).join('');
   const estOpts=['Padrao','Rest Pause','Drop Set','Bi Set','Circuito'].map(e=>`<option value="${e}" ${(a.estimulo_padrao||'')==e?'selected':''}>${e}</option>`).join('');
 
-  return`<div style="background:#FAFAF8;border:1.5px solid var(--purple-b);border-radius:var(--r);padding:12px 14px;margin-bottom:4px;display:flex;flex-direction:column;gap:10px">
-    <div style="font-size:12px;font-weight:600;color:var(--purple)">✏️ Editar cabeçalho do programa</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <div style="flex:1;min-width:110px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Objetivo</label>
-        <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.objetivo=this.value">${objOpts}</select></div>
-      <div style="flex:1;min-width:100px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Nível</label>
-        <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.nivel=this.value">${nivOpts}</select></div>
-      <div style="flex:1;min-width:80px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Freq/sem</label>
-        <input class="mi" type="number" min="1" max="7" value="${a.freq_semana||2}" style="height:34px;font-size:12px" onchange="alunoSel.freq_semana=parseInt(this.value)||2"></div>
-      <div style="flex:1;min-width:110px"><label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Estímulo geral</label>
-        <select class="mi" style="height:34px;font-size:12px" onchange="alunoSel.estimulo_padrao=this.value">${estOpts}</select></div>
+  const fld=(label,html)=>`<div style="display:flex;flex-direction:column;gap:4px">
+    <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px">${label}</label>
+    ${html}
+  </div>`;
+  const sel=(opts,onChange,h='36px')=>`<select class="mi" style="height:${h};font-size:13px" onchange="${onChange}">${opts}</select>`;
+
+  return`<div style="background:#FAFAF8;border:1.5px solid var(--purple-b);border-radius:var(--r);padding:14px 16px;margin-bottom:4px;display:flex;flex-direction:column;gap:12px">
+    <div style="font-size:13px;font-weight:700;color:var(--purple)">✏️ Editar cabeçalho do programa</div>
+
+    <!-- Linha 1: Objetivo, Nível, Freq, Estímulo -->
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px">
+      ${fld('Objetivo',sel(objOpts,"alunoSel.objetivo=this.value"))}
+      ${fld('Nível',sel(nivOpts,"alunoSel.nivel=this.value"))}
+      ${fld('Freq/sem',`<input class="mi" type="number" min="1" max="7" value="${a.freq_semana||2}" style="height:36px;font-size:13px" onchange="alunoSel.freq_semana=parseInt(this.value)||2">`)}
+      ${fld('Estímulo',sel(estOpts,"alunoSel.estimulo_padrao=this.value"))}
     </div>
     <div>
-      <label style="font-size:10px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Restrições por região</label>
+      <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:8px">Restrições por região</label>
       ${(()=>{
         const rObj=parseRestricoesStr(a.restricoes||'');
         return `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
@@ -1543,7 +1547,7 @@ function renderCabecalhoPrograma(){
             const bc=isSevere?'#FECACA':hasRestr?'#FCD34D':'var(--bg3)';
             const bg=isSevere?'#FFF5F5':hasRestr?'#FFFBEB':'var(--wh)';
             return `<div style="display:flex;flex-direction:column;gap:2px">
-              <span style="font-size:10px;font-weight:700;color:var(--ink3)">${reg}</span>
+              <span style="font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:1px">${reg}</span>
               <select style="border:1.5px solid ${bc};border-radius:8px;padding:5px 8px;font-size:12px;background:${bg};color:var(--ink);outline:none;cursor:pointer"
                 onchange="(()=>{const o=parseRestricoesStr(alunoSel.restricoes||'');if(this.value)o['${reg}']=this.value;else delete o['${reg}'];alunoSel.restricoes=restricoesObjToStr(o);})()">
                 ${selectOpts}
