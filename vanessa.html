@@ -3701,55 +3701,96 @@ function renderCalendarioAval(){
 function renderGerenciarSlots(){
   const data = getAgendaData();
   const dias_nome = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-
-  const fixosHtml = data.slots_fixos.length ? data.slots_fixos.map(s=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--wh);border:1px solid var(--bg3);border-radius:10px">
-      <div style="width:32px;height:32px;border-radius:8px;background:${s.ativo?'#EFF6FF':'#F3F4F6'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${s.ativo?'#1E40AF':'#6B7280'}">${dias_nome[s.weekday]}</div>
-      <span style="font-size:14px;font-weight:600;color:var(--ink)">${s.hora}</span>
-      <span style="font-size:11px;color:var(--ink3);flex:1">${s.ativo?'Ativo':'Desativado'}</span>
-      <button onclick="toggleSlotFixo('${s.id}')" style="font-size:11px;padding:4px 10px;border:1px solid var(--bg3);border-radius:8px;background:var(--bg);cursor:pointer;color:${s.ativo?'#DC2626':'#059669'}">${s.ativo?'Desativar':'Ativar'}</button>
-      <button onclick="removerSlotFixo('${s.id}')" style="font-size:11px;padding:4px 8px;border:none;background:transparent;cursor:pointer;color:#DC2626">🗑</button>
-    </div>`).join('') : '<div style="color:var(--ink3);font-size:13px;padding:12px">Nenhum slot fixo configurado.</div>';
-
   const diasOpts = dias_nome.map((d,i)=>`<option value="${i}">${d}</option>`).join('');
+
+  // Agrupar slots fixos por dia da semana
+  const porDia = {};
+  data.slots_fixos.forEach(s=>{
+    if(!porDia[s.weekday]) porDia[s.weekday] = [];
+    porDia[s.weekday].push(s);
+  });
+
+  const fixosHtml = Object.keys(porDia).sort((a,b)=>a-b).map(wd=>{
+    const diaNm = dias_nome[wd];
+    const slots = porDia[wd].map(s=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${s.ativo?'var(--wh)':'#F9F7F4'};border:1.5px solid ${s.ativo?'var(--bg3)':'#E8E3DC'};border-radius:10px;margin-bottom:6px">
+        <span style="font-size:15px;font-weight:700;color:${s.ativo?'var(--ink)':'var(--ink3)'}">${s.hora}</span>
+        <span style="font-size:11px;padding:2px 10px;border-radius:20px;background:${s.ativo?'#ECFDF5':'#F3F4F6'};color:${s.ativo?'#065F46':'#6B7280'};border:1px solid ${s.ativo?'#A7F3D0':'#E5E7EB'}">${s.ativo?'Ativo':'Inativo'}</span>
+        <div style="flex:1"></div>
+        <button onclick="toggleSlotFixo('${s.id}')" style="font-size:11px;padding:5px 12px;border:1px solid ${s.ativo?'#FECACA':'#86EFAC'};border-radius:8px;background:${s.ativo?'#FEF2F2':'#F0FDF4'};cursor:pointer;color:${s.ativo?'#DC2626':'#059669'};font-weight:600">${s.ativo?'Desativar':'Ativar'}</button>
+        <button onclick="removerSlotFixo('${s.id}')" style="width:30px;height:30px;border:1px solid var(--bg3);border-radius:8px;background:var(--bg);cursor:pointer;color:#DC2626;font-size:14px;display:flex;align-items:center;justify-content:center">🗑</button>
+      </div>`).join('');
+    return `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;overflow:hidden;margin-bottom:8px">
+      <div style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:8px">
+        <div style="width:36px;height:36px;border-radius:8px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#1E40AF">${diaNm}</div>
+        <span style="font-size:13px;font-weight:600;color:var(--ink)">${['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][wd]}</span>
+        <span style="font-size:11px;color:var(--ink3);margin-left:4px">${porDia[wd].filter(s=>s.ativo).length} ativo${porDia[wd].filter(s=>s.ativo).length!==1?'s':''}</span>
+      </div>
+      <div style="padding:10px 14px">${slots}</div>
+    </div>`;
+  }).join('') || '<div style="text-align:center;padding:24px;color:var(--ink3);font-size:13px;background:var(--wh);border:1px solid var(--bg3);border-radius:12px">Nenhum slot fixo. Adicione abaixo.</div>';
+
+  const zapiData = getAgendaData();
 
   return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
-      <button onclick="agendaState.view='calendario';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
-      <div><div style="font-size:14px;font-weight:600">Configurar horários fixos</div>
-        <div style="font-size:11px;color:var(--ink3)">Horários recorrentes toda semana</div></div>
+      <button onclick="agendaState.view='calendario';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3);padding:0 4px">←</button>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:600">⚙️ Configurar agenda</div>
+        <div style="font-size:11px;color:var(--ink3)">Horários fixos e integração WhatsApp</div>
+      </div>
     </div>
-    <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
-      <div style="display:flex;flex-direction:column;gap:8px">${fixosHtml}</div>
-      
+
+    <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:16px">
+
+      <!-- Horários fixos por dia -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Grade fixa semanal</div>
+        ${fixosHtml}
+      </div>
+
       <!-- Adicionar novo slot fixo -->
-      <div style="background:#F5F0E8;border:1.5px dashed #D4C9B8;border-radius:12px;padding:14px">
-        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px">+ Adicionar horário fixo</div>
-        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+      <div style="background:#FAFAF8;border:1.5px dashed #D4C9B8;border-radius:12px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">+ Adicionar horário fixo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:flex-end">
           <div>
-            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:4px">Dia</label>
-            <select id="novo-slot-dia" class="mi" style="height:36px;width:100px">
+            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Dia da semana</label>
+            <select id="novo-slot-dia" class="mi" style="height:40px;font-size:13px;background:#fff;color:var(--ink)">
               ${diasOpts}
             </select>
           </div>
           <div>
-            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:4px">Horário</label>
-            <input type="time" id="novo-slot-hora" value="08:00" class="mi" style="height:36px;width:110px">
+            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Horário</label>
+            <input type="time" id="novo-slot-hora" value="08:00" class="mi" style="height:40px;font-size:14px;font-weight:600">
           </div>
-          <button onclick="adicionarSlotFixo()" style="height:36px;padding:0 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Adicionar</button>
+          <button onclick="adicionarSlotFixo()" style="height:40px;padding:0 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap">Adicionar</button>
         </div>
       </div>
 
       <!-- Config Z-API -->
-      <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:12px;padding:14px">
-        <div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px">📲 Configuração Z-API (WhatsApp)</div>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <div><label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:3px">Instance ID</label>
-            <input class="mi" id="zapi-inst" value="${getAgendaData().zapi_instance||''}" placeholder="Ex: 3C4B2A1..." oninput="salvarZapiConfig()"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:3px">Token</label>
-            <input class="mi" id="zapi-tok" type="password" value="${getAgendaData().zapi_token||''}" placeholder="Token de acesso" oninput="salvarZapiConfig()"></div>
+      <div style="background:var(--wh);border:1.5px solid #E8E3DC;border-radius:12px;padding:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <div style="width:36px;height:36px;border-radius:10px;background:#DCFCE7;display:flex;align-items:center;justify-content:center;font-size:18px">📲</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">Z-API — Envio via WhatsApp</div>
+            <div style="font-size:11px;color:var(--ink3)">Deixe em branco para usar WhatsApp Web (fallback)</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Instance ID</label>
+            <input class="mi" id="zapi-inst" value="${zapiData.zapi_instance||''}" placeholder="Ex: 3C4B2A1D5E6F..." style="font-size:13px;background:#F9F7F4" oninput="salvarZapiConfig()">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Token</label>
+            <input class="mi" id="zapi-tok" type="password" value="${zapiData.zapi_token||''}" placeholder="••••••••••••" style="font-size:13px;background:#F9F7F4" oninput="salvarZapiConfig()">
+          </div>
+          <div style="padding:8px 12px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;font-size:12px;color:#166534">
+            ✓ Se configurado, o link é enviado automaticamente. Caso contrário, abre o WhatsApp Web com a mensagem pronta.
+          </div>
         </div>
       </div>
+
     </div>
   </div>`;
 }
