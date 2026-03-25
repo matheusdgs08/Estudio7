@@ -1,52 +1,77 @@
-# Serviço Local de Impressão — Estúdio Se7e
+# Serviço de Impressão Térmica — Estúdio Se7e
+## Impressora: 80mm USB (ESC/POS)
 
-Roda no computador da recepção. Verifica a cada minuto se há aulas
-começando nos próximos 5 minutos e imprime as fichas automaticamente.
-
-## Instalação
-
-1. Instalar Python 3.8+ no computador
-2. Instalar Google Chrome
-
-## Configuração
-
-Variáveis de ambiente (ou editar no topo do arquivo):
+### 1. Instalar dependências
 
 ```bash
-API_BASE=https://estudio7-production.up.railway.app
-API_KEY=se7e2025
-JANELA_MIN=5       # imprimir X minutos antes da aula
-CHECK_INTERVALO=60 # verificar a cada N segundos
+pip install python-escpos pyusb
+# Windows também:
+pip install pywin32
 ```
 
-## Executar
+### 2. Windows: dar permissão USB (se necessário)
+
+Baixar e instalar **Zadig** (https://zadig.akeo.ie)  
+→ Selecionar a impressora → Instalar driver **libusb-win32**
+
+### 3. Linux: permissão no dispositivo
+
+```bash
+sudo chmod 666 /dev/usb/lp0
+# ou adicionar ao grupo lp:
+sudo usermod -a -G lp $USER
+```
+
+### 4. Configurar (opcional)
+
+Variáveis de ambiente ou editar no início do arquivo:
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `API_BASE` | `https://estudio7-production.up.railway.app` | URL da API |
+| `API_KEY` | `se7e2025` | Chave da API |
+| `JANELA_MIN` | `5` | Minutos antes da aula para imprimir |
+| `CHECK_SEC` | `60` | Intervalo de verificação em segundos |
+| `PRINTER_VENDOR` | auto | Vendor ID hex (ex: `0x04b8` = Epson) |
+| `PRINTER_PRODUCT` | auto | Product ID hex |
+
+### 5. Executar
 
 ```bash
 python impressora.py
 ```
 
-## Executar como serviço (Windows — Task Scheduler)
+### 6. Iniciar automaticamente (Windows)
 
-Criar tarefa agendada:
-- Programa: `python`
-- Argumentos: `C:\se7e\impressora.py`
-- Iniciar quando: "Ao fazer logon"
-- Executar continuamente
-
-## Executar como serviço (Mac/Linux — cron)
-
-```bash
-# crontab -e
-@reboot cd /path/to/se7e && python impressora.py >> /tmp/impressora.log 2>&1 &
+Criar arquivo `iniciar.bat`:
+```bat
+@echo off
+cd C:\se7e
+python impressora.py
 ```
+Adicionar ao **Inicializações do Windows** (Win+R → `shell:startup`)
 
-## Logs
+### 7. Marcas compatíveis
 
-O serviço imprime no terminal:
+Epson TM-T20, TM-T88 · Bematech MP-4200 · Daruma DR700 · 
+Elgin i9 · Sweda SI-300S · Gertec GC600 · e qualquer térmica ESC/POS
+
+### Saída esperada no terminal
+
 ```
-[08:55:01] Verificando horários...
-  ⏰ 09:00 — 8 alunos — 4.9min p/ início
-  🖨️  Maria Silva — Treino A
-  🖨️  João Santos — Treino B
-  ...
+==================================================
+  Serviço de Impressão — Estúdio Se7e
+  Impressora: Térmica 80mm USB (ESC/POS)
+  API: https://estudio7-production.up.railway.app
+  Janela: 5 min antes da aula
+==================================================
+  ✅ Impressora conectada
+  🖨️  Página de teste impressa
+
+  Monitorando horários...
+
+[08:55:01] verificando...
+  ⏰ 09:00 (4.8min) — 8 alunos
+  🖨️  MARIA SILVA — TREINO A
+  🖨️  JOAO SANTOS — TREINO B
 ```
