@@ -387,3 +387,194 @@ async def salvar_resposta(body: QuestResposta):
     await sb_patch("quest_tokens", f"token=eq.{body.token}", {"status": "respondido"})
     return {"ok": True}
 
+
+# ════════════════════════════════════════
+# RELATÓRIO DE AULA — Professor confirma presença
+# Fluxo: professor fecha aula → cria workout_log →
+#   enrollment.status = attended
+#   next_training_session + 1 (loop ao terminar ciclo)
+#   treinos_realizados + 1 (contador para vencimento)
+#   exercise_history atualizado para cada carga alterada
+# ════════════════════════════════════════
+
+class CargaLog(BaseModel):
+    exercise_id: str
+    weight_kg: float
+    sets_done: int
+    reps_done: str
+    changed_from_previous: bool = True
+    notes: Optional[str] = None
+
+class ConfirmarAulaBody(BaseModel):
+    enrollment_id: str          # class_enrollment sendo confirmado
+    student_id: str
+    training_session_id: str    # ficha executada (A, B, C ou D)
+    instructor_id: str
+    class_date: str             # YYYY-MM-DD
+    presentes: List[str]        # lista de student_ids presentes
+    ausentes: List[str]         # lista de student_ids ausentes
+    cargas: List[CargaLog] = [] # cargas alteradas nesta aula
+    notes: Optional[str] = None
+
+@app.post("/aulas/confirmar")
+async def confirmar_aula(body: ConfirmarAulaBody, _=Depends(check_api_key)):
+    """
+    Professor confirma o relatório de aula.
+    Para cada aluno presente:
+      - enrollment.status = 'attended'
+      - students.next_training_session avança (loop)
+      - students.treinos_realizados + 1
+    Para cada aluno ausente:
+      - enrollment.status = 'missed'
+      - next_training_session NÃO avança
+    Para cargas alteradas:
+      - cria exercise_log
+      - atualiza exercise_history (upsert)
+    Cria workout_log para o professor.
+    """
+    results = {"presentes": [], "ausentes": [], "workout_log_id": None}
+
+    # 1. Criar workout_log
+    wlog_data = {
+        "student_id":          body.student_id,
+        "enrollment_id":       body.enrollment_id,
+        "training_session_id": body.training_session_id,
+        "instructor_id":       body.instructor_id,
+        "class_date":          body.class_date,
+        "notes":               body.notes,
+    }
+    wlog = await sb_post("workout_logs", wlog_data)
+    if isinstance(wlog, list): wlog = wlog[0]
+    wlog_id = wlog.get("id")
+    results["workout_log_id"] = wlog_id
+
+    # 2. Processar alunos presentes
+    for sid in body.presentes:
+        try:
+            # a. Marcar enrollment como attended
+            await sb_patch(
+                "class_enrollments",
+                f"student_id=eq.{sid}&class_date=eq.{body.class_date}&status=eq.confirmed",
+                {"status": "attended", "checked_in_at": "now()"}
+            )
+
+            # b. Buscar dados atuais do aluno
+            student_rows = await sb_get("students",
+                f"id=eq.{sid}&select=id,next_training_session,treinos_realizados,current_program_id")
+            if not student_rows:
+                continue
+            st = student_rows[0]
+
+            # c. Contar quantas fichas tem o programa atual (para o loop)
+            n_fichas = 4  # default
+            if st.get("current_program_id"):
+                fichas = await sb_get("training_sessions",
+                    f"program_id=eq.{st['current_program_id']}&select=id")
+                n_fichas = len(fichas) or 4
+
+            # d. Avançar next_training_session (loop ao terminar)
+            cur = st.get("next_training_session", 1) or 1
+            next_ts = (cur % n_fichas) + 1   # ex: 4 fichas → 1→2→3→4→1
+
+            # e. Incrementar treinos_realizados
+            cur_realizados = st.get("treinos_realizados") or 0
+            new_realizados = cur_realizados + 1
+
+            await sb_patch("students", f"id=eq.{sid}", {
+                "next_training_session": next_ts,
+                "treinos_realizados":    new_realizados,
+            })
+
+            results["presentes"].append({
+                "student_id": sid,
+                "next_training_session": next_ts,
+                "treinos_realizados": new_realizados,
+            })
+
+        except Exception as e:
+            results["presentes"].append({"student_id": sid, "error": str(e)})
+
+    # 3. Processar ausentes (só marca missed, NÃO avança treinos)
+    for sid in body.ausentes:
+        try:
+            await sb_patch(
+                "class_enrollments",
+                f"student_id=eq.{sid}&class_date=eq.{body.class_date}&status=eq.confirmed",
+                {"status": "missed"}
+            )
+            results["ausentes"].append({"student_id": sid, "status": "missed"})
+        except Exception as e:
+            results["ausentes"].append({"student_id": sid, "error": str(e)})
+
+    # 4. Registrar cargas alteradas
+    for carga in body.cargas:
+        try:
+            # exercise_log
+            await sb_post("exercise_logs", {
+                "workout_log_id":        wlog_id,
+                "exercise_id":           carga.exercise_id,
+                "weight_kg":             carga.weight_kg,
+                "sets_done":             carga.sets_done,
+                "reps_done":             carga.reps_done,
+                "changed_from_previous": carga.changed_from_previous,
+                "notes":                 carga.notes,
+            })
+
+            # exercise_history (upsert — última carga por aluno/exercício)
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    f"{SUPABASE_URL}/rest/v1/exercise_history",
+                    headers={**SB_HEADERS,
+                             "Prefer": "resolution=merge-duplicates,return=minimal"},
+                    json={
+                        "student_id":      body.student_id,
+                        "exercise_id":     carga.exercise_id,
+                        "last_weight_kg":  carga.weight_kg,
+                        "last_recorded_at": f"{body.class_date}T12:00:00",
+                        "workout_log_id":  wlog_id,
+                    },
+                    timeout=20
+                )
+        except Exception as e:
+            results.setdefault("carga_errors", []).append(str(e))
+
+    return {"ok": True, **results}
+
+
+# ── Endpoint simples para o professor ver seus alunos do dia ──
+@app.get("/professor/{instructor_id}/aulas/{data}")
+async def aulas_professor(instructor_id: str, data: str, _=Depends(check_api_key)):
+    """
+    Retorna os enrollments escalados para o professor em determinada data.
+    Professor só vê alunos atribuídos a ele (instructor_id).
+    """
+    enrollments = await sb_get(
+        "class_enrollments",
+        f"instructor_id=eq.{instructor_id}&class_date=eq.{data}"
+        f"&select=id,student_id,class_slot_id,status,training_session_id"
+        f"&status=neq.cancelled"
+    )
+    if not enrollments:
+        return []
+
+    # Buscar nomes dos alunos
+    sids = ",".join({e["student_id"] for e in enrollments})
+    profiles = await sb_get("profiles", f"id=in.({sids})&select=id,full_name,phone")
+    prof_map  = {p["id"]: p for p in profiles}
+
+    # Buscar dados de treino de cada aluno (próxima ficha + última carga)
+    for e in enrollments:
+        sid = e["student_id"]
+        e["aluno_nome"] = prof_map.get(sid, {}).get("full_name", "")
+
+        # next_training_session
+        st_rows = await sb_get("students",
+            f"id=eq.{sid}&select=next_training_session,current_program_id,treinos_realizados")
+        if st_rows:
+            st = st_rows[0]
+            e["next_training_session"] = st.get("next_training_session", 1)
+            e["treinos_realizados"]    = st.get("treinos_realizados", 0)
+            e["current_program_id"]    = st.get("current_program_id")
+
+    return enrollments
+
