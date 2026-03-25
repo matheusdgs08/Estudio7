@@ -279,7 +279,8 @@ function renderContent(){
   const c = document.getElementById('content');
   const ta = document.getElementById('topbar-actions');
   ta.innerHTML = '';
-  if(modulo==='alunos') renderAlunos(c, ta);
+  if(modulo==='alunos')    renderAlunos(c, ta);
+  else if(modulo==='contratos') renderContratos(c, ta);
   else c.innerHTML = `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Módulo ${modulo} em construção.</div></div>`;
 }
 
@@ -782,6 +783,1151 @@ function showToast(msg){
   document.body.appendChild(t);
   setTimeout(()=>t.remove(), 2800);
 }
+
+
+// ══════════════════════════════════════════════════════
+// MÓDULO CONTRATOS
+// ══════════════════════════════════════════════════════
+
+let contratos   = [];   // contratos do aluno selecionado
+let planos      = [];   // planos disponíveis
+let classSlots  = [];   // horários disponíveis
+let contratoSel = null; // contrato em visualização
+let novoContrato = null;// form de novo contrato
+
+async function loadPlanos(){
+  if(planos.length) return;
+  planos = await sbGet('plans','active=eq.true&order=frequency_per_week');
+}
+
+async function loadClassSlots(){
+  if(classSlots.length) return;
+  classSlots = await sbGet('class_slots','active=eq.true&order=weekday,start_time');
+}
+
+async function loadContratos(studentId){
+  contratos = await sbGet('contracts',
+    `student_id=eq.${studentId}&order=created_at.desc&select=*`);
+}
+
+function renderContratos(container, ta){
+  ta.innerHTML = `
+    ${alunoSel?`<button class="btn btn-primary" onclick="abrirModalNovoContrato()">+ Novo contrato</button>`:''}`;
+
+  if(!alunoSel){
+    container.innerHTML = `<div class="split">
+      <div class="list-col">
+        <div class="list-search">
+          <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="busca=this.value;renderContent()">
+        </div>
+        <div class="list-items">${renderListaAlunos()}</div>
+      </div>
+      <div class="empty"><div class="empty-ico">📄</div><div class="empty-title">Selecione um aluno</div><div class="empty-sub">para ver e gerenciar seus contratos.</div></div>
+    </div>`;
+    return;
+  }
+
+  const cor = avColor(alunoSel.full_name||'');
+  const cardsHtml = contratos.length ? contratos.map(c=>{
+    const plan = planos.find(p=>p.id===c.plan_id);
+    const STATUS = {active:{bg:'#ECFDF5',tc:'#065F46',lbl:'Ativo'},paused:{bg:'#FEF3C7',tc:'#92400E',lbl:'Pausado'},ended:{bg:'#F3F4F6',tc:'#6B7280',lbl:'Encerrado'},cancelled:{bg:'#FEF2F2',tc:'#991B1B',lbl:'Cancelado'}};
+    const st = STATUS[c.status]||STATUS.ended;
+    const isSel = contratoSel?.id===c.id;
+    return `<div onclick="contratoSel=${JSON.stringify(c).replace(/"/g,'&quot;')};renderContent()"
+      style="background:var(--wh);border:1.5px solid ${isSel?'var(--blue)':'var(--bg3)'};border-radius:10px;padding:12px 14px;cursor:pointer;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${plan?.name||'Plano'}</div>
+          <div style="font-size:11px;color:var(--ink3)">${fmtDate(c.start_date)} → ${fmtDate(c.end_date)}</div>
+        </div>
+        <span style="font-size:11px;padding:2px 10px;border-radius:20px;background:${st.bg};color:${st.tc};font-weight:600">${st.lbl}</span>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--ink2)">💳 ${c.payment_type==='monthly'?'Mensal':c.payment_type==='annual'?'Anual':'Recorrente'}</span>
+        <span style="font-size:11px;color:var(--ink2)">📚 ${c.remaining_classes||0}/${c.total_classes||0} aulas</span>
+        <span style="font-size:11px;color:var(--ink2)">${c.has_fixed_schedule?'📌 Fixo':'🔄 Flexível'}</span>
+      </div>
+    </div>`;
+  }).join('') : `<div style="text-align:center;padding:32px;color:var(--ink3);font-size:13px">
+    <div style="font-size:32px;margin-bottom:10px">📄</div>
+    Nenhum contrato. Clique em <strong>"+ Novo contrato"</strong> para criar.
+  </div>`;
+
+  const detalhe = contratoSel ? renderDetalheContrato(contratoSel) : `
+    <div class="empty"><div class="empty-ico">📄</div><div class="empty-title">Selecione um contrato</div></div>`;
+
+  container.innerHTML = `
+    <div class="split">
+      <!-- Lista de contratos do aluno -->
+      <div style="width:340px;border-right:1px solid var(--bg3);display:flex;flex-direction:column;flex-shrink:0;background:var(--wh)">
+        <!-- Header aluno -->
+        <div style="padding:14px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:10px">
+          <button onclick="alunoSel=null;contratoSel=null;busca='';renderContent()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+          <div class="av" style="background:${cor};width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:700">${ini(alunoSel.full_name)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${alunoSel.full_name}</div>
+            <div style="font-size:11px;color:var(--ink3)">${contratos.length} contrato${contratos.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div style="padding:12px 14px;overflow-y:auto;flex:1">${cardsHtml}</div>
+      </div>
+      <!-- Detalhe do contrato -->
+      <div class="detail">${detalhe}</div>
+    </div>`;
+}
+
+function renderListaAlunos(){
+  const filtrados = busca ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(busca.toLowerCase())) : alunos;
+  return filtrados.map(a=>{
+    const cor = avColor(a.full_name||'');
+    return `<div class="list-item" onclick="selecionarAlunoContrato('${a.id}')">
+      <div class="av" style="background:${cor}">${ini(a.full_name||'?')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="li-name">${a.full_name||'—'}</div>
+        <div class="li-sub">mat. ${a.mat||'—'}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="padding:16px;text-align:center;color:var(--ink3);font-size:13px">Nenhum aluno</div>';
+}
+
+async function selecionarAlunoContrato(id){
+  alunoSel  = alunos.find(a=>a.id===id);
+  contratoSel = null;
+  await Promise.all([loadPlanos(), loadClassSlots(), loadContratos(id)]);
+  renderContent();
+}
+
+function renderDetalheContrato(c){
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const STATUS = {active:{bg:'#ECFDF5',tc:'#065F46',lbl:'✅ Ativo'},paused:{bg:'#FEF3C7',tc:'#92400E',lbl:'⏸️ Pausado'},ended:{bg:'#F3F4F6',tc:'#6B7280',lbl:'📁 Encerrado'},cancelled:{bg:'#FEF2F2',tc:'#991B1B',lbl:'❌ Cancelado'}};
+  const st = STATUS[c.status]||STATUS.ended;
+  const hoje = new Date().toISOString().slice(0,10);
+  const diasRestantes = Math.ceil((new Date(c.end_date)-new Date())/(864e5));
+  const isActive = c.status==='active';
+  const isPaused = c.status==='paused';
+
+  // Horários fixos do contrato
+  const horariosFixos = classSlots.filter(s=>
+    (c._fixed_slots||[]).some(fs=>fs.class_slot_id===s.id)
+  );
+
+  const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  return `
+    <!-- Status card -->
+    <div style="background:${st.bg};border:1px solid ${st.tc}33;border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:${st.tc}">${st.lbl}</div>
+        <div style="font-size:12px;color:${st.tc};margin-top:2px">${plan?.name||'Plano'} · ${c.payment_type==='monthly'?'Mensal':c.payment_type==='annual'?'Anual':'Recorrente'}</div>
+      </div>
+      ${isActive?`<div style="text-align:right">
+        <div style="font-size:22px;font-weight:800;color:${st.tc}">${diasRestantes}d</div>
+        <div style="font-size:10px;color:${st.tc}">restantes</div>
+      </div>`:''}
+    </div>
+
+    <!-- Datas e créditos -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">📅</span><span class="card-hdr-title">Vigência e créditos</span></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label>Início</label><div class="val">${fmtDate(c.start_date)}</div></div>
+          <div class="field"><label>Término</label><div class="val">${fmtDate(c.end_date)}</div></div>
+          <div class="field"><label>Aulas restantes</label>
+            <div class="val" style="font-size:22px;font-weight:800;color:var(--purple)">${c.remaining_classes||0}</div></div>
+          <div class="field"><label>Total contratado</label>
+            <div class="val" style="font-size:22px;font-weight:800">${c.total_classes||0}</div></div>
+          <div class="field"><label>Vencimento pagamento</label><div class="val">${fmtDate(c.due_date)}</div></div>
+          <div class="field"><label>Tipo de horário</label>
+            <div class="val">${c.has_fixed_schedule?'📌 Horário fixo':'🔄 Flexível'}</div></div>
+        </div>
+        ${isPaused?`<div style="margin-top:10px;padding:10px 12px;background:#FEF3C7;border-radius:8px;font-size:12px;color:#92400E">
+          ⏸️ Pausado de ${fmtDate(c.pause_start)} até ${fmtDate(c.pause_end)} · Tipo: ${c.pause_type||'—'}
+        </div>`:''}
+      </div>
+    </div>
+
+    <!-- Ações -->
+    ${isActive||isPaused?`
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">⚙️</span><span class="card-hdr-title">Ações</span></div>
+      <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+        ${isActive?`
+          <button class="btn btn-secondary" onclick="abrirModalPausa('${c.id}')">⏸️ Pausar contrato</button>
+          <button class="btn btn-secondary" onclick="abrirModalUpgrade('${c.id}')">⬆️ Upgrade/Downgrade</button>
+          <button class="btn btn-danger" onclick="cancelarContrato('${c.id}')">❌ Cancelar</button>
+        `:''}
+        ${isPaused?`
+          <button class="btn btn-green" onclick="retomarContrato('${c.id}')">▶️ Retomar agora</button>
+        `:''}
+      </div>
+    </div>`:''}`;
+}
+
+// ══════════════════════════════════════
+// MODAL — NOVO CONTRATO
+// ══════════════════════════════════════
+async function abrirModalNovoContrato(){
+  await Promise.all([loadPlanos(), loadClassSlots()]);
+  novoContrato = {
+    plan_id: planos[2]?.id||'',  // default 3x
+    payment_type: 'monthly',
+    has_fixed_schedule: true,
+    start_date: new Date().toISOString().slice(0,10),
+    end_date: '',
+    fixed_slots_sel: [],
+    due_date: '',
+  };
+  renderModalNovoContrato();
+}
+
+function renderModalNovoContrato(){
+  const c = novoContrato;
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const freq = plan?.frequency_per_week||0;
+
+  // Auto-calcular end_date baseado no tipo
+  if(c.start_date && !c.end_date){
+    const d = new Date(c.start_date+'T12:00');
+    if(c.payment_type==='monthly')    d.setMonth(d.getMonth()+1);
+    else if(c.payment_type==='annual') d.setFullYear(d.getFullYear()+1);
+    else d.setMonth(d.getMonth()+6);
+    c.end_date = d.toISOString().slice(0,10);
+  }
+
+  // Total de aulas
+  const totalAulas = c.payment_type==='annual'
+    ? (plan?.annual_classes||0)
+    : c.payment_type==='monthly'
+    ? freq*4
+    : freq*24;
+
+  // Horários disponíveis agrupados por dia
+  const DIAS = ['Dom','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const slotsPorDia = {};
+  classSlots.filter(s=>s.slot_type==='normal').forEach(s=>{
+    if(!slotsPorDia[s.weekday]) slotsPorDia[s.weekday] = [];
+    slotsPorDia[s.weekday].push(s);
+  });
+
+  const slotsHtml = c.has_fixed_schedule ? Object.entries(slotsPorDia).map(([wd,slots])=>`
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:4px">${DIAS[wd]}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${slots.map(s=>{
+          const sel = c.fixed_slots_sel.includes(s.id);
+          const t = s.start_time.slice(0,5);
+          return `<button onclick="toggleSlotSel('${s.id}',${freq})"
+            style="padding:6px 12px;border:2px solid ${sel?'var(--purple)':'var(--bg3)'};border-radius:8px;font-size:12px;font-weight:600;background:${sel?'var(--purple-l)':'var(--wh)'};color:${sel?'var(--purple)':'var(--ink2)'};cursor:pointer">${t}</button>`;
+        }).join('')}
+      </div>
+    </div>`).join('')
+    : '<div style="font-size:12px;color:var(--ink3);padding:4px 0">Aluno flexível agenda conforme disponibilidade.</div>';
+
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:580px">
+      <div class="modal-hdr">
+        <div class="modal-title">📄 Novo contrato — ${alunoSel.full_name.split(' ')[0]}</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Plano -->
+        <div class="field">
+          <label>Plano *</label>
+          <select class="mi" onchange="novoContrato.plan_id=this.value;novoContrato.end_date='';renderModalNovoContrato()">
+            ${planos.map(p=>`<option value="${p.id}"${c.plan_id===p.id?' selected':''}>${p.name} (${p.frequency_per_week}x/sem)</option>`).join('')}
+          </select>
+        </div>
+
+        <!-- Modalidade -->
+        <div class="field">
+          <label>Modalidade de pagamento *</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            ${[['monthly','Mensal'],['recurring','Recorrente'],['annual','Anual']].map(([v,l])=>`
+              <div onclick="novoContrato.payment_type='${v}';novoContrato.end_date='';renderModalNovoContrato()"
+                style="padding:10px;border:2px solid ${c.payment_type===v?'var(--purple)':'var(--bg3)'};border-radius:10px;cursor:pointer;text-align:center;background:${c.payment_type===v?'var(--purple-l)':'var(--wh)'}">
+                <div style="font-size:13px;font-weight:700;color:${c.payment_type===v?'var(--purple)':'var(--ink)'}">${l}</div>
+                <div style="font-size:11px;color:var(--ink3)">${v==='monthly'?'1 mês':v==='annual'?'12 meses':'6 meses'}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Datas -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label>Data de início *</label>
+            <input class="mi" type="date" value="${c.start_date}"
+              onchange="novoContrato.start_date=this.value;novoContrato.end_date='';renderModalNovoContrato()"></div>
+          <div class="field"><label>Data de término *</label>
+            <input class="mi" type="date" value="${c.end_date}"
+              onchange="novoContrato.end_date=this.value"></div>
+        </div>
+
+        <!-- Vencimento pagamento -->
+        <div class="field">
+          <label>Vencimento do pagamento</label>
+          <input class="mi" type="date" value="${c.due_date}"
+            onchange="novoContrato.due_date=this.value">
+        </div>
+
+        <!-- Total de aulas calculado -->
+        <div style="background:var(--purple-l);border:1px solid var(--purple-b);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:28px;font-weight:900;color:var(--purple)">${totalAulas}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--purple)">aulas no contrato</div>
+            <div style="font-size:11px;color:var(--ink3)">${freq}x/sem · ${c.payment_type==='monthly'?'4 semanas':c.payment_type==='annual'?'54 semanas':'24 semanas'}</div>
+          </div>
+        </div>
+
+        <!-- Tipo de horário -->
+        <div class="field">
+          <label>Tipo de horário</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div onclick="novoContrato.has_fixed_schedule=true;novoContrato.fixed_slots_sel=[];renderModalNovoContrato()"
+              style="padding:10px;border:2px solid ${c.has_fixed_schedule?'var(--purple)':'var(--bg3)'};border-radius:10px;cursor:pointer;background:${c.has_fixed_schedule?'var(--purple-l)':'var(--wh)'}">
+              <div style="font-size:13px;font-weight:700;color:${c.has_fixed_schedule?'var(--purple)':'var(--ink)'}">📌 Horário fixo</div>
+              <div style="font-size:11px;color:var(--ink3)">Vagas reservadas toda semana</div>
+            </div>
+            <div onclick="novoContrato.has_fixed_schedule=false;novoContrato.fixed_slots_sel=[];renderModalNovoContrato()"
+              style="padding:10px;border:2px solid ${!c.has_fixed_schedule?'var(--purple)':'var(--bg3)'};border-radius:10px;cursor:pointer;background:${!c.has_fixed_schedule?'var(--purple-l)':'var(--wh)'}">
+              <div style="font-size:13px;font-weight:700;color:${!c.has_fixed_schedule?'var(--purple)':'var(--ink)'}">🔄 Flexível</div>
+              <div style="font-size:11px;color:var(--ink3)">Agenda conforme disponibilidade</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seleção de horários fixos -->
+        ${c.has_fixed_schedule?`
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">
+            Selecionar horários (${c.fixed_slots_sel.length}/${freq} selecionados)
+          </label>
+          ${c.fixed_slots_sel.length===freq
+            ?`<div style="padding:4px 0;font-size:12px;color:var(--green)">✅ ${freq} horário${freq!==1?'s':''} selecionado${freq!==1?'s':''}</div>`
+            :c.fixed_slots_sel.length>0
+            ?`<div style="padding:4px 0;font-size:12px;color:#D97706">⚠️ Selecione mais ${freq-c.fixed_slots_sel.length} horário${freq-c.fixed_slots_sel.length!==1?'s':''}</div>`
+            :`<div style="padding:4px 0;font-size:12px;color:var(--ink3)">Selecione ${freq} horário${freq!==1?'s':''} fixo${freq!==1?'s':''}</div>`}
+          ${slotsHtml}
+        </div>`:''}
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarNovoContrato()">✓ Criar contrato</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleSlotSel(slotId, freq){
+  const idx = novoContrato.fixed_slots_sel.indexOf(slotId);
+  if(idx>=0){
+    novoContrato.fixed_slots_sel.splice(idx,1);
+  } else {
+    if(novoContrato.fixed_slots_sel.length >= freq){
+      showToast(`⚠️ Máximo ${freq} horário${freq!==1?'s':''} para este plano`);
+      return;
+    }
+    novoContrato.fixed_slots_sel.push(slotId);
+  }
+  renderModalNovoContrato();
+}
+
+async function salvarNovoContrato(){
+  const c = novoContrato;
+  if(!c.plan_id||!c.start_date||!c.end_date){ alert('Preencha plano, data de início e término.'); return; }
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const freq = plan?.frequency_per_week||2;
+  if(c.has_fixed_schedule && c.fixed_slots_sel.length!==freq){
+    alert(`Selecione exatamente ${freq} horário${freq!==1?'s':''} fixo${freq!==1?'s':''}.`); return;
+  }
+
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Salvando…';
+
+  try {
+    const totalAulas = c.payment_type==='annual'
+      ? (plan?.annual_classes||freq*54)
+      : c.payment_type==='monthly' ? freq*4 : freq*24;
+
+    const contrato = await sbPost('contracts',{
+      student_id:       alunoSel.id,
+      plan_id:          c.plan_id,
+      payment_type:     c.payment_type,
+      has_fixed_schedule: c.has_fixed_schedule,
+      total_classes:    totalAulas,
+      remaining_classes: totalAulas,
+      start_date:       c.start_date,
+      end_date:         c.end_date,
+      status:           'active',
+      due_date:         c.due_date||null,
+      grace_period_end: c.due_date ? new Date(new Date(c.due_date).getTime()+7*864e5).toISOString().slice(0,10) : null,
+      replacements_transferred: false,
+    });
+    const cid = Array.isArray(contrato)?contrato[0].id:contrato.id;
+
+    // Criar fixed_slots se horário fixo
+    if(c.has_fixed_schedule && c.fixed_slots_sel.length){
+      await Promise.all(c.fixed_slots_sel.map(slotId=>
+        sbPost('fixed_slots',{
+          student_id:    alunoSel.id,
+          contract_id:   cid,
+          class_slot_id: slotId,
+          start_date:    c.start_date,
+          end_date:      c.end_date,
+          active:        true,
+        })
+      ));
+    }
+
+    await loadContratos(alunoSel.id);
+    contratoSel = contratos.find(ct=>ct.id===cid)||contratos[0];
+    fecharModal();
+    renderContent();
+    showToast(`✅ Contrato criado! ${totalAulas} aulas`);
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Criar contrato';
+  }
+}
+
+// ══════════════════════════════════════
+// MODAL — PAUSAR CONTRATO
+// ══════════════════════════════════════
+function abrirModalPausa(cid){
+  const c = contratos.find(x=>x.id===cid);
+  if(!c) return;
+  const hoje = new Date().toISOString().slice(0,10);
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">⏸️ Pausar contrato</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:13px;color:var(--ink2);margin-bottom:4px">O término do contrato será estendido automaticamente pela duração da pausa.</div>
+        <div class="field-grid">
+          <div class="field"><label>Início da pausa *</label>
+            <input class="mi" id="p-start" type="date" value="${hoje}" min="${hoje}"></div>
+          <div class="field"><label>Fim da pausa *</label>
+            <input class="mi" id="p-end" type="date" min="${hoje}"></div>
+          <div class="field" style="grid-column:span 2"><label>Tipo de pausa</label>
+            <select class="mi" id="p-type">
+              <option value="vacation">Férias</option>
+              <option value="medical">Médico</option>
+              <option value="administrative">Administrativo</option>
+            </select>
+          </div>
+        </div>
+        <div style="background:var(--gold-l);border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400E">
+          ⏸️ Durante a pausa: horário fixo mantido, agendamentos bloqueados. Término atual: <strong>${fmtDate(c.end_date)}</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarPausa('${cid}','${c.end_date}')">✓ Pausar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function confirmarPausa(cid, endDateAtual){
+  const ps = document.getElementById('p-start').value;
+  const pe = document.getElementById('p-end').value;
+  const pt = document.getElementById('p-type').value;
+  if(!ps||!pe||pe<=ps){ alert('Datas inválidas.'); return; }
+
+  // Calcular nova end_date: end_date += (pause_end - pause_start) dias
+  const dias = Math.ceil((new Date(pe)-new Date(ps))/(864e5));
+  const novaEnd = new Date(new Date(endDateAtual).getTime()+dias*864e5).toISOString().slice(0,10);
+
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Pausando…';
+
+  try {
+    await sbPatch('contracts',`id=eq.${cid}`,{
+      status:      'paused',
+      pause_start: ps,
+      pause_end:   pe,
+      pause_type:  pt,
+      end_date:    novaEnd,
+    });
+    await loadContratos(alunoSel.id);
+    contratoSel = contratos.find(c=>c.id===cid);
+    fecharModal();
+    renderContent();
+    showToast(`✅ Pausado! Novo término: ${fmtDate(novaEnd)}`);
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Pausar';
+  }
+}
+
+async function retomarContrato(cid){
+  if(!confirm('Retomar o contrato agora?')) return;
+  await sbPatch('contracts',`id=eq.${cid}`,{status:'active'});
+  await loadContratos(alunoSel.id);
+  contratoSel = contratos.find(c=>c.id===cid);
+  renderContent();
+  showToast('▶️ Contrato retomado!');
+}
+
+async function cancelarContrato(cid){
+  if(!confirm('Cancelar este contrato? Esta ação libera os horários fixos.')) return;
+  await sbPatch('contracts',`id=eq.${cid}`,{status:'cancelled'});
+  // Desativar fixed_slots
+  try { await sbPatch('fixed_slots',`contract_id=eq.${cid}`,{active:false}); } catch(e){}
+  await loadContratos(alunoSel.id);
+  contratoSel = contratos.find(c=>c.id===cid);
+  renderContent();
+  showToast('❌ Contrato cancelado');
+}
+
+// Upgrade/Downgrade - modal simples por agora
+function abrirModalUpgrade(cid){
+  const c = contratos.find(x=>x.id===cid);
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">⬆️ Upgrade / Downgrade</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:13px;color:var(--ink2);margin-bottom:8px">
+          Plano atual: <strong>${plan?.name||'—'}</strong><br>
+          O novo contrato herda a data de término <strong>${fmtDate(c.end_date)}</strong>.
+        </div>
+        <div class="field"><label>Novo plano *</label>
+          <select class="mi" id="upg-plan">
+            ${planos.filter(p=>p.id!==c.plan_id).map(p=>`<option value="${p.id}">${p.name} (${p.frequency_per_week}x/sem)</option>`).join('')}
+          </select>
+        </div>
+        <div style="background:var(--blue-l);border:1px solid var(--blue-b);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue)">
+          💡 O contrato atual será encerrado e um novo será criado herdando a data de término.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarUpgrade('${cid}','${c.end_date}')">✓ Confirmar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function confirmarUpgrade(cid, endDate){
+  const newPlanId = document.getElementById('upg-plan').value;
+  const newPlan = planos.find(p=>p.id===newPlanId);
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Processando…';
+  try {
+    // Encerrar contrato atual
+    await sbPatch('contracts',`id=eq.${cid}`,{status:'ended'});
+    // Criar novo contrato com end_date herdado
+    const freq = newPlan.frequency_per_week;
+    const hoje = new Date().toISOString().slice(0,10);
+    const diasRestantes = Math.ceil((new Date(endDate)-new Date())/(864e5));
+    const totalAulas = Math.round(freq*(diasRestantes/7));
+    await sbPost('contracts',{
+      student_id: alunoSel.id,
+      plan_id: newPlanId,
+      payment_type: 'monthly',
+      has_fixed_schedule: false,
+      total_classes: totalAulas,
+      remaining_classes: totalAulas,
+      start_date: hoje,
+      end_date: endDate,
+      status: 'active',
+      upgrade_downgrade_from: cid,
+      replacements_transferred: false,
+    });
+    await loadContratos(alunoSel.id);
+    contratoSel = contratos[0];
+    fecharModal();
+    renderContent();
+    showToast('✅ Upgrade realizado!');
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Confirmar';
+  }
+}
+
+
+
+
+// ══════════════════════════════════════════════════════
+// MÓDULO CONTRATOS
+// ══════════════════════════════════════════════════════
+
+let contratos   = [];   // contratos do aluno selecionado
+let planos      = [];   // planos disponíveis
+let classSlots  = [];   // horários disponíveis
+let contratoSel = null; // contrato em visualização
+let novoContrato = null;// form de novo contrato
+
+async function loadPlanos(){
+  if(planos.length) return;
+  planos = await sbGet('plans','active=eq.true&order=frequency_per_week');
+}
+
+async function loadClassSlots(){
+  if(classSlots.length) return;
+  classSlots = await sbGet('class_slots','active=eq.true&order=weekday,start_time');
+}
+
+async function loadContratos(studentId){
+  contratos = await sbGet('contracts',
+    `student_id=eq.${studentId}&order=created_at.desc&select=*`);
+}
+
+function renderContratos(container, ta){
+  ta.innerHTML = `
+    ${alunoSel?`<button class="btn btn-primary" onclick="abrirModalNovoContrato()">+ Novo contrato</button>`:''}`;
+
+  if(!alunoSel){
+    container.innerHTML = `<div class="split">
+      <div class="list-col">
+        <div class="list-search">
+          <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="busca=this.value;renderContent()">
+        </div>
+        <div class="list-items">${renderListaAlunos()}</div>
+      </div>
+      <div class="empty"><div class="empty-ico">📄</div><div class="empty-title">Selecione um aluno</div><div class="empty-sub">para ver e gerenciar seus contratos.</div></div>
+    </div>`;
+    return;
+  }
+
+  const cor = avColor(alunoSel.full_name||'');
+  const cardsHtml = contratos.length ? contratos.map(c=>{
+    const plan = planos.find(p=>p.id===c.plan_id);
+    const STATUS = {active:{bg:'#ECFDF5',tc:'#065F46',lbl:'Ativo'},paused:{bg:'#FEF3C7',tc:'#92400E',lbl:'Pausado'},ended:{bg:'#F3F4F6',tc:'#6B7280',lbl:'Encerrado'},cancelled:{bg:'#FEF2F2',tc:'#991B1B',lbl:'Cancelado'}};
+    const st = STATUS[c.status]||STATUS.ended;
+    const isSel = contratoSel?.id===c.id;
+    return `<div onclick="contratoSel=${JSON.stringify(c).replace(/"/g,'&quot;')};renderContent()"
+      style="background:var(--wh);border:1.5px solid ${isSel?'var(--blue)':'var(--bg3)'};border-radius:10px;padding:12px 14px;cursor:pointer;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${plan?.name||'Plano'}</div>
+          <div style="font-size:11px;color:var(--ink3)">${fmtDate(c.start_date)} → ${fmtDate(c.end_date)}</div>
+        </div>
+        <span style="font-size:11px;padding:2px 10px;border-radius:20px;background:${st.bg};color:${st.tc};font-weight:600">${st.lbl}</span>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--ink2)">💳 ${c.payment_type==='monthly'?'Mensal':c.payment_type==='annual'?'Anual':'Recorrente'}</span>
+        <span style="font-size:11px;color:var(--ink2)">📚 ${c.remaining_classes||0}/${c.total_classes||0} aulas</span>
+        <span style="font-size:11px;color:var(--ink2)">${c.has_fixed_schedule?'📌 Fixo':'🔄 Flexível'}</span>
+      </div>
+    </div>`;
+  }).join('') : `<div style="text-align:center;padding:32px;color:var(--ink3);font-size:13px">
+    <div style="font-size:32px;margin-bottom:10px">📄</div>
+    Nenhum contrato. Clique em <strong>"+ Novo contrato"</strong> para criar.
+  </div>`;
+
+  const detalhe = contratoSel ? renderDetalheContrato(contratoSel) : `
+    <div class="empty"><div class="empty-ico">📄</div><div class="empty-title">Selecione um contrato</div></div>`;
+
+  container.innerHTML = `
+    <div class="split">
+      <!-- Lista de contratos do aluno -->
+      <div style="width:340px;border-right:1px solid var(--bg3);display:flex;flex-direction:column;flex-shrink:0;background:var(--wh)">
+        <!-- Header aluno -->
+        <div style="padding:14px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:10px">
+          <button onclick="alunoSel=null;contratoSel=null;busca='';renderContent()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+          <div class="av" style="background:${cor};width:32px;height:32px;border-radius:50%;font-size:12px;font-weight:700">${ini(alunoSel.full_name)}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${alunoSel.full_name}</div>
+            <div style="font-size:11px;color:var(--ink3)">${contratos.length} contrato${contratos.length!==1?'s':''}</div>
+          </div>
+        </div>
+        <div style="padding:12px 14px;overflow-y:auto;flex:1">${cardsHtml}</div>
+      </div>
+      <!-- Detalhe do contrato -->
+      <div class="detail">${detalhe}</div>
+    </div>`;
+}
+
+function renderListaAlunos(){
+  const filtrados = busca ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(busca.toLowerCase())) : alunos;
+  return filtrados.map(a=>{
+    const cor = avColor(a.full_name||'');
+    return `<div class="list-item" onclick="selecionarAlunoContrato('${a.id}')">
+      <div class="av" style="background:${cor}">${ini(a.full_name||'?')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="li-name">${a.full_name||'—'}</div>
+        <div class="li-sub">mat. ${a.mat||'—'}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="padding:16px;text-align:center;color:var(--ink3);font-size:13px">Nenhum aluno</div>';
+}
+
+async function selecionarAlunoContrato(id){
+  alunoSel  = alunos.find(a=>a.id===id);
+  contratoSel = null;
+  await Promise.all([loadPlanos(), loadClassSlots(), loadContratos(id)]);
+  renderContent();
+}
+
+function renderDetalheContrato(c){
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const STATUS = {active:{bg:'#ECFDF5',tc:'#065F46',lbl:'✅ Ativo'},paused:{bg:'#FEF3C7',tc:'#92400E',lbl:'⏸️ Pausado'},ended:{bg:'#F3F4F6',tc:'#6B7280',lbl:'📁 Encerrado'},cancelled:{bg:'#FEF2F2',tc:'#991B1B',lbl:'❌ Cancelado'}};
+  const st = STATUS[c.status]||STATUS.ended;
+  const hoje = new Date().toISOString().slice(0,10);
+  const diasRestantes = Math.ceil((new Date(c.end_date)-new Date())/(864e5));
+  const isActive = c.status==='active';
+  const isPaused = c.status==='paused';
+
+  // Horários fixos do contrato
+  const horariosFixos = classSlots.filter(s=>
+    (c._fixed_slots||[]).some(fs=>fs.class_slot_id===s.id)
+  );
+
+  const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  return `
+    <!-- Status card -->
+    <div style="background:${st.bg};border:1px solid ${st.tc}33;border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:${st.tc}">${st.lbl}</div>
+        <div style="font-size:12px;color:${st.tc};margin-top:2px">${plan?.name||'Plano'} · ${c.payment_type==='monthly'?'Mensal':c.payment_type==='annual'?'Anual':'Recorrente'}</div>
+      </div>
+      ${isActive?`<div style="text-align:right">
+        <div style="font-size:22px;font-weight:800;color:${st.tc}">${diasRestantes}d</div>
+        <div style="font-size:10px;color:${st.tc}">restantes</div>
+      </div>`:''}
+    </div>
+
+    <!-- Datas e créditos -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">📅</span><span class="card-hdr-title">Vigência e créditos</span></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label>Início</label><div class="val">${fmtDate(c.start_date)}</div></div>
+          <div class="field"><label>Término</label><div class="val">${fmtDate(c.end_date)}</div></div>
+          <div class="field"><label>Aulas restantes</label>
+            <div class="val" style="font-size:22px;font-weight:800;color:var(--purple)">${c.remaining_classes||0}</div></div>
+          <div class="field"><label>Total contratado</label>
+            <div class="val" style="font-size:22px;font-weight:800">${c.total_classes||0}</div></div>
+          <div class="field"><label>Vencimento pagamento</label><div class="val">${fmtDate(c.due_date)}</div></div>
+          <div class="field"><label>Tipo de horário</label>
+            <div class="val">${c.has_fixed_schedule?'📌 Horário fixo':'🔄 Flexível'}</div></div>
+        </div>
+        ${isPaused?`<div style="margin-top:10px;padding:10px 12px;background:#FEF3C7;border-radius:8px;font-size:12px;color:#92400E">
+          ⏸️ Pausado de ${fmtDate(c.pause_start)} até ${fmtDate(c.pause_end)} · Tipo: ${c.pause_type||'—'}
+        </div>`:''}
+      </div>
+    </div>
+
+    <!-- Ações -->
+    ${isActive||isPaused?`
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">⚙️</span><span class="card-hdr-title">Ações</span></div>
+      <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+        ${isActive?`
+          <button class="btn btn-secondary" onclick="abrirModalPausa('${c.id}')">⏸️ Pausar contrato</button>
+          <button class="btn btn-secondary" onclick="abrirModalUpgrade('${c.id}')">⬆️ Upgrade/Downgrade</button>
+          <button class="btn btn-danger" onclick="cancelarContrato('${c.id}')">❌ Cancelar</button>
+        `:''}
+        ${isPaused?`
+          <button class="btn btn-green" onclick="retomarContrato('${c.id}')">▶️ Retomar agora</button>
+        `:''}
+      </div>
+    </div>`:''}`;
+}
+
+// ══════════════════════════════════════
+// MODAL — NOVO CONTRATO
+// ══════════════════════════════════════
+async function abrirModalNovoContrato(){
+  await Promise.all([loadPlanos(), loadClassSlots()]);
+  novoContrato = {
+    plan_id: planos[2]?.id||'',  // default 3x
+    payment_type: 'monthly',
+    has_fixed_schedule: true,
+    start_date: new Date().toISOString().slice(0,10),
+    end_date: '',
+    fixed_slots_sel: [],
+    due_date: '',
+  };
+  renderModalNovoContrato();
+}
+
+function renderModalNovoContrato(){
+  const c = novoContrato;
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const freq = plan?.frequency_per_week||0;
+
+  // Auto-calcular end_date baseado no tipo
+  if(c.start_date && !c.end_date){
+    const d = new Date(c.start_date+'T12:00');
+    if(c.payment_type==='monthly')    d.setMonth(d.getMonth()+1);
+    else if(c.payment_type==='annual') d.setFullYear(d.getFullYear()+1);
+    else d.setMonth(d.getMonth()+6);
+    c.end_date = d.toISOString().slice(0,10);
+  }
+
+  // Total de aulas
+  const totalAulas = c.payment_type==='annual'
+    ? (plan?.annual_classes||0)
+    : c.payment_type==='monthly'
+    ? freq*4
+    : freq*24;
+
+  // Horários disponíveis agrupados por dia
+  const DIAS = ['Dom','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const slotsPorDia = {};
+  classSlots.filter(s=>s.slot_type==='normal').forEach(s=>{
+    if(!slotsPorDia[s.weekday]) slotsPorDia[s.weekday] = [];
+    slotsPorDia[s.weekday].push(s);
+  });
+
+  const slotsHtml = c.has_fixed_schedule ? Object.entries(slotsPorDia).map(([wd,slots])=>`
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:4px">${DIAS[wd]}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${slots.map(s=>{
+          const sel = c.fixed_slots_sel.includes(s.id);
+          const t = s.start_time.slice(0,5);
+          return `<button onclick="toggleSlotSel('${s.id}',${freq})"
+            style="padding:6px 12px;border:2px solid ${sel?'var(--purple)':'var(--bg3)'};border-radius:8px;font-size:12px;font-weight:600;background:${sel?'var(--purple-l)':'var(--wh)'};color:${sel?'var(--purple)':'var(--ink2)'};cursor:pointer">${t}</button>`;
+        }).join('')}
+      </div>
+    </div>`).join('')
+    : '<div style="font-size:12px;color:var(--ink3);padding:4px 0">Aluno flexível agenda conforme disponibilidade.</div>';
+
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:580px">
+      <div class="modal-hdr">
+        <div class="modal-title">📄 Novo contrato — ${alunoSel.full_name.split(' ')[0]}</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Plano -->
+        <div class="field">
+          <label>Plano *</label>
+          <select class="mi" onchange="novoContrato.plan_id=this.value;novoContrato.end_date='';renderModalNovoContrato()">
+            ${planos.map(p=>`<option value="${p.id}"${c.plan_id===p.id?' selected':''}>${p.name} (${p.frequency_per_week}x/sem)</option>`).join('')}
+          </select>
+        </div>
+
+        <!-- Modalidade -->
+        <div class="field">
+          <label>Modalidade de pagamento *</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            ${[['monthly','Mensal'],['recurring','Recorrente'],['annual','Anual']].map(([v,l])=>`
+              <div onclick="novoContrato.payment_type='${v}';novoContrato.end_date='';renderModalNovoContrato()"
+                style="padding:10px;border:2px solid ${c.payment_type===v?'var(--purple)':'var(--bg3)'};border-radius:10px;cursor:pointer;text-align:center;background:${c.payment_type===v?'var(--purple-l)':'var(--wh)'}">
+                <div style="font-size:13px;font-weight:700;color:${c.payment_type===v?'var(--purple)':'var(--ink)'}">${l}</div>
+                <div style="font-size:11px;color:var(--ink3)">${v==='monthly'?'1 mês':v==='annual'?'12 meses':'6 meses'}</div>
+              </div>`).join('')}
+          </div>
+        </div>
+
+        <!-- Datas -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label>Data de início *</label>
+            <input class="mi" type="date" value="${c.start_date}"
+              onchange="novoContrato.start_date=this.value;novoContrato.end_date='';renderModalNovoContrato()"></div>
+          <div class="field"><label>Data de término *</label>
+            <input class="mi" type="date" value="${c.end_date}"
+              onchange="novoContrato.end_date=this.value"></div>
+        </div>
+
+        <!-- Vencimento pagamento -->
+        <div class="field">
+          <label>Vencimento do pagamento</label>
+          <input class="mi" type="date" value="${c.due_date}"
+            onchange="novoContrato.due_date=this.value">
+        </div>
+
+        <!-- Total de aulas calculado -->
+        <div style="background:var(--purple-l);border:1px solid var(--purple-b);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <div style="font-size:28px;font-weight:900;color:var(--purple)">${totalAulas}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--purple)">aulas no contrato</div>
+            <div style="font-size:11px;color:var(--ink3)">${freq}x/sem · ${c.payment_type==='monthly'?'4 semanas':c.payment_type==='annual'?'54 semanas':'24 semanas'}</div>
+          </div>
+        </div>
+
+        <!-- Tipo de horário -->
+        <div class="field">
+          <label>Tipo de horário</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div onclick="novoContrato.has_fixed_schedule=true;novoContrato.fixed_slots_sel=[];renderModalNovoContrato()"
+              style="padding:10px;border:2px solid ${c.has_fixed_schedule?'var(--purple)':'var(--bg3)'};border-radius:10px;cursor:pointer;background:${c.has_fixed_schedule?'var(--purple-l)':'var(--wh)'}">
+              <div style="font-size:13px;font-weight:700;color:${c.has_fixed_schedule?'var(--purple)':'var(--ink)'}">📌 Horário fixo</div>
+              <div style="font-size:11px;color:var(--ink3)">Vagas reservadas toda semana</div>
+            </div>
+            <div onclick="novoContrato.has_fixed_schedule=false;novoContrato.fixed_slots_sel=[];renderModalNovoContrato()"
+              style="padding:10px;border:2px solid ${!c.has_fixed_schedule?'var(--purple)':'var(--bg3)'};border-radius:10px;cursor:pointer;background:${!c.has_fixed_schedule?'var(--purple-l)':'var(--wh)'}">
+              <div style="font-size:13px;font-weight:700;color:${!c.has_fixed_schedule?'var(--purple)':'var(--ink)'}">🔄 Flexível</div>
+              <div style="font-size:11px;color:var(--ink3)">Agenda conforme disponibilidade</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seleção de horários fixos -->
+        ${c.has_fixed_schedule?`
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">
+            Selecionar horários (${c.fixed_slots_sel.length}/${freq} selecionados)
+          </label>
+          ${c.fixed_slots_sel.length===freq
+            ?`<div style="padding:4px 0;font-size:12px;color:var(--green)">✅ ${freq} horário${freq!==1?'s':''} selecionado${freq!==1?'s':''}</div>`
+            :c.fixed_slots_sel.length>0
+            ?`<div style="padding:4px 0;font-size:12px;color:#D97706">⚠️ Selecione mais ${freq-c.fixed_slots_sel.length} horário${freq-c.fixed_slots_sel.length!==1?'s':''}</div>`
+            :`<div style="padding:4px 0;font-size:12px;color:var(--ink3)">Selecione ${freq} horário${freq!==1?'s':''} fixo${freq!==1?'s':''}</div>`}
+          ${slotsHtml}
+        </div>`:''}
+
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarNovoContrato()">✓ Criar contrato</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleSlotSel(slotId, freq){
+  const idx = novoContrato.fixed_slots_sel.indexOf(slotId);
+  if(idx>=0){
+    novoContrato.fixed_slots_sel.splice(idx,1);
+  } else {
+    if(novoContrato.fixed_slots_sel.length >= freq){
+      showToast(`⚠️ Máximo ${freq} horário${freq!==1?'s':''} para este plano`);
+      return;
+    }
+    novoContrato.fixed_slots_sel.push(slotId);
+  }
+  renderModalNovoContrato();
+}
+
+async function salvarNovoContrato(){
+  const c = novoContrato;
+  if(!c.plan_id||!c.start_date||!c.end_date){ alert('Preencha plano, data de início e término.'); return; }
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const freq = plan?.frequency_per_week||2;
+  if(c.has_fixed_schedule && c.fixed_slots_sel.length!==freq){
+    alert(`Selecione exatamente ${freq} horário${freq!==1?'s':''} fixo${freq!==1?'s':''}.`); return;
+  }
+
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Salvando…';
+
+  try {
+    const totalAulas = c.payment_type==='annual'
+      ? (plan?.annual_classes||freq*54)
+      : c.payment_type==='monthly' ? freq*4 : freq*24;
+
+    const contrato = await sbPost('contracts',{
+      student_id:       alunoSel.id,
+      plan_id:          c.plan_id,
+      payment_type:     c.payment_type,
+      has_fixed_schedule: c.has_fixed_schedule,
+      total_classes:    totalAulas,
+      remaining_classes: totalAulas,
+      start_date:       c.start_date,
+      end_date:         c.end_date,
+      status:           'active',
+      due_date:         c.due_date||null,
+      grace_period_end: c.due_date ? new Date(new Date(c.due_date).getTime()+7*864e5).toISOString().slice(0,10) : null,
+      replacements_transferred: false,
+    });
+    const cid = Array.isArray(contrato)?contrato[0].id:contrato.id;
+
+    // Criar fixed_slots se horário fixo
+    if(c.has_fixed_schedule && c.fixed_slots_sel.length){
+      await Promise.all(c.fixed_slots_sel.map(slotId=>
+        sbPost('fixed_slots',{
+          student_id:    alunoSel.id,
+          contract_id:   cid,
+          class_slot_id: slotId,
+          start_date:    c.start_date,
+          end_date:      c.end_date,
+          active:        true,
+        })
+      ));
+    }
+
+    await loadContratos(alunoSel.id);
+    contratoSel = contratos.find(ct=>ct.id===cid)||contratos[0];
+    fecharModal();
+    renderContent();
+    showToast(`✅ Contrato criado! ${totalAulas} aulas`);
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Criar contrato';
+  }
+}
+
+// ══════════════════════════════════════
+// MODAL — PAUSAR CONTRATO
+// ══════════════════════════════════════
+function abrirModalPausa(cid){
+  const c = contratos.find(x=>x.id===cid);
+  if(!c) return;
+  const hoje = new Date().toISOString().slice(0,10);
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">⏸️ Pausar contrato</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:13px;color:var(--ink2);margin-bottom:4px">O término do contrato será estendido automaticamente pela duração da pausa.</div>
+        <div class="field-grid">
+          <div class="field"><label>Início da pausa *</label>
+            <input class="mi" id="p-start" type="date" value="${hoje}" min="${hoje}"></div>
+          <div class="field"><label>Fim da pausa *</label>
+            <input class="mi" id="p-end" type="date" min="${hoje}"></div>
+          <div class="field" style="grid-column:span 2"><label>Tipo de pausa</label>
+            <select class="mi" id="p-type">
+              <option value="vacation">Férias</option>
+              <option value="medical">Médico</option>
+              <option value="administrative">Administrativo</option>
+            </select>
+          </div>
+        </div>
+        <div style="background:var(--gold-l);border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400E">
+          ⏸️ Durante a pausa: horário fixo mantido, agendamentos bloqueados. Término atual: <strong>${fmtDate(c.end_date)}</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarPausa('${cid}','${c.end_date}')">✓ Pausar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function confirmarPausa(cid, endDateAtual){
+  const ps = document.getElementById('p-start').value;
+  const pe = document.getElementById('p-end').value;
+  const pt = document.getElementById('p-type').value;
+  if(!ps||!pe||pe<=ps){ alert('Datas inválidas.'); return; }
+
+  // Calcular nova end_date: end_date += (pause_end - pause_start) dias
+  const dias = Math.ceil((new Date(pe)-new Date(ps))/(864e5));
+  const novaEnd = new Date(new Date(endDateAtual).getTime()+dias*864e5).toISOString().slice(0,10);
+
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Pausando…';
+
+  try {
+    await sbPatch('contracts',`id=eq.${cid}`,{
+      status:      'paused',
+      pause_start: ps,
+      pause_end:   pe,
+      pause_type:  pt,
+      end_date:    novaEnd,
+    });
+    await loadContratos(alunoSel.id);
+    contratoSel = contratos.find(c=>c.id===cid);
+    fecharModal();
+    renderContent();
+    showToast(`✅ Pausado! Novo término: ${fmtDate(novaEnd)}`);
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Pausar';
+  }
+}
+
+async function retomarContrato(cid){
+  if(!confirm('Retomar o contrato agora?')) return;
+  await sbPatch('contracts',`id=eq.${cid}`,{status:'active'});
+  await loadContratos(alunoSel.id);
+  contratoSel = contratos.find(c=>c.id===cid);
+  renderContent();
+  showToast('▶️ Contrato retomado!');
+}
+
+async function cancelarContrato(cid){
+  if(!confirm('Cancelar este contrato? Esta ação libera os horários fixos.')) return;
+  await sbPatch('contracts',`id=eq.${cid}`,{status:'cancelled'});
+  // Desativar fixed_slots
+  try { await sbPatch('fixed_slots',`contract_id=eq.${cid}`,{active:false}); } catch(e){}
+  await loadContratos(alunoSel.id);
+  contratoSel = contratos.find(c=>c.id===cid);
+  renderContent();
+  showToast('❌ Contrato cancelado');
+}
+
+// Upgrade/Downgrade - modal simples por agora
+function abrirModalUpgrade(cid){
+  const c = contratos.find(x=>x.id===cid);
+  const plan = planos.find(p=>p.id===c.plan_id);
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">⬆️ Upgrade / Downgrade</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:13px;color:var(--ink2);margin-bottom:8px">
+          Plano atual: <strong>${plan?.name||'—'}</strong><br>
+          O novo contrato herda a data de término <strong>${fmtDate(c.end_date)}</strong>.
+        </div>
+        <div class="field"><label>Novo plano *</label>
+          <select class="mi" id="upg-plan">
+            ${planos.filter(p=>p.id!==c.plan_id).map(p=>`<option value="${p.id}">${p.name} (${p.frequency_per_week}x/sem)</option>`).join('')}
+          </select>
+        </div>
+        <div style="background:var(--blue-l);border:1px solid var(--blue-b);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue)">
+          💡 O contrato atual será encerrado e um novo será criado herdando a data de término.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarUpgrade('${cid}','${c.end_date}')">✓ Confirmar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function confirmarUpgrade(cid, endDate){
+  const newPlanId = document.getElementById('upg-plan').value;
+  const newPlan = planos.find(p=>p.id===newPlanId);
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Processando…';
+  try {
+    // Encerrar contrato atual
+    await sbPatch('contracts',`id=eq.${cid}`,{status:'ended'});
+    // Criar novo contrato com end_date herdado
+    const freq = newPlan.frequency_per_week;
+    const hoje = new Date().toISOString().slice(0,10);
+    const diasRestantes = Math.ceil((new Date(endDate)-new Date())/(864e5));
+    const totalAulas = Math.round(freq*(diasRestantes/7));
+    await sbPost('contracts',{
+      student_id: alunoSel.id,
+      plan_id: newPlanId,
+      payment_type: 'monthly',
+      has_fixed_schedule: false,
+      total_classes: totalAulas,
+      remaining_classes: totalAulas,
+      start_date: hoje,
+      end_date: endDate,
+      status: 'active',
+      upgrade_downgrade_from: cid,
+      replacements_transferred: false,
+    });
+    await loadContratos(alunoSel.id);
+    contratoSel = contratos[0];
+    fecharModal();
+    renderContent();
+    showToast('✅ Upgrade realizado!');
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Confirmar';
+  }
+}
+
 
 // ══════════════════════════════════════
 // INIT
