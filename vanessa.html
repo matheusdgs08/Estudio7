@@ -1423,8 +1423,9 @@ function renderTreinos(){
   // Excesso = treinos realizados ALÉM do previsto no programa (freq × 8 semanas)
   // Positivo = passou do limite e precisa trocar. Negativo = ainda dentro do programa.
   function excessoTreinos(a){
-    const nf=(a.programas&&a.programas[0]&&a.programas[0].fichas&&a.programas[0].fichas.length)||4;
-    return(a.treinos_realizados||0)-nf;
+    // Ciclo completo = freq_semana × 8 treinos
+    const ciclo = (parseInt(a.freq_semana)||2) * 8;
+    return (a.treinos_realizados||0) - ciclo;
   }
   let alunosFiltrados=[...alunos];
   if(filtro==='excesso_desc') alunosFiltrados.sort((a,b)=>excessoTreinos(b)-excessoTreinos(a));
@@ -4329,11 +4330,12 @@ function renderQuestEnviar(tipo){
         </div>
         <div style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto">
           ${vencidos.map(a=>{
-            const nf = (a.programas&&a.programas[0]&&a.programas[0].fichas&&a.programas[0].fichas.length)||4;
-            const real = parseInt(a.treinos_realizados||0);
-            const exc  = real - nf;
-            const bc   = exc>4?'#FECACA':exc>1?'#FCD34D':'#86EFAC';
-            const tc   = exc>4?'#991B1B':exc>1?'#92400E':'#166534';
+            const ciclo = (parseInt(a.freq_semana)||2) * 8;
+            const real  = parseInt(a.treinos_realizados||0);
+            const exc   = real - ciclo;
+            const bc    = exc>4?'#FECACA':exc>1?'#FCD34D':'#86EFAC';
+            const tc    = exc>4?'#991B1B':exc>1?'#92400E':'#166534';
+            const nf    = ciclo; // para o label
             const ultEnvio = getTokens().filter(t=>t.aluno_id===a.id&&t.tipo==='mudanca').sort((x,y)=>y.criado_em.localeCompare(x.criado_em))[0];
             const dataEnvio = ultEnvio ? new Date(ultEnvio.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'2-digit'}) : null;
             return `<div style="background:var(--wh);border:1.5px solid ${bc};border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px"
@@ -4341,7 +4343,7 @@ function renderQuestEnviar(tipo){
               <div style="${avStyle(a.nm)};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0">${ini(a.nm)}</div>
               <div style="flex:1;min-width:0">
                 <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nm}</div>
-                <div style="font-size:11px;color:${tc};font-weight:500">${real} treinos / ${nf} na ficha · <strong>+${exc} além</strong></div>
+                <div style="font-size:11px;color:${tc};font-weight:500">${real} feitos / ${nf} esperados (${a.freq_semana}×8) · <strong>+${exc} além</strong></div>
               </div>
               ${dataEnvio
                 ?`<div style="text-align:right;flex-shrink:0"><div style="font-size:9px;color:var(--ink3);text-transform:uppercase">Enviado</div><div style="font-size:11px;font-weight:600;color:#D97706">${dataEnvio}</div></div>`
