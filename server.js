@@ -10,6 +10,7 @@ const ROUTES = {
   '/coordenacao': 'vanessa.html',
   '/agendar': 'agendar.html',
   '/recepcao': 'recepcao.html',
+  '/impressao/servico/download': 'servico_impressao/impressora.py',
   '/questionario': 'questionario.html',
 };
 
@@ -18,6 +19,7 @@ const MIME = {
   '.js': 'application/javascript; charset=utf-8',
   '.css': 'text/css',
   '.json': 'application/json',
+  '.py': 'text/plain; charset=utf-8',
 };
 
 http.createServer((req, res) => {

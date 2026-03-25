@@ -131,6 +131,7 @@
   <button class="sb-item" onclick="setMod('contratos',this)"><span class="sb-ico">📄</span> Contratos</button>
   <button class="sb-item" onclick="setMod('agenda',this)"><span class="sb-ico">📅</span> Agenda do dia</button>
   <div class="sb-section">Operação</div>
+  <button class="sb-item" onclick="setMod('impressao',this)"><span class="sb-ico">🖨️</span> Impressão de fichas</button>
   <button class="sb-item" onclick="setMod('experimentais',this)"><span class="sb-ico">🧪</span> Experimentais<span class="sb-badge" id="badge-exp" style="display:none">0</span></button>
   <button class="sb-item" onclick="setMod('pausas',this)"><span class="sb-ico">⏸️</span> Pausas</button>
 </div>
@@ -189,6 +190,7 @@ const MOD_TITLES = {
   agenda:       ['Agenda do dia', 'Horários, vagas e check-in'],
   experimentais:['Experimentais', 'Pipeline de leads e agendamentos'],
   pausas:       ['Pausas', 'Pausas de contrato'],
+  impressao:    ['Impressão de fichas', 'Configure e monitore a impressão automática'],
 };
 
 // ══════════════════════════════════════
@@ -282,6 +284,7 @@ function renderContent(){
   if(modulo==='alunos')    renderAlunos(c, ta);
   else if(modulo==='contratos') renderContratos(c, ta);
   else if(modulo==='agenda')   { renderAgenda(c, ta); return; }
+  else if(modulo==='impressao') renderImpressao(c, ta);
   else c.innerHTML = `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Módulo ${modulo} em construção.</div></div>`;
 }
 
@@ -2248,6 +2251,148 @@ async function autoAtribuir(slotId){
     aulasHoje[best.id]=(aulasHoje[best.id]||0)+1;
   }
   showToast('⚡ Professores atribuídos!');
+}
+
+
+
+// ══════════════════════════════════════════════════════
+// MÓDULO IMPRESSÃO DE FICHAS
+// ══════════════════════════════════════════════════════
+
+let impressaoData = null;
+let impressaoSlotSel = null;
+
+async function renderImpressao(container, ta){
+  const hoje = new Date().toISOString().slice(0,10);
+  ta.innerHTML = `<button class="btn btn-secondary" onclick="impressaoData=null;renderContent()">🔄 Atualizar</button>`;
+
+  if(!impressaoData){
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando…</div></div>';
+    try {
+      const r = await fetch(`/impressao/horarios/${hoje}`,{headers:{'x-api-key':'se7e2025'}});
+      impressaoData = r.ok ? await r.json() : {horarios:[]};
+    } catch(e){ impressaoData = {horarios:[]}; }
+    renderContent();
+    return;
+  }
+
+  const agora = new Date();
+  const horarios = (impressaoData.horarios||[]);
+
+  const horariosHtml = horarios.map(h=>{
+    const horaAula = new Date(`${hoje}T${h.horario}:00`);
+    const diffMin  = Math.round((horaAula-agora)/60000);
+    const isProx   = diffMin>=0 && diffMin<=10;
+    const passou   = diffMin<0;
+    const bc = isProx?'var(--purple-b)':passou?'var(--bg3)':'var(--bg3)';
+    const bg = isProx?'var(--purple-l)':'var(--wh)';
+
+    return `<div class="card" style="border-color:${bc};background:${bg}">
+      <div style="padding:12px 16px;display:flex;align-items:center;gap:12px">
+        <div style="text-align:center;min-width:60px">
+          <div style="font-size:22px;font-weight:900;color:${isProx?'var(--purple)':'var(--ink)'}">${h.horario}</div>
+          <div style="font-size:10px;color:var(--ink3)">${diffMin>=0?diffMin+'min':'passou'}</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${h.confirmados} aluno${h.confirmados!==1?'s':''} confirmados</div>
+          ${isProx?`<div style="font-size:11px;color:var(--purple);font-weight:600">⚡ Dentro da janela de impressão</div>`:''}
+        </div>
+        <button class="btn ${isProx?'btn-primary':'btn-secondary'}" onclick="imprimirHorario('${h.slot_id}','${hoje}','${h.horario}')">
+          🖨️ ${isProx?'Imprimir agora':'Imprimir manual'}
+        </button>
+      </div>
+    </div>`;
+  }).join('') || `<div class="empty"><div class="empty-ico">📋</div><div class="empty-title">Sem aulas confirmadas hoje</div></div>`;
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="padding:10px 24px;background:var(--bg);border-bottom:1px solid var(--bg3);flex-shrink:0">
+        <div style="font-size:13px;font-weight:600">Hoje — ${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'})}</div>
+        <div style="font-size:11px;color:var(--ink3);margin-top:2px">Fichas são impressas automaticamente 5 min antes da aula pelo serviço local</div>
+      </div>
+      <div style="padding:16px 24px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px">
+        ${horariosHtml}
+        <!-- Config do serviço -->
+        <div class="card" style="margin-top:8px">
+          <div class="card-hdr"><span class="sb-ico">⚙️</span><span class="card-hdr-title">Serviço de impressão automática</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-size:13px;color:var(--ink2)">
+              O serviço local (<code>impressora.py</code>) roda no computador da recepção e imprime automaticamente 5 minutos antes de cada aula.
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="padding:10px;background:var(--bg);border-radius:8px">
+                <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">API Base</div>
+                <div style="font-size:12px;font-weight:600;margin-top:3px">${window.location.origin}</div>
+              </div>
+              <div style="padding:10px;background:var(--bg);border-radius:8px">
+                <div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">Janela</div>
+                <div style="font-size:12px;font-weight:600;margin-top:3px">5 min antes da aula</div>
+              </div>
+            </div>
+            <a href="/impressao/servico/download" class="btn btn-secondary" style="text-decoration:none;text-align:center">
+              📥 Baixar impressora.py
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function imprimirHorario(slotId, data, hora){
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Buscando fichas…';
+  try {
+    const r = await fetch(`/impressao/aula/${slotId}/${data}`,{headers:{'x-api-key':'se7e2025'}});
+    const dados = await r.json();
+    const fichas = dados.fichas || [];
+    if(!fichas.length){ alert('Nenhuma ficha para imprimir neste horário.'); btn.disabled=false; btn.textContent='🖨️ Imprimir manual'; return; }
+    fichas.forEach((f,i)=>{
+      setTimeout(()=>{ imprimirFichaNav(f); }, i*1200);
+    });
+    showToast(`🖨️ ${fichas.length} ficha${fichas.length!==1?'s':''} enviadas para impressão`);
+  } catch(e){ alert('Erro: '+e.message); }
+  btn.disabled = false;
+  btn.textContent = '🖨️ Imprimir manual';
+}
+
+function imprimirFichaNav(ficha){
+  const dataFmt = new Date(ficha.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const exRows = (ficha.exercicios||[]).map((ex,i)=>`
+    <tr style="background:${i%2===0?'#fff':'#F9F7F4'}">
+      <td style="padding:6px 10px;font-size:11px;color:#6B5E52">${ex.grupo}</td>
+      <td style="padding:6px 10px;font-size:13px;font-weight:600">${ex.nome}</td>
+      <td style="padding:6px 10px;font-size:13px;text-align:center;color:#6D28D9;font-weight:700">${ex.series}×${ex.reps}</td>
+      <td style="padding:6px 10px;font-size:13px;text-align:center;font-weight:700;color:${ex.ultima_carga?'#DC2626':'#8A8278'}">${ex.ultima_carga?ex.ultima_carga+' kg':'—'}</td>
+      <td style="padding:6px 10px;font-size:11px;color:#8A8278">${ex.obs||''}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Segoe UI',Arial,sans-serif;padding:16px;max-width:720px;margin:0 auto}
+  @media print{body{padding:8px}}</style></head><body>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:3px solid #6D28D9">
+    <div>
+      <div style="font-size:22px;font-weight:900">${ficha.nome}</div>
+      <div style="font-size:13px;color:#6D28D9;font-weight:700">${ficha.ficha_nome}</div>
+      <div style="font-size:12px;color:#8A8278">${dataFmt}</div>
+    </div>
+    <div style="font-size:11px;color:#8A8278;text-align:right">ESTÚDIO Se7e</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;border:1px solid #E8E3DC">
+    <thead><tr style="background:#1C1916;color:#fff">
+      <th style="padding:7px 10px;text-align:left;font-size:11px;width:90px">GRUPO</th>
+      <th style="padding:7px 10px;text-align:left;font-size:11px">EXERCÍCIO</th>
+      <th style="padding:7px 10px;text-align:center;font-size:11px;width:70px">SÉRIES</th>
+      <th style="padding:7px 10px;text-align:center;font-size:11px;width:80px">CARGA</th>
+      <th style="padding:7px 10px;text-align:left;font-size:11px;width:120px">OBS</th>
+    </tr></thead>
+    <tbody>${exRows}</tbody>
+  </table>
+  <script>window.onload=function(){window.print();setTimeout(function(){window.close();},800);}<\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=780,height=600');
+  if(w){ w.document.write(html); w.document.close(); }
 }
 
 

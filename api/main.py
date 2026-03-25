@@ -578,3 +578,159 @@ async def aulas_professor(instructor_id: str, data: str, _=Depends(check_api_key
 
     return enrollments
 
+
+# ════════════════════════════════════════════════════════
+# IMPRESSÃO DE FICHAS DE TREINO
+# Fluxo: 5 min antes da aula →
+#   1. Busca enrollments confirmados do horário
+#   2. Para cada aluno: monta ficha (exercícios + última carga)
+#   3. Marca printed_at no enrollment
+#   4. Retorna HTML/dados para o serviço local imprimir
+# ════════════════════════════════════════════════════════
+
+@app.get("/impressao/aula/{class_slot_id}/{data}")
+async def dados_impressao_aula(class_slot_id: str, data: str, _=Depends(check_api_key)):
+    """
+    Retorna dados completos para impressão das fichas de treino
+    de todos os alunos confirmados naquele horário/data.
+    Usado pelo serviço local de impressão.
+    """
+    # 1. Buscar enrollments confirmados não impressos
+    enrollments = await sb_get("class_enrollments",
+        f"class_slot_id=eq.{class_slot_id}&class_date=eq.{data}"
+        f"&status=in.(confirmed,attended)&select=id,student_id,training_session_id,printed_at"
+    )
+    if not enrollments:
+        return {"fichas": [], "slot_id": class_slot_id, "data": data}
+
+    fichas = []
+    for enroll in enrollments:
+        sid = enroll["student_id"]
+
+        # 2. Dados do aluno
+        profile_rows = await sb_get("profiles", f"id=eq.{sid}&select=full_name,phone")
+        st_rows      = await sb_get("students",
+            f"id=eq.{sid}&select=next_training_session,current_program_id,treinos_realizados")
+
+        if not profile_rows or not st_rows:
+            continue
+
+        profile = profile_rows[0]
+        st      = st_rows[0]
+
+        # 3. Determinar a ficha a ser impressa (next_training_session)
+        session_id = enroll.get("training_session_id")
+        if not session_id and st.get("current_program_id"):
+            # Buscar a sessão pela posição next_training_session
+            sessions = await sb_get("training_sessions",
+                f"program_id=eq.{st['current_program_id']}&order=order")
+            n = st.get("next_training_session", 1) or 1
+            idx = (n - 1) % max(len(sessions), 1)
+            session_id = sessions[idx]["id"] if sessions else None
+
+        if not session_id:
+            continue
+
+        # 4. Buscar exercícios da sessão
+        session_rows = await sb_get("training_sessions",
+            f"id=eq.{session_id}&select=id,name,order,notes")
+        if not session_rows:
+            continue
+        session = session_rows[0]
+
+        ex_rows = await sb_get("training_exercises",
+            f"session_id=eq.{session_id}&select=id,exercise_id,sets,reps,rest_seconds,order,observation,superset_group_id&order=order")
+
+        # 5. Buscar nomes dos exercícios
+        if ex_rows:
+            ex_ids = ",".join({e["exercise_id"] for e in ex_rows})
+            ex_data = await sb_get("exercises", f"id=in.({ex_ids})&select=id,name,muscle_group")
+            ex_map  = {e["id"]: e for e in ex_data}
+        else:
+            ex_map = {}
+
+        # 6. Buscar última carga de cada exercício (exercise_history)
+        carga_map = {}
+        if ex_rows:
+            ex_ids_list = list({e["exercise_id"] for e in ex_rows})
+            for eid in ex_ids_list:
+                hist = await sb_get("exercise_history",
+                    f"student_id=eq.{sid}&exercise_id=eq.{eid}&select=last_weight_kg,last_recorded_at")
+                if hist:
+                    carga_map[eid] = hist[0]["last_weight_kg"]
+
+        # 7. Montar exercícios com última carga
+        exercicios = []
+        for ex in ex_rows:
+            eid   = ex["exercise_id"]
+            ex_info = ex_map.get(eid, {})
+            exercicios.append({
+                "id":           ex["id"],
+                "nome":         ex_info.get("name", ""),
+                "grupo":        ex_info.get("muscle_group", ""),
+                "series":       ex["sets"],
+                "reps":         ex["reps"],
+                "descanso":     ex["rest_seconds"],
+                "ordem":        ex["order"],
+                "obs":          ex["observation"] or "",
+                "ultima_carga": carga_map.get(eid),
+                "superset_id":  ex.get("superset_group_id"),
+            })
+
+        fichas.append({
+            "enrollment_id": enroll["id"],
+            "student_id":    sid,
+            "nome":          profile["full_name"],
+            "ficha_nome":    session["name"],
+            "ficha_ordem":   session["order"],
+            "data":          data,
+            "ja_impressa":   bool(enroll.get("printed_at")),
+            "exercicios":    exercicios,
+        })
+
+    return {
+        "fichas": fichas,
+        "slot_id": class_slot_id,
+        "data": data,
+        "total": len(fichas),
+    }
+
+
+@app.post("/impressao/marcar/{enrollment_id}")
+async def marcar_impresso(enrollment_id: str, _=Depends(check_api_key)):
+    """Marca printed_at no enrollment para evitar reimpressão."""
+    from datetime import datetime, timezone
+    await sb_patch("class_enrollments", f"id=eq.{enrollment_id}",
+        {"printed_at": datetime.now(timezone.utc).isoformat()})
+    return {"ok": True, "enrollment_id": enrollment_id}
+
+
+@app.get("/impressao/horarios/{data}")
+async def horarios_com_alunos(data: str, _=Depends(check_api_key)):
+    """
+    Retorna os horários que têm alunos confirmados em uma data.
+    Usado pelo serviço local para saber quais fichas imprimir.
+    """
+    wd = __import__('datetime').date.fromisoformat(data).weekday()
+    # Supabase weekday: 0=dom...6=sab. Python weekday: 0=seg...6=dom
+    # Convert: python 0(seg)→supa 1, python 6(dom)→supa 0
+    supa_wd = (wd + 1) % 7
+
+    slots = await sb_get("class_slots",
+        f"active=eq.true&weekday=eq.{supa_wd}&order=start_time")
+
+    result = []
+    for slot in slots:
+        count = await sb_get("class_enrollments",
+            f"class_slot_id=eq.{slot['id']}&class_date=eq.{data}"
+            f"&status=in.(confirmed,attended)&select=id")
+        if count:
+            result.append({
+                "slot_id":    slot["id"],
+                "horario":    slot["start_time"][:5],
+                "capacidade": slot["capacity"],
+                "confirmados": len(count),
+            })
+
+    return {"data": data, "horarios": result}
+
