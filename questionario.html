@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Questionário — Estúdio Se7e</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --purple:#6D28D9;--purple-l:#EDE9FE;--purple-b:#C4B5FD;
+    --green:#16A34A;--green-l:#DCFCE7;
+    --gold:#F59E0B;--gold-l:#FEF3C7;
+    --red:#DC2626;--red-l:#FEE2E2;
+    --ink:#1C1916;--ink2:#4A453F;--ink3:#8A8278;
+    --bg:#F5F0E8;--bg2:#EDE8E0;--wh:#FFFEF9;
+    --r:14px;--r-sm:8px;
+  }
+  body{background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+
+  /* Header */
+  .header{background:var(--ink);padding:0;position:relative;overflow:hidden}
+  .header-inner{padding:32px 24px 28px;position:relative;z-index:1}
+  .header::after{content:'';position:absolute;bottom:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(109,40,217,.15);pointer-events:none}
+  .studio-logo{font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff;margin-bottom:4px}
+  .studio-logo span{color:var(--gold)}
+  .header-sub{font-size:13px;color:rgba(255,255,255,.6)}
+  .q-type-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(109,40,217,.3);border:1px solid rgba(109,40,217,.5);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:#C4B5FD;margin-top:10px}
+
+  /* Progress */
+  .progress-bar{height:4px;background:rgba(255,255,255,.15)}
+  .progress-fill{height:4px;background:var(--purple-b);transition:width .4s ease}
+
+  /* Content */
+  .content{max-width:540px;margin:0 auto;padding:24px 16px 60px}
+
+  /* Intro card */
+  .intro-card{background:var(--wh);border-radius:var(--r);padding:20px;margin-bottom:20px;border:1px solid #E8E3DC;line-height:1.65;font-size:14px;color:var(--ink2)}
+  .intro-card strong{color:var(--ink)}
+
+  /* Section */
+  .section{background:var(--wh);border-radius:var(--r);border:1px solid #E8E3DC;margin-bottom:16px;overflow:hidden}
+  .section-header{padding:16px 20px 14px;border-bottom:1px solid #F0EBE1;display:flex;align-items:center;gap:12px}
+  .section-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .section-title{font-size:15px;font-weight:700;color:var(--ink)}
+  .section-sub{font-size:12px;color:var(--ink3);margin-top:1px}
+  .section-body{padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+
+  /* Field */
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
+  .field label.req::after{content:' *';color:var(--red)}
+  .fi{width:100%;padding:11px 14px;border:1.5px solid #E0DAD0;border-radius:var(--r-sm);font-size:14px;color:var(--ink);background:#fff;outline:none;transition:border-color .15s;font-family:inherit}
+  .fi:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(109,40,217,.08)}
+  .fi::placeholder{color:#C4BCB4}
+  textarea.fi{resize:vertical;min-height:80px;line-height:1.5}
+  select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A8278' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
+
+  /* Checkboxes grid */
+  .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .check-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1.5px solid #E0DAD0;border-radius:var(--r-sm);cursor:pointer;transition:all .15s;background:#fff;user-select:none}
+  .check-item:hover{border-color:var(--purple-b);background:var(--purple-l)}
+  .check-item.checked{border-color:var(--purple);background:var(--purple-l)}
+  .check-item input{display:none}
+  .check-box{width:18px;height:18px;border-radius:5px;border:2px solid #D4C9B8;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .check-item.checked .check-box{background:var(--purple);border-color:var(--purple)}
+  .check-ico{font-size:11px;color:#fff;display:none}
+  .check-item.checked .check-ico{display:block}
+  .check-label{font-size:14px;color:var(--ink);font-weight:500}
+
+  /* Radio group */
+  .radio-group{display:flex;gap:8px;flex-wrap:wrap}
+  .radio-item{display:flex;align-items:center;gap:8px;padding:10px 16px;border:1.5px solid #E0DAD0;border-radius:var(--r-sm);cursor:pointer;background:#fff;transition:all .15s;user-select:none}
+  .radio-item:hover{border-color:var(--purple-b)}
+  .radio-item.selected{border-color:var(--purple);background:var(--purple-l)}
+  .radio-item input{display:none}
+  .radio-dot{width:16px;height:16px;border-radius:50%;border:2px solid #D4C9B8;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .radio-item.selected .radio-dot{border-color:var(--purple);background:var(--purple)}
+  .radio-dot::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff;opacity:0;transition:opacity .15s}
+  .radio-item.selected .radio-dot::after{opacity:1}
+
+  /* Patologia row */
+  .pat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F0EBE1}
+  .pat-row:last-child{border-bottom:none}
+  .pat-check{width:20px;height:20px;border-radius:5px;border:2px solid #D4C9B8;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+  .pat-check.on{background:var(--purple);border-color:var(--purple)}
+  .pat-label{font-size:14px;font-weight:500;color:var(--ink);flex:1;cursor:pointer}
+  .pat-select{padding:7px 10px;border:1.5px solid #E0DAD0;border-radius:var(--r-sm);font-size:13px;color:var(--ink);background:#fff;outline:none;cursor:pointer;min-width:130px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8278' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;transition:all .15s}
+  .pat-select:disabled{opacity:.35;cursor:default}
+  .pat-select:focus{border-color:var(--purple)}
+
+  /* Submit */
+  .btn-submit{width:100%;padding:18px;background:var(--purple);color:#fff;border:none;border-radius:var(--r);font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:opacity .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
+  .btn-submit:hover{opacity:.9}
+  .btn-submit:disabled{opacity:.5;cursor:not-allowed}
+
+  /* Success screen */
+  #success{display:none;text-align:center;padding:60px 24px}
+  #success .ico{font-size:72px;margin-bottom:20px}
+  #success h2{font-size:26px;font-weight:800;margin-bottom:10px}
+  #success p{font-size:15px;color:var(--ink2);line-height:1.65;max-width:380px;margin:0 auto}
+  #success .detail{background:var(--wh);border:1px solid #E8E3DC;border-radius:var(--r);padding:16px 20px;margin:24px auto;max-width:340px;text-align:left;font-size:13px;color:var(--ink2);line-height:1.7}
+
+  /* Utils */
+  .hint{font-size:12px;color:var(--ink3);line-height:1.5}
+  .hidden{display:none!important}
+  .req-note{font-size:12px;color:var(--ink3);margin-bottom:-8px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="studio-logo">ESTÚDIO <span>Se7e</span></div>
+    <div class="header-sub">Vanessa Ramos · Vila Mariana, São Paulo</div>
+    <div class="q-type-badge" id="q-badge">📋 Questionário</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+</div>
+
+<div class="content" id="main-content">
+
+  <!-- Intro -->
+  <div class="intro-card" id="intro-card">
+    Olá! 👋 <strong>Antes de montar o seu treino</strong>, precisamos entender melhor você — seus objetivos, preferências e como está se sentindo. Leva menos de 2 minutos!
+  </div>
+
+  <p class="req-note">Campos com <strong style="color:var(--red)">*</strong> são obrigatórios</p>
+
+  <!-- SEÇÃO 1: Perfil de Treino -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-ico" style="background:#EDE9FE">💪</div>
+      <div><div class="section-title">Perfil de Treino</div>
+        <div class="section-sub">Como você quer treinar</div></div>
+    </div>
+    <div class="section-body">
+
+      <!-- Só para Entrada -->
+      <div class="field" id="f-freq-wrap">
+        <label class="req">Quantas vezes por semana você vai treinar?</label>
+        <select class="fi" id="f-freq">
+          <option value="">Selecione…</option>
+          <option value="1">1x por semana</option>
+          <option value="2">2x por semana</option>
+          <option value="3">3x por semana</option>
+          <option value="4">4x por semana</option>
+          <option value="5">5x por semana</option>
+        </select>
+      </div>
+
+      <!-- Só para Mudança -->
+      <div class="field hidden" id="f-treino-atual-wrap">
+        <label>O que você acha do seu treino atual?</label>
+        <select class="fi" id="f-treino-atual">
+          <option value="">Selecione…</option>
+          <option value="gosto_muito">Gosto muito, quero continuar igual</option>
+          <option value="gosto_ajustes">Gosto, mas quero alguns ajustes</option>
+          <option value="nao_gosto">Não estou gostando</option>
+          <option value="muito_facil">Está muito fácil</option>
+          <option value="muito_dificil">Está muito difícil</option>
+        </select>
+      </div>
+
+      <div class="field hidden" id="f-novo-treino-wrap">
+        <label>O seu novo treino deve ser:</label>
+        <select class="fi" id="f-novo-treino">
+          <option value="">Selecione…</option>
+          <option value="mais_intenso">Mais intenso que o atual</option>
+          <option value="igual">Igual ao atual</option>
+          <option value="mais_leve">Mais leve que o atual</option>
+          <option value="diferente">Completamente diferente</option>
+        </select>
+      </div>
+
+      <div class="field" id="f-objetivo-wrap">
+        <label class="req">Qual é o seu objetivo principal?</label>
+        <select class="fi" id="f-objetivo">
+          <option value="">Selecione…</option>
+          <option value="perda_peso">Perda de peso / emagrecimento</option>
+          <option value="hipertrofia">Ganho de massa muscular</option>
+          <option value="definicao">Definição muscular</option>
+          <option value="saude">Saúde e qualidade de vida</option>
+          <option value="forca">Força e performance</option>
+          <option value="reabilitacao">Reabilitação / Cuidado ortopédico</option>
+          <option value="postura">Postura e mobilidade</option>
+          <option value="condicionamento">Condicionamento físico</option>
+        </select>
+      </div>
+
+      <!-- Só para Mudança -->
+      <div class="field hidden" id="f-prioridade-wrap">
+        <label>Qual objetivo você quer priorizar no novo treino?</label>
+        <select class="fi" id="f-prioridade">
+          <option value="">Selecione…</option>
+          <option value="superior">Membros superiores (braços, peito, costas)</option>
+          <option value="inferior">Membros inferiores (pernas, glúteos)</option>
+          <option value="core">Core e abdômen</option>
+          <option value="total">Corpo todo equilibrado</option>
+          <option value="cardio">Mais cardio / condicionamento</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Existe alguma região que você quer focar mais? (pode marcar várias)</label>
+        <div class="check-grid" id="regioes-grid">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SEÇÃO 2: Histórico de Saúde -->
+  <div class="section" id="section-saude">
+    <div class="section-header">
+      <div class="section-ico" style="background:#FEF3C7">🩺</div>
+      <div><div class="section-title">Histórico de Saúde</div>
+        <div class="section-sub">Ajuda a personalizar seu treino com segurança</div></div>
+    </div>
+    <div class="section-body">
+
+      <div class="field">
+        <label>Você tem alguma patologia ou limitação? (selecione as que se aplicam)</label>
+        <div id="pat-lista"><!-- filled by JS --></div>
+      </div>
+
+      <div class="field">
+        <label>Você tem algum desses problemas de saúde?</label>
+        <div class="check-grid" id="prob-saude-grid">
+          <!-- filled by JS -->
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Sente alguma dor ou desconforto atualmente?</label>
+        <div class="radio-group" id="dor-radio">
+          <label class="radio-item" onclick="radioSel(this,'dor','nao');document.getElementById('dor-detalhe').classList.add('hidden')">
+            <input type="radio" name="dor" value="nao">
+            <div class="radio-dot"></div>
+            <span style="font-size:14px;font-weight:500">Não</span>
+          </label>
+          <label class="radio-item" onclick="radioSel(this,'dor','sim');document.getElementById('dor-detalhe').classList.remove('hidden')">
+            <input type="radio" name="dor" value="sim">
+            <div class="radio-dot"></div>
+            <span style="font-size:14px;font-weight:500">Sim</span>
+          </label>
+        </div>
+        <div id="dor-detalhe" class="hidden" style="margin-top:8px">
+          <input class="fi" id="f-dor-local" placeholder="Onde? Ex: joelho direito, lombar…">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Faz uso de algum medicamento?</label>
+        <div class="radio-group" id="med-radio">
+          <label class="radio-item" onclick="radioSel(this,'med','nao');document.getElementById('med-detalhe').classList.add('hidden')">
+            <input type="radio" name="med" value="nao">
+            <div class="radio-dot"></div>
+            <span style="font-size:14px;font-weight:500">Não</span>
+          </label>
+          <label class="radio-item" onclick="radioSel(this,'med','sim');document.getElementById('med-detalhe').classList.remove('hidden')">
+            <input type="radio" name="med" value="sim">
+            <div class="radio-dot"></div>
+            <span style="font-size:14px;font-weight:500">Sim</span>
+          </label>
+        </div>
+        <div id="med-detalhe" class="hidden" style="margin-top:8px">
+          <input class="fi" id="f-med-nome" placeholder="Qual medicamento? Ex: Levotiroxina 50mcg…">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SEÇÃO 3: Informações Adicionais -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-ico" style="background:#DCFCE7">💬</div>
+      <div><div class="section-title">Informações Adicionais</div>
+        <div class="section-sub">Qualquer coisa que queira nos contar</div></div>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Tem algo importante que a Vanessa deve saber para montar o seu treino?</label>
+        <textarea class="fi" id="f-obs" rows="4" placeholder="Ex: Tenho medo de agachamento livre, quero exercícios para fazer em casa também, viajo a trabalho…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn-submit" id="btn-submit" onclick="submeter()">
+    <span>✓</span> Enviar respostas
+  </button>
+
+</div>
+
+<!-- Success -->
+<div id="success">
+  <div class="ico">🎉</div>
+  <h2>Respostas enviadas!</h2>
+  <p>A Vanessa já recebeu suas respostas e vai usar tudo isso para montar o melhor treino pra você.</p>
+  <div class="detail" id="success-detail"></div>
+  <p style="margin-top:16px;font-size:13px;color:var(--ink3)">Você pode fechar esta página agora.</p>
+</div>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const TOKEN  = params.get('t')||'';
+const TIPO   = params.get('tipo')||'entrada'; // 'entrada' | 'mudanca'
+const IS_MUDANCA = TIPO==='mudanca';
+
+// Regiões do corpo
+const REGIOES = ['Perna','Glúteo','Barriga/Core','Peito','Costas','Ombro','Tríceps','Bíceps','Panturrilha'];
+const REGIOES_ICO = ['🦵','🍑','💫','💪','🔙','🏋','💪','💪','🦶'];
+
+// Patologias por região
+const PAT_MAP = {
+  Ombro:     ['Bursite','Tendinite','Ruptura','Artrose','Ligamento'],
+  Cervical:  ['Hernia','Protusao','Artrose'],
+  Lombar:    ['Lombalgia','Hernia','Escoliose','Lordose','Protusao','Artrose'],
+  Quadril:   ['Tendinite','Artrose','Desgaste','Protese'],
+  Joelho:    ['Tendinite','Artrose','Desgaste','Cirurgia','Ligamento','Menisco','Protese'],
+  Punho:     ['Cisto','Tendinite'],
+  Cotovelo:  ['Epicondilite','Tendinite'],
+  Tornozelo: ['Ruptura Ligamento','Artrose'],
+};
+
+const PROB_SAUDE = ['Pressão Alta','Diabetes','Fibromialgia','Hipotireoidismo','Hipotensão','Depressão / Ansiedade'];
+
+// State
+const state = {
+  regioes: new Set(),
+  patologias: {},   // {Ombro: 'Bursite', ...}
+  prob_saude: new Set(),
+  dor: '',
+  dor_local: '',
+  med: '',
+  med_nome: '',
+};
+
+// ── Setup ──
+function setup(){
+  // Tipo badge
+  const badge = document.getElementById('q-badge');
+  badge.textContent = IS_MUDANCA ? '🔄 Mudança de Treino' : '✨ Questionário de Entrada';
+
+  // Intro text
+  if(IS_MUDANCA){
+    document.getElementById('intro-card').innerHTML =
+      'Olá! 👋 A Vanessa vai atualizar o seu treino em breve. <strong>Responda algumas perguntas rápidas</strong> para ela entender o que funcionou, o que pode melhorar e o que você quer focar. Leva menos de 2 minutos!';
+  }
+
+  // Mostrar/esconder campos por tipo
+  if(IS_MUDANCA){
+    document.getElementById('f-freq-wrap').classList.add('hidden');
+    document.getElementById('f-treino-atual-wrap').classList.remove('hidden');
+    document.getElementById('f-novo-treino-wrap').classList.remove('hidden');
+    document.getElementById('f-prioridade-wrap').classList.remove('hidden');
+  }
+
+  // Regiões grid
+  const grid = document.getElementById('regioes-grid');
+  grid.innerHTML = REGIOES.map((r,i)=>`
+    <label class="check-item" onclick="toggleRegiao(this,'${r}')">
+      <input type="checkbox" value="${r}">
+      <div class="check-box"><span class="check-ico">✓</span></div>
+      <span class="check-label">${REGIOES_ICO[i]} ${r}</span>
+    </label>`).join('');
+
+  // Patologias
+  const patLista = document.getElementById('pat-lista');
+  patLista.innerHTML = Object.entries(PAT_MAP).map(([reg,opts])=>`
+    <div class="pat-row" id="pat-row-${reg}">
+      <div class="pat-check" id="pat-chk-${reg}" onclick="togglePat('${reg}')"></div>
+      <span class="pat-label" onclick="togglePat('${reg}')">${reg}</span>
+      <select class="pat-select" id="pat-sel-${reg}" disabled onchange="state.patologias['${reg}']=this.value">
+        <option value="">Especifique</option>
+        ${opts.map(o=>`<option value="${o}">${o}</option>`).join('')}
+      </select>
+    </div>`).join('');
+
+  // Problemas de saúde
+  const probGrid = document.getElementById('prob-saude-grid');
+  probGrid.innerHTML = PROB_SAUDE.map(p=>`
+    <label class="check-item" onclick="toggleProb(this,'${p}')">
+      <input type="checkbox" value="${p}">
+      <div class="check-box"><span class="check-ico">✓</span></div>
+      <span class="check-label">${p}</span>
+    </label>`).join('');
+
+  updateProgress();
+}
+
+// ── Interactions ──
+function toggleRegiao(el, nome){
+  el.classList.toggle('checked');
+  if(el.classList.contains('checked')) state.regioes.add(nome);
+  else state.regioes.delete(nome);
+  updateProgress();
+}
+
+function toggleProb(el, nome){
+  el.classList.toggle('checked');
+  if(el.classList.contains('checked')) state.prob_saude.add(nome);
+  else state.prob_saude.delete(nome);
+}
+
+function togglePat(reg){
+  const chk = document.getElementById('pat-chk-'+reg);
+  const sel = document.getElementById('pat-sel-'+reg);
+  const on = chk.classList.toggle('on');
+  sel.disabled = !on;
+  if(on) sel.focus();
+  else { delete state.patologias[reg]; sel.value=''; }
+  if(on) state.patologias[reg] = sel.value||'';
+}
+
+function radioSel(el, name, val){
+  document.querySelectorAll(`[name="${name}"]`).forEach(r=>{
+    r.closest('.radio-item').classList.remove('selected');
+  });
+  el.classList.add('selected');
+  state[name] = val;
+  updateProgress();
+}
+
+function updateProgress(){
+  const fields = IS_MUDANCA
+    ? [document.getElementById('f-treino-atual').value, document.getElementById('f-objetivo').value]
+    : [document.getElementById('f-freq').value, document.getElementById('f-objetivo').value];
+  const filled = fields.filter(Boolean).length;
+  const pct = Math.round((filled/fields.length)*100);
+  document.getElementById('prog-fill').style.width = pct+'%';
+}
+
+// ── Submit ──
+function submeter(){
+  // Validate
+  if(!IS_MUDANCA && !document.getElementById('f-freq').value){
+    alert('Por favor, selecione sua frequência semanal.'); return;
+  }
+  if(!document.getElementById('f-objetivo').value){
+    alert('Por favor, selecione seu objetivo principal.'); return;
+  }
+
+  const resp = {
+    token: TOKEN,
+    tipo: TIPO,
+    respondido_em: new Date().toISOString(),
+    // Treino
+    freq: document.getElementById('f-freq').value,
+    treino_atual: document.getElementById('f-treino-atual').value,
+    novo_treino: document.getElementById('f-novo-treino').value,
+    objetivo: document.getElementById('f-objetivo').value,
+    prioridade: document.getElementById('f-prioridade').value,
+    regioes: [...state.regioes],
+    // Saúde
+    patologias: {...state.patologias},
+    prob_saude: [...state.prob_saude],
+    dor: state.dor,
+    dor_local: document.getElementById('f-dor-local').value,
+    med: state.med,
+    med_nome: document.getElementById('f-med-nome').value,
+    obs: document.getElementById('f-obs').value,
+  };
+
+  // Save to localStorage (same domain, admin reads it)
+  try {
+    const existing = JSON.parse(localStorage.getItem('se7e_questionarios')||'[]');
+    // Remove any previous answer for same token
+    const filtered = existing.filter(r=>r.token!==TOKEN);
+    filtered.push(resp);
+    localStorage.setItem('se7e_questionarios', JSON.stringify(filtered));
+  } catch(e){}
+
+  // Show success
+  document.getElementById('main-content').style.display = 'none';
+  const succ = document.getElementById('success');
+  succ.style.display = 'block';
+  document.getElementById('success-detail').innerHTML = `
+    <strong>Suas respostas:</strong><br>
+    🎯 Objetivo: ${document.getElementById('f-objetivo').options[document.getElementById('f-objetivo').selectedIndex]?.text||'-'}<br>
+    ${resp.regioes.length?`💪 Foco: ${resp.regioes.join(', ')}<br>`:''}
+    ${resp.obs?`💬 "${resp.obs.slice(0,80)}${resp.obs.length>80?'…':''}"`:''}
+  `;
+  document.getElementById('prog-fill').style.width = '100%';
+}
+
+// ── Init ──
+// Attach live progress update to selects
+['f-freq','f-objetivo','f-treino-atual'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', updateProgress);
+});
+
+setup();
+</script>
+</body>
+</html>
