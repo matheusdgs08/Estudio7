@@ -323,8 +323,8 @@ button{cursor:pointer}
       <div class="sb-section">Alunos</div>
       <button class="sb-item" onclick="setMod('avaliacao',this)"><span class="sb-ico">📊</span> Avaliação física</button>
       <button class="sb-item" onclick="setMod('agenda_aval',this)"><span class="sb-ico">📅</span> Agenda de avaliação</button>
-      <button class="sb-item" onclick="setMod('questionarios',this)"><span class="sb-ico">📋</span> Questionários<span class="sb-badge" id="badge-quest" style="display:none">0</span></button>
-      <button class="sb-item" onclick="setMod('questionarios',this)"><span class="sb-ico">📋</span> Questionários<span class="sb-badge" id="badge-quest" style="display:none">0</span></button>
+      <button class="sb-item" onclick="setMod('quest_entrada',this)"><span class="sb-ico">✨</span> Questionário — Entrada<span class="sb-badge" id="badge-quest-entrada" style="display:none">0</span></button>
+      <button class="sb-item" onclick="setMod('quest_mudanca',this)"><span class="sb-ico">🔄</span> Questionário — Mudança<span class="sb-badge" id="badge-quest-mudanca" style="display:none">0</span></button>
       <button class="sb-item" onclick="setMod('evolucao',this)"><span class="sb-ico">📈</span> Evolução</button>
     </nav>
     <div class="sb-bottom"><button class="btn-logout-sb">✕ &nbsp;Sair</button></div>
@@ -1242,7 +1242,7 @@ function setMod(m,el){
 
 function toggleSketch(id){sketchOpen[id]=sketchOpen[id]!==false?false:true;render();}
 function render(){
-  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],pendentes:['Esboços pendentes','Fichas com cabeçalho feito — aguardando exercícios'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho'],historico:['Histórico de treinos','Programas anteriores do aluno'],agenda_aval:['Agenda de Avaliação','Gerencie horários e links para os alunos'],questionarios:['Questionários','Envie e visualize respostas dos alunos'],questionarios:['Questionários','Envie e visualize respostas dos alunos'],agenda_aval:['Agenda de Avaliação','Gerencie horários e links para os alunos'],questionarios:['Questionários','Envie e visualize respostas dos alunos'],questionarios:['Questionários','Envie e visualize respostas dos alunos']};
+  const titles={treinos:['Fichas de treino','Programas e sequências dos alunos'],fila:['Solicitações dos professores','Trocas e remoções pendentes'],catalogo:['Catálogo de exercícios','Gerencie os exercícios disponíveis'],pendentes:['Esboços pendentes','Fichas com cabeçalho feito — aguardando exercícios'],avaliacao:['Avaliação física','Medidas e evolução'],evolucao:['Evolução','Frequência e desempenho'],historico:['Histórico de treinos','Programas anteriores do aluno'],agenda_aval:['Agenda de Avaliação','Gerencie horários e links para os alunos'],quest_entrada:['Questionário — Aluno Novo','Entrada automática ao cadastrar aluno'],quest_mudanca:['Questionário — Mudança de Treino','Envie quando for atualizar o programa'],quest_entrada:['Questionário — Aluno Novo','Entrada automática ao cadastrar aluno'],quest_mudanca:['Questionário — Mudança de Treino','Envie quando for atualizar o programa'],agenda_aval:['Agenda de Avaliação','Gerencie horários e links para os alunos'],quest_entrada:['Questionário — Aluno Novo','Entrada automática ao cadastrar aluno'],quest_mudanca:['Questionário — Mudança de Treino','Envie quando for atualizar o programa'],quest_entrada:['Questionário — Aluno Novo','Entrada automática ao cadastrar aluno'],quest_mudanca:['Questionário — Mudança de Treino','Envie quando for atualizar o programa']};
   // Badge pendentes
   const nPend=countPendentes();
   const bpend=document.getElementById('badge-pendentes');
@@ -1277,7 +1277,8 @@ function render(){
     modulo==='historico'?renderHistorico():
     modulo==='avaliacao'?renderAvaliacao():
     modulo==='agenda_aval'?renderAgendaAval():
-    modulo==='questionarios'?renderQuestionarios():
+    modulo==='quest_entrada'?renderQuestionarios('entrada'):
+    modulo==='quest_mudanca'?renderQuestionarios('mudanca'):
     modulo==='questionarios'?renderQuestionarios():
     modulo==='agenda_aval'?renderAgendaAval():
     modulo==='questionarios'?renderQuestionarios():
@@ -4188,34 +4189,43 @@ function getLinkQ(token, tipo){
   return `${window.location.origin}/questionario?t=${token}&tipo=${tipo}`;
 }
 
-function updateQuestBadge(){
+function updateQuestBadges(){
   const tokens = getTokens();
   const resps  = getQuestionarios();
-  // Novos: respondidos mas ainda não vistos
-  const novos  = resps.filter(r=>{
-    const tk = tokens.find(t=>t.token===r.token);
-    return tk && !tk.visto;
-  }).length;
-  const badge = document.getElementById('badge-quest');
-  if(badge){ badge.textContent=novos; badge.style.display=novos?'':'none'; }
+  ['entrada','mudanca'].forEach(tipo=>{
+    const novos = resps.filter(r=>{
+      const tk = tokens.find(t=>t.token===r.token && t.tipo===tipo);
+      return tk && !tk.visto;
+    }).length;
+    const badge = document.getElementById('badge-quest-'+tipo);
+    if(badge){ badge.textContent=novos; badge.style.display=novos?'':'none'; }
+  });
 }
 
-function renderQuestionarios(){
+function renderQuestionarios(tipoModulo){
+  // Store current type in state
+  if(tipoModulo) questState.tipoModulo = tipoModulo;
+  const tipo = questState.tipoModulo || 'entrada';
+
   // Load from API if not yet loaded
   if(!_questCache.carregado){
-    carregarQuestCache().then(()=>{ updateQuestBadge(); render(); });
+    carregarQuestCache().then(()=>{ updateQuestBadges(); render(); });
     return `<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--ink3);gap:10px">
-      <div style="font-size:20px">⏳</div><div>Carregando questionários…</div></div>`;
+      <div style="font-size:20px">⏳</div><div>Carregando…</div></div>`;
   }
-  updateQuestBadge();
-  if(questState.view==='enviar')   return renderQuestEnviar();
+  updateQuestBadges();
+  if(questState.view==='enviar')   return renderQuestEnviar(tipo);
   if(questState.view==='resposta') return renderQuestResposta();
-  return renderQuestLista();
+  return renderQuestLista(tipo);
 }
 
 // ── Lista de questionários enviados ──
-function renderQuestLista(){
-  const tokens = getTokens().slice().reverse();
+function renderQuestLista(tipo){
+  const tipoLabel = tipo==='entrada' ? '✨ Aluno Novo' : '🔄 Mudança de Treino';
+  const tipoDesc  = tipo==='entrada'
+    ? 'Enviado automaticamente ao cadastrar. Reenvie se necessário.'
+    : 'Enviado manualmente quando for atualizar o programa.';
+  const tokens = getTokens().filter(t=>t.tipo===tipo).slice().reverse();
   const resps  = getQuestionarios();
 
   const items = tokens.length ? tokens.map(tk=>{
@@ -4226,22 +4236,30 @@ function renderQuestLista(){
     const tipoBadge = tk.tipo==='mudanca' ? '🔄 Mudança' : '✨ Entrada';
     const isNovo    = resp && !tk.visto;
 
-    return `<div style="background:var(--wh);border:1.5px solid ${isNovo?'var(--purple-b)':'var(--bg3)'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer"
-      onclick="verResposta('${tk.token}')">
-      ${isNovo?`<div style="width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0"></div>`:'<div style="width:8px;height:8px;flex-shrink:0"></div>'}
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tk.aluno_nm}</div>
-        <div style="font-size:11px;color:var(--ink3);margin-top:2px">${tipoBadge} · enviado ${dataEnvio}</div>
+    return `<div style="background:var(--wh);border:1.5px solid ${isNovo?'var(--purple-b)':'var(--bg3)'};border-radius:12px;overflow:hidden">
+      <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+        ${isNovo?`<div style="width:8px;height:8px;border-radius:50%;background:var(--purple);flex-shrink:0"></div>`:'<div style="width:8px;height:8px;flex-shrink:0"></div>'}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tk.aluno_nm}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px">Enviado ${dataEnvio}${tk.aluno_phone?' · '+tk.aluno_phone:''}</div>
+        </div>
+        ${status==='respondido'
+          ? `<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;flex-shrink:0">${isNovo?'🔔 Novo':'✓'} ${dataResp}</span>`
+          : `<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#FEF3C7;color:#92400E;border:1px solid #FCD34D;flex-shrink:0">⏳ Pendente</span>`}
       </div>
-      ${status==='respondido'
-        ? `<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0">${isNovo?'🔔 Novo':'✓ Respondido'} · ${dataResp}</span>`
-        : `<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#F9F7F4;color:var(--ink3);border:1px solid var(--bg3)">⏳ Pendente</span>`}
-      <span style="color:var(--ink3);font-size:16px">${status==='respondido'?'›':'·'}</span>
+      <div style="border-top:1px solid var(--bg3);padding:8px 14px;display:flex;gap:6px;background:var(--bg)">
+        ${status==='respondido'
+          ? `<button onclick="verResposta('${tk.token}')" style="flex:1;padding:7px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">👁 Ver respostas</button>`
+          : `<button disabled style="flex:1;padding:7px;background:var(--bg3);color:var(--ink3);border:none;border-radius:8px;font-size:12px">Aguardando resposta</button>`}
+        <button onclick="reenviarLink('${tk.token}')" style="padding:7px 12px;background:${tk.aluno_phone?'#25D366':'var(--bg)'};color:${tk.aluno_phone?'#fff':'var(--ink3)'};border:1px solid ${tk.aluno_phone?'#25D366':'var(--bg3)'};border-radius:8px;cursor:pointer;font-size:12px;font-weight:500">
+          📲 Reenviar
+        </button>
+      </div>
     </div>`;
   }).join('') : `<div style="text-align:center;padding:48px 20px;color:var(--ink3)">
     <div style="font-size:36px;margin-bottom:12px">📋</div>
-    <div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum questionário enviado</div>
-    <div style="font-size:12px">Clique em "Enviar questionário" para começar</div>
+    <div style="font-size:14px;font-weight:600;margin-bottom:6px">${tipo==='entrada'?'Nenhum questionário de entrada enviado':'Nenhum questionário de mudança enviado'}</div>
+    <div style="font-size:12px">${tipo==='entrada'?'Enviado automaticamente ao cadastrar. Ou clique em Enviar para reenviar.':'Clique em Enviar quando for atualizar o programa do aluno.'}</div>
   </div>`;
 
   const pendentes = tokens.filter(tk=>!resps.find(r=>r.token===tk.token)).length;
@@ -4250,14 +4268,14 @@ function renderQuestLista(){
   return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
       <div style="flex:1">
-        <div style="font-size:14px;font-weight:600">Questionários</div>
-        <div style="font-size:11px;color:var(--ink3)">${tokens.length} enviados · ${respondidos} respondidos · ${pendentes} pendentes</div>
+        <div style="font-size:14px;font-weight:600">${tipoLabel}</div>
+        <div style="font-size:11px;color:var(--ink3)">${tipoDesc}</div>
       </div>
       <button onclick="_questCache.carregado=false;render()" style="padding:8px 14px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink3)" title="Recarregar">🔄</button>
       <button onclick="_questCache.carregado=false;render()" style="padding:8px 14px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink3)" title="Recarregar">🔄</button>
-      <button onclick="questState.view='enviar';questState.alunoEnvio=null;questState.buscaEnvio='';render()"
+      <button onclick="questState.view='enviar';questState.alunoEnvio=null;questState.buscaEnvio='';questState.tipoEnvio=questState.tipoModulo||'entrada';render()"
         style="padding:8px 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
-        📤 Enviar questionário
+        📤 Enviar
       </button>
     </div>
     <div style="padding:12px 16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px">${items}</div>
@@ -4265,11 +4283,11 @@ function renderQuestLista(){
 }
 
 // ── Enviar questionário para aluno ──
-function renderQuestEnviar(){
+function renderQuestEnviar(tipo){
+  tipo = tipo || questState.tipoEnvio || questState.tipoModulo || 'entrada';
   const busca = questState.buscaEnvio||'';
   const sel   = questState.alunoEnvio;
   const alunos = busca ? D.alunos.filter(a=>a.nm.toLowerCase().includes(busca.toLowerCase())).slice(0,8) : [];
-  const tipo   = questState.tipoEnvio||'entrada';
 
   const links = sel ? {
     entrada: getLinkQ(questState._token_ent||'preview', 'entrada'),
@@ -4308,20 +4326,12 @@ function renderQuestEnviar(){
         <button onclick="questState.alunoEnvio=null;render()" style="border:none;background:transparent;cursor:pointer;color:#6B5E52;font-size:18px">✕</button>
       </div>
 
-      <!-- Tipo -->
-      <div>
-        <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:8px">Tipo de questionário</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div onclick="questState.tipoEnvio='entrada';render()" style="padding:14px;border:2px solid ${tipo==='entrada'?'var(--purple)':'var(--bg3)'};border-radius:12px;cursor:pointer;background:${tipo==='entrada'?'#EDE9FE':'var(--wh)'}">
-            <div style="font-size:20px;margin-bottom:4px">✨</div>
-            <div style="font-size:13px;font-weight:700;color:${tipo==='entrada'?'var(--purple)':'var(--ink)'}">Entrada</div>
-            <div style="font-size:11px;color:var(--ink3);margin-top:2px">Novo aluno chegando</div>
-          </div>
-          <div onclick="questState.tipoEnvio='mudanca';render()" style="padding:14px;border:2px solid ${tipo==='mudanca'?'var(--purple)':'var(--bg3)'};border-radius:12px;cursor:pointer;background:${tipo==='mudanca'?'#EDE9FE':'var(--wh)'}">
-            <div style="font-size:20px;margin-bottom:4px">🔄</div>
-            <div style="font-size:13px;font-weight:700;color:${tipo==='mudanca'?'var(--purple)':'var(--ink)'}">Mudança de Treino</div>
-            <div style="font-size:11px;color:var(--ink3);margin-top:2px">Atualizando o programa</div>
-          </div>
+      <!-- Tipo info -->
+      <div style="background:${tipo==='entrada'?'#EDE9FE':'#F0FDF4'};border:1.5px solid ${tipo==='entrada'?'var(--purple-b)':'#86EFAC'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:24px">${tipo==='entrada'?'✨':'🔄'}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${tipo==='entrada'?'var(--purple)':'#166534'}">${tipo==='entrada'?'Questionário de Entrada':'Questionário de Mudança de Treino'}</div>
+          <div style="font-size:11px;color:${tipo==='entrada'?'var(--ink3)':'#166534'}">${tipo==='entrada'?'Enviado ao novo aluno para montar o primeiro treino':'Enviado quando a Vanessa vai atualizar o programa'}</div>
         </div>
       </div>
 
