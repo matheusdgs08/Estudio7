@@ -188,7 +188,7 @@ const MOD_TITLES = {
   alunos:       ['Alunos', 'Cadastro e ficha dos alunos'],
   contratos:    ['Contratos', 'Criar e gerenciar contratos'],
   agenda:       ['Agenda do dia', 'Horários, vagas e check-in'],
-  experimentais:['Experimentais', 'Pipeline de leads e agendamentos'],
+  experimentais:['Experimentais', 'Pipeline de leads e agendamentos de aulas experimentais'],
   pausas:       ['Pausas', 'Pausas de contrato'],
   impressao:    ['Impressão de fichas', 'Configure e monitore a impressão automática'],
 };
@@ -284,7 +284,8 @@ function renderContent(){
   if(modulo==='alunos')    renderAlunos(c, ta);
   else if(modulo==='contratos') renderContratos(c, ta);
   else if(modulo==='agenda')   { renderAgenda(c, ta); return; }
-  else if(modulo==='impressao') renderImpressao(c, ta);
+  else if(modulo==='impressao')    renderImpressao(c, ta);
+  else if(modulo==='experimentais'){ renderExperimentais(c, ta); return; }
   else c.innerHTML = `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Módulo ${modulo} em construção.</div></div>`;
 }
 
@@ -2393,6 +2394,565 @@ function imprimirFichaNav(ficha){
 
   const w = window.open('','_blank','width=780,height=600');
   if(w){ w.document.write(html); w.document.close(); }
+}
+
+
+
+// ══════════════════════════════════════════════════════
+// MÓDULO EXPERIMENTAIS
+// Pipeline: Novo → Agendado → Compareceu → Convertido
+// ══════════════════════════════════════════════════════
+
+let expLeads      = [];   // todos os leads
+let expExps       = [];   // todos os experimentais
+let expLoaded     = false;
+let expView       = 'pipeline'; // 'pipeline' | 'novo' | 'detalhe'
+let expLeadSel    = null;
+let expFormNovo   = null;
+
+const EXP_STATUS = {
+  new:       { lbl:'Novo',       bg:'#EFF6FF', tc:'#1E40AF', bc:'#BFDBFE', ico:'🆕' },
+  scheduled: { lbl:'Agendado',   bg:'#FEF3C7', tc:'#92400E', bc:'#FCD34D', ico:'📅' },
+  attended:  { lbl:'Compareceu', bg:'#F0FDF4', tc:'#166534', bc:'#86EFAC', ico:'✅' },
+  no_show:   { lbl:'Não veio',   bg:'#FEF2F2', tc:'#991B1B', bc:'#FECACA', ico:'❌' },
+  converted: { lbl:'Convertido', bg:'#EDE9FE', tc:'#5B21B6', bc:'#C4B5FD', ico:'🎉' },
+  lost:      { lbl:'Perdido',    bg:'#F3F4F6', tc:'#6B7280', bc:'#E5E7EB', ico:'👻' },
+};
+
+const ORIGENS = ['Instagram','Indicação','Google','Passa a passo','WhatsApp','Outro'];
+
+async function loadExperimentais(){
+  const [leads, exps] = await Promise.all([
+    sbGet('leads', 'order=created_at.desc'),
+    sbGet('experimentals', 'order=scheduled_date.desc,scheduled_time.desc'),
+  ]);
+  expLeads = leads;
+  expExps  = exps;
+  expLoaded = true;
+}
+
+// ── Enriquecer leads com seu experimental ──
+function enrichLead(lead){
+  const exp = expExps.filter(e=>e.lead_id===lead.id)
+    .sort((a,b)=>b.scheduled_date?.localeCompare(a.scheduled_date||'')||0)[0];
+  return { ...lead, _exp: exp||null };
+}
+
+// ── Render principal ──
+async function renderExperimentais(container, ta){
+  ta.innerHTML = `
+    <button class="btn btn-secondary" onclick="expLoaded=false;renderContent()">🔄</button>
+    <button class="btn btn-primary" onclick="abrirNovoLead()">+ Novo lead</button>`;
+
+  if(!expLoaded){
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando…</div></div>';
+    loadExperimentais().then(()=>renderContent());
+    return;
+  }
+
+  if(expView==='novo')   { renderExpFormNovo(container); return; }
+  if(expView==='detalhe'){ renderExpDetalhe(container); return; }
+
+  renderExpPipeline(container);
+}
+
+// ── PIPELINE (Kanban por status) ──
+function renderExpPipeline(container){
+  const colunas = ['new','scheduled','attended','converted'];
+  const leads_enrich = expLeads.map(enrichLead);
+
+  const hoje = new Date().toISOString().slice(0,10);
+
+  // Stats rápidas
+  const total    = expLeads.length;
+  const conv     = expLeads.filter(l=>l.status==='converted').length;
+  const agendHoje= expExps.filter(e=>e.scheduled_date===hoje).length;
+  const pendFup  = leads_enrich.filter(l=>{
+    const e=l._exp;
+    return e&&e.status==='attended'&&
+      (!e.followup_24h_sent||!e.followup_72h_sent||!e.followup_7d_sent);
+  }).length;
+
+  const statsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 24px;flex-shrink:0;border-bottom:1px solid var(--bg3)">
+      ${[
+        ['Total de leads', total, 'var(--ink)'],
+        ['Agendados hoje', agendHoje, 'var(--gold)'],
+        ['Convertidos', conv, 'var(--purple)'],
+        ['Follow-ups pendentes', pendFup, pendFup?'var(--red)':'var(--green)'],
+      ].map(([lbl,val,cor])=>`
+        <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 14px">
+          <div style="font-size:22px;font-weight:800;color:${cor}">${val}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${lbl}</div>
+        </div>`).join('')}
+    </div>`;
+
+  // Colunas Kanban
+  const kanban = colunas.map(status=>{
+    const st = EXP_STATUS[status];
+    const cards = leads_enrich
+      .filter(l=>l.status===status)
+      .map(l=>{
+        const e = l._exp;
+        const dataExp = e?.scheduled_date ? fmtDate(e.scheduled_date) : '—';
+        const horaExp = e?.scheduled_time?.slice(0,5)||'';
+        return `<div onclick="expLeadSel=expLeads.find(x=>x.id==='${l.id}');expView='detalhe';renderContent()"
+          style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 12px;cursor:pointer;margin-bottom:6px;transition:box-shadow .1s"
+          onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,.08)'"
+          onmouseout="this.style.boxShadow='none'">
+          <div style="display:flex;align-items:flex-start;gap:8px">
+            <div style="width:32px;height:32px;border-radius:50%;background:${avColor(l.name)};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">${ini(l.name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.name}</div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:1px">${l.origin||'—'} ${l.phone?'· '+fmtPhone(l.phone):''}</div>
+            </div>
+          </div>
+          ${e?`<div style="margin-top:6px;font-size:11px;color:var(--ink3);display:flex;gap:8px">
+            <span>📅 ${dataExp}${horaExp?' '+horaExp:''}</span>
+          </div>`:''}
+          ${l._exp?.status==='attended'&&(!l._exp?.followup_24h_sent)?
+            `<div style="margin-top:5px;font-size:10px;background:#FEF3C7;color:#92400E;border-radius:6px;padding:2px 7px;display:inline-block">⏰ Follow-up pendente</div>`:''
+          }
+        </div>`;
+      }).join('') || `<div style="padding:16px;text-align:center;color:var(--ink3);font-size:12px">Sem leads</div>`;
+
+    return `<div style="flex:1;min-width:200px;max-width:280px;display:flex;flex-direction:column">
+      <div style="background:${st.bg};border:1px solid ${st.bc};border-radius:10px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">${st.ico}</span>
+        <span style="font-size:13px;font-weight:700;color:${st.tc}">${st.lbl}</span>
+        <span style="margin-left:auto;background:${st.bc};color:${st.tc};font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px">${leads_enrich.filter(l=>l.status===status).length}</span>
+      </div>
+      <div style="overflow-y:auto;flex:1;padding-right:2px">${cards}</div>
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      ${statsHtml}
+      <div style="padding:14px 24px;overflow:auto;flex:1">
+        <div style="display:flex;gap:12px;min-width:700px;height:100%">${kanban}</div>
+      </div>
+    </div>`;
+}
+
+// ── DETALHE DO LEAD ──
+function renderExpDetalhe(container){
+  const l = expLeadSel;
+  if(!l){ expView='pipeline'; renderContent(); return; }
+  const e = expExps.filter(x=>x.lead_id===l.id)
+    .sort((a,b)=>(b.scheduled_date||'').localeCompare(a.scheduled_date||''))[0];
+  const st = EXP_STATUS[l.status]||EXP_STATUS.new;
+  const hoje = new Date().toISOString().slice(0,10);
+
+  // Próximos status disponíveis
+  const transicoes = {
+    new:       ['scheduled'],
+    scheduled: ['attended','no_show'],
+    attended:  ['converted','lost'],
+    no_show:   ['scheduled','lost'],
+    converted: [],
+    lost:      ['scheduled'],
+  };
+
+  const btnTransicoes = (transicoes[l.status]||[]).map(ns=>{
+    const s = EXP_STATUS[ns];
+    return `<button class="btn" onclick="mudarStatusLead('${l.id}','${ns}')"
+      style="background:${s.bg};color:${s.tc};border:1px solid ${s.bc};font-size:12px;padding:7px 14px">
+      ${s.ico} ${s.lbl}
+    </button>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <button onclick="expView='pipeline';expLeadSel=null;renderContent()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+        <div style="width:36px;height:36px;border-radius:50%;background:${avColor(l.name)};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff">${ini(l.name)}</div>
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700">${l.name}</div>
+          <div style="font-size:11px;color:var(--ink3)">${l.origin||'—'} · ${fmtDate(l.created_at)}</div>
+        </div>
+        <span style="font-size:12px;padding:4px 12px;border-radius:20px;background:${st.bg};color:${st.tc};border:1px solid ${st.bc};font-weight:600">${st.ico} ${st.lbl}</span>
+      </div>
+
+      <div class="detail">
+        <!-- Dados do lead -->
+        <div class="card">
+          <div class="card-hdr"><span class="sb-ico">👤</span><span class="card-hdr-title">Dados</span>
+            <button class="btn btn-secondary" style="margin-left:auto;padding:4px 10px;font-size:11px" onclick="abrirEditarLead('${l.id}')">✏️ Editar</button>
+          </div>
+          <div class="card-body">
+            <div class="field-grid">
+              <div class="field"><label>Nome</label><div class="val">${l.name}</div></div>
+              <div class="field"><label>Origem</label><div class="val">${l.origin||'—'}</div></div>
+              <div class="field"><label>WhatsApp</label>
+                <div class="val">${l.phone?`<a href="${waLink(l.phone)}" target="_blank" style="color:var(--blue)">${fmtPhone(l.phone)}</a>`:'—'}</div>
+              </div>
+              <div class="field"><label>Cadastrado em</label><div class="val">${fmtDate(l.created_at)}</div></div>
+            </div>
+            ${l.notes?`<div style="margin-top:8px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--ink2)">📝 ${l.notes}</div>`:''}
+          </div>
+        </div>
+
+        <!-- Experimental -->
+        <div class="card">
+          <div class="card-hdr"><span class="sb-ico">🧪</span><span class="card-hdr-title">Aula experimental</span>
+            ${l.status!=='converted'&&l.status!=='lost'?`<button class="btn btn-secondary" style="margin-left:auto;padding:4px 10px;font-size:11px" onclick="abrirAgendarExp('${l.id}')">📅 Agendar</button>`:''}
+          </div>
+          <div class="card-body">
+            ${e?`
+              <div class="field-grid">
+                <div class="field"><label>Data</label><div class="val">${fmtDate(e.scheduled_date)}</div></div>
+                <div class="field"><label>Horário</label><div class="val">${e.scheduled_time?.slice(0,5)||'—'}</div></div>
+                <div class="field"><label>Status</label>
+                  <div class="val"><span style="background:${(EXP_STATUS[e.status]||EXP_STATUS.new).bg};color:${(EXP_STATUS[e.status]||EXP_STATUS.new).tc};padding:2px 10px;border-radius:20px;font-size:12px;font-weight:600">${(EXP_STATUS[e.status]||EXP_STATUS.new).lbl}</span></div>
+                </div>
+              </div>
+              ${e.notes?`<div style="margin-top:6px;font-size:12px;color:var(--ink2)">📝 ${e.notes}</div>`:''}
+              <!-- Follow-ups -->
+              <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+                <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:${e.followup_24h_sent?'#ECFDF5':'#F3F4F6'};color:${e.followup_24h_sent?'#065F46':'#6B7280'};border:1px solid ${e.followup_24h_sent?'#A7F3D0':'#E5E7EB'}">
+                  ${e.followup_24h_sent?'✓':'○'} Follow-up 24h
+                </span>
+                <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:${e.followup_72h_sent?'#ECFDF5':'#F3F4F6'};color:${e.followup_72h_sent?'#065F46':'#6B7280'};border:1px solid ${e.followup_72h_sent?'#A7F3D0':'#E5E7EB'}">
+                  ${e.followup_72h_sent?'✓':'○'} Follow-up 72h
+                </span>
+                <span style="font-size:11px;padding:3px 9px;border-radius:20px;background:${e.followup_7d_sent?'#ECFDF5':'#F3F4F6'};color:${e.followup_7d_sent?'#065F46':'#6B7280'};border:1px solid ${e.followup_7d_sent?'#A7F3D0':'#E5E7EB'}">
+                  ${e.followup_7d_sent?'✓':'○'} Follow-up 7d
+                </span>
+              </div>`
+            :`<div style="color:var(--ink3);font-size:13px">Nenhuma aula experimental agendada.</div>`}
+          </div>
+        </div>
+
+        <!-- Ações de pipeline -->
+        ${btnTransicoes?`
+        <div class="card">
+          <div class="card-hdr"><span class="sb-ico">⚡</span><span class="card-hdr-title">Avançar pipeline</span></div>
+          <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+            ${btnTransicoes}
+          </div>
+        </div>`:''}
+
+        <!-- WhatsApp rápido -->
+        ${l.phone?`
+        <div class="card">
+          <div class="card-hdr"><span class="sb-ico">📲</span><span class="card-hdr-title">Mensagens rápidas</span></div>
+          <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+            ${e?.scheduled_date?`<a href="${waLink(l.phone,
+              `Olá ${l.name.split(' ')[0]}! 😊 Confirmo sua aula experimental no Estúdio Se7e em ${fmtDate(e.scheduled_date)} às ${e.scheduled_time?.slice(0,5)||''}. Qualquer dúvida estou aqui! _Estúdio Se7e_`)}"
+              target="_blank" class="btn btn-green" style="text-decoration:none;font-size:12px">✅ Confirmação</a>`:''}
+            ${e?.scheduled_date?`<a href="${waLink(l.phone,
+              `Olá ${l.name.split(' ')[0]}! 👋 Lembrando da sua aula experimental amanhã, ${fmtDate(e.scheduled_date)} às ${e.scheduled_time?.slice(0,5)||''}. Te esperamos! _Estúdio Se7e_`)}"
+              target="_blank" class="btn btn-secondary" style="text-decoration:none;font-size:12px">🔔 Lembrete</a>`:''}
+            ${l.status==='attended'?`<a href="${waLink(l.phone,
+              `Olá ${l.name.split(' ')[0]}! 😊 Foi um prazer ter você no Estúdio Se7e! Como se sentiu? Posso te passar as opções de planos disponíveis? _Estúdio Se7e_`)}"
+              target="_blank" class="btn btn-secondary" style="text-decoration:none;font-size:12px">💬 Follow-up</a>`:''}
+            <a href="${waLink(l.phone)}" target="_blank" class="btn btn-secondary" style="text-decoration:none;font-size:12px">📲 Abrir WhatsApp</a>
+          </div>
+        </div>`:''}
+
+        <!-- Conversão -->
+        ${l.status==='attended'?`
+        <div style="background:var(--purple-l);border:1.5px solid var(--purple-b);border-radius:var(--r);padding:14px 16px">
+          <div style="font-size:14px;font-weight:700;color:var(--purple);margin-bottom:6px">🎉 Converter em aluno</div>
+          <div style="font-size:12px;color:var(--ink2);margin-bottom:12px">Compareceu à experimental e quer fechar? Converta para criar o cadastro e o primeiro contrato.</div>
+          <button class="btn btn-primary" onclick="converterEmAluno('${l.id}')">✓ Converter em aluno</button>
+        </div>`:''}
+
+        <div style="padding-bottom:20px"></div>
+      </div>
+    </div>`;
+}
+
+// ── FORM NOVO LEAD ──
+function abrirNovoLead(){
+  expFormNovo = { name:'', phone:'', origin:'Instagram', notes:'' };
+  expView = 'novo';
+  renderContent();
+}
+
+function renderExpFormNovo(container){
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+        <button onclick="expView='pipeline';renderContent()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+        <div style="font-size:15px;font-weight:700">Novo lead</div>
+      </div>
+      <div class="detail" style="max-width:520px">
+        <div class="card">
+          <div class="card-hdr"><span class="sb-ico">👤</span><span class="card-hdr-title">Dados do lead</span></div>
+          <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+            <div class="field"><label>Nome completo *</label>
+              <input class="mi" id="nl-nome" placeholder="Ex: Ana Paula Silva" autofocus></div>
+            <div class="field"><label>WhatsApp (com DDD)</label>
+              <input class="mi" id="nl-phone" type="tel" placeholder="11987654321"></div>
+            <div class="field"><label>Como nos conheceu?</label>
+              <select class="mi" id="nl-origem">
+                ${ORIGENS.map(o=>`<option>${o}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>Observações</label>
+              <textarea class="mi" id="nl-notes" rows="2" placeholder="Interesses, horários preferidos, dúvidas…" style="resize:none"></textarea></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hdr"><span class="sb-ico">🧪</span><span class="card-hdr-title">Agendar experimental (opcional)</span></div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="field"><label>Data</label>
+                <input class="mi" id="nl-exp-data" type="date" min="${new Date().toISOString().slice(0,10)}"></div>
+              <div class="field"><label>Horário</label>
+                <select class="mi" id="nl-exp-hora">
+                  <option value="">— Sem horário —</option>
+                  ${classSlots.filter(s=>s.slot_type==='normal').map(s=>`<option value="${s.start_time.slice(0,5)}">${s.start_time.slice(0,5)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-secondary" onclick="expView='pipeline';renderContent()">Cancelar</button>
+          <button class="btn btn-primary" style="flex:1" onclick="salvarNovoLead()">✓ Salvar lead</button>
+        </div>
+        <div style="padding-bottom:20px"></div>
+      </div>
+    </div>`;
+}
+
+async function salvarNovoLead(){
+  const nome  = document.getElementById('nl-nome').value.trim();
+  const phone = document.getElementById('nl-phone').value.trim().replace(/\D/g,'');
+  const orig  = document.getElementById('nl-origem').value;
+  const notes = document.getElementById('nl-notes').value.trim();
+  const expData= document.getElementById('nl-exp-data')?.value;
+  const expHora= document.getElementById('nl-exp-hora')?.value;
+
+  if(!nome){ alert('Nome é obrigatório.'); return; }
+  const btn = document.querySelector('.detail .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Salvando…';
+
+  try {
+    const phoneF = phone?(phone.startsWith('55')?phone:'55'+phone):null;
+    const lead = await sbPost('leads',{
+      name: nome,
+      phone: phoneF,
+      origin: orig,
+      notes: notes||null,
+      status: expData&&expHora ? 'scheduled' : 'new',
+    });
+    const lid = Array.isArray(lead)?lead[0].id:lead.id;
+
+    // Agendar experimental se informado
+    if(expData && expHora){
+      await sbPost('experimentals',{
+        lead_id: lid,
+        scheduled_date: expData,
+        scheduled_time: expHora+':00',
+        status: 'scheduled',
+      });
+      // Abrir WhatsApp com confirmação
+      if(phoneF){
+        const msg = `Olá ${nome.split(' ')[0]}! 😊 Sua aula experimental no Estúdio Se7e está confirmada para ${fmtDate(expData)} às ${expHora}. Te esperamos! _Estúdio Se7e_`;
+        window.open(`https://wa.me/${phoneF}?text=${encodeURIComponent(msg)}`,'_blank');
+      }
+    }
+
+    await loadExperimentais();
+    expView = 'pipeline';
+    renderContent();
+    showToast(`✅ Lead ${nome} cadastrado!`);
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Salvar lead';
+  }
+}
+
+// ── AGENDAR EXPERIMENTAL ──
+function abrirAgendarExp(leadId){
+  const root = document.getElementById('modal-root');
+  const hoje = new Date().toISOString().slice(0,10);
+  const horasOpts = classSlots.filter(s=>s.slot_type==='normal')
+    .map(s=>`<option value="${s.start_time.slice(0,5)}">${s.start_time.slice(0,5)}</option>`).join('');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="max-width:420px">
+      <div class="modal-hdr">
+        <div class="modal-title">📅 Agendar experimental</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:9px 12px;font-size:12px;color:#92400E;margin-bottom:4px">
+          ⚠️ Máximo 1 experimental por dia. Verifique a disponibilidade antes.
+        </div>
+        <div class="field-grid">
+          <div class="field"><label>Data *</label>
+            <input class="mi" id="ae-data" type="date" min="${hoje}"></div>
+          <div class="field"><label>Horário *</label>
+            <select class="mi" id="ae-hora"><option value="">Selecione…</option>${horasOpts}</select></div>
+        </div>
+        <div class="field" style="margin-top:4px"><label>Observações</label>
+          <input class="mi" id="ae-notes" placeholder="Observações sobre a experimental…"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarAgendarExp('${leadId}')">✓ Confirmar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function confirmarAgendarExp(leadId){
+  const data  = document.getElementById('ae-data').value;
+  const hora  = document.getElementById('ae-hora').value;
+  const notes = document.getElementById('ae-notes').value;
+  if(!data||!hora){ alert('Data e horário são obrigatórios.'); return; }
+
+  // Verificar se já tem experimental nesse dia
+  const jaExiste = expExps.find(e=>e.scheduled_date===data&&e.status==='scheduled');
+  if(jaExiste){ alert('Já existe um experimental agendado neste dia. Escolha outra data.'); return; }
+
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳…';
+  try {
+    await sbPost('experimentals',{
+      lead_id: leadId,
+      scheduled_date: data,
+      scheduled_time: hora+':00',
+      status: 'scheduled',
+      notes: notes||null,
+    });
+    await sbPatch('leads',`id=eq.${leadId}`,{status:'scheduled'});
+
+    // WhatsApp
+    const lead = expLeads.find(l=>l.id===leadId);
+    if(lead?.phone){
+      const msg = `Olá ${lead.name.split(' ')[0]}! 😊 Sua aula experimental no Estúdio Se7e está confirmada para ${fmtDate(data)} às ${hora}. Qualquer dúvida estou aqui! _Estúdio Se7e_`;
+      window.open(`https://wa.me/${lead.phone}?text=${encodeURIComponent(msg)}`,'_blank');
+    }
+
+    await loadExperimentais();
+    expLeadSel = expLeads.find(l=>l.id===leadId);
+    fecharModal();
+    renderContent();
+    showToast('📅 Experimental agendado!');
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Confirmar';
+  }
+}
+
+// ── MUDAR STATUS ──
+async function mudarStatusLead(leadId, novoStatus){
+  await sbPatch('leads',`id=eq.${leadId}`,{status:novoStatus});
+  // Se compareceu, atualizar experimental
+  if(novoStatus==='attended'){
+    const e = expExps.find(x=>x.lead_id===leadId&&x.status==='scheduled');
+    if(e) await sbPatch('experimentals',`id=eq.${e.id}`,{status:'attended',attended_at:new Date().toISOString()});
+  }
+  await loadExperimentais();
+  expLeadSel = expLeads.find(l=>l.id===leadId);
+  renderContent();
+  showToast(`✅ Status atualizado: ${EXP_STATUS[novoStatus]?.lbl}`);
+}
+
+// ── CONVERTER EM ALUNO ──
+async function converterEmAluno(leadId){
+  const l = expLeads.find(x=>x.id===leadId);
+  if(!confirm(`Converter ${l.name} em aluno? Isso criará o perfil e você poderá criar o contrato.`)) return;
+
+  try {
+    const phoneF = l.phone;
+    const profile = await sbPost('profiles',{
+      full_name: l.name,
+      phone: phoneF,
+      role: 'student',
+      active: true,
+    });
+    const pid = Array.isArray(profile)?profile[0].id:profile.id;
+
+    await sbPost('students',{
+      id: pid,
+      next_training_session: 1,
+      treinos_realizados: 0,
+      blocked: false,
+    });
+
+    // Atualizar lead
+    await Promise.all([
+      sbPatch('leads',`id=eq.${leadId}`,{status:'converted',converted_student_id:pid}),
+      sbPatch('experimentals',`lead_id=eq.${leadId}&status=eq.attended`,{status:'converted',converted_at:new Date().toISOString()}),
+    ]);
+
+    // Recarregar alunos
+    await Promise.all([loadAlunos(), loadExperimentais()]);
+
+    // Ir para ficha do aluno recém-criado
+    alunoSel = alunos.find(a=>a.id===pid);
+    expView = 'pipeline';
+    setMod('alunos', document.querySelector('.sb-item'));
+    showToast(`🎉 ${l.name} convertido com sucesso!`);
+
+    // WhatsApp boas-vindas
+    if(phoneF){
+      const msg = `Olá ${l.name.split(' ')[0]}! 🎉 Seja bem-vindo(a) ao Estúdio Se7e! Seu cadastro foi criado. Em breve entraremos em contato para configurar seu plano. _Estúdio Se7e_`;
+      window.open(`https://wa.me/${phoneF}?text=${encodeURIComponent(msg)}`,'_blank');
+    }
+  } catch(e){
+    alert('Erro: '+e.message);
+  }
+}
+
+// ── EDITAR LEAD ──
+function abrirEditarLead(leadId){
+  const l = expLeads.find(x=>x.id===leadId);
+  if(!l) return;
+  const phone = (l.phone||'').replace(/\D/g,'').replace(/^55/,'');
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">✏️ Editar lead</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field" style="grid-column:span 2">
+            <label>Nome</label><input class="mi" id="el-nome" value="${l.name}"></div>
+          <div class="field"><label>WhatsApp</label>
+            <input class="mi" id="el-phone" value="${phone}" type="tel"></div>
+          <div class="field"><label>Origem</label>
+            <select class="mi" id="el-orig">
+              ${ORIGENS.map(o=>`<option${l.origin===o?' selected':''}>${o}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field" style="grid-column:span 2">
+            <label>Observações</label>
+            <input class="mi" id="el-notes" value="${l.notes||''}">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEditarLead('${leadId}')">✓ Salvar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function salvarEditarLead(leadId){
+  const nome  = document.getElementById('el-nome').value.trim();
+  const phone = document.getElementById('el-phone').value.trim().replace(/\D/g,'');
+  const orig  = document.getElementById('el-orig').value;
+  const notes = document.getElementById('el-notes').value.trim();
+  if(!nome){ alert('Nome obrigatório.'); return; }
+  const phoneF = phone?(phone.startsWith('55')?phone:'55'+phone):null;
+  await sbPatch('leads',`id=eq.${leadId}`,{name:nome,phone:phoneF,origin:orig,notes:notes||null});
+  await loadExperimentais();
+  expLeadSel = expLeads.find(l=>l.id===leadId);
+  fecharModal();
+  renderContent();
+  showToast('✅ Lead atualizado!');
 }
 
 
