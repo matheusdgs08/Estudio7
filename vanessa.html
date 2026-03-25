@@ -1422,7 +1422,10 @@ function renderTreinos(){
   function diasSemTreino(a){if(!a.treino_atualizado)return 0;const d=new Date(a.treino_atualizado+'T00:00:00');return Math.round((hoje-d)/864e5);}
   // Excesso = treinos realizados ALÉM do previsto no programa (freq × 8 semanas)
   // Positivo = passou do limite e precisa trocar. Negativo = ainda dentro do programa.
-  function excessoTreinos(a){return(a.treinos_realizados||0)-(a.treinos_previstos||0);}
+  function excessoTreinos(a){
+    const nf=(a.programas&&a.programas[0]&&a.programas[0].fichas&&a.programas[0].fichas.length)||4;
+    return(a.treinos_realizados||0)-nf;
+  }
   let alunosFiltrados=[...alunos];
   if(filtro==='excesso_desc') alunosFiltrados.sort((a,b)=>excessoTreinos(b)-excessoTreinos(a));
   else if(filtro==='excesso_asc') alunosFiltrados.sort((a,b)=>excessoTreinos(a)-excessoTreinos(b));
@@ -4293,31 +4296,80 @@ function renderQuestEnviar(tipo){
   const sel   = questState.alunoEnvio;
   const alunos = busca ? D.alunos.filter(a=>a.nm.toLowerCase().includes(busca.toLowerCase())).slice(0,8) : [];
 
-  const links = sel ? {
-    entrada: getLinkQ(questState._token_ent||'preview', 'entrada'),
-    mudanca: getLinkQ(questState._token_mud||'preview', 'mudanca'),
-  } : null;
+  // Para mudança: lista alunos com treino vencido (realizados >= fichas)
+  const vencidos = tipo==='mudanca' && !busca && !sel
+    ? D.alunos
+        .filter(a => excessoTreinos(a) > 0)
+        .sort((a,b) => excessoTreinos(b) - excessoTreinos(a))
+    : [];
 
   return `<div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0">
       <button onclick="questState.view='lista';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
       <div><div style="font-size:14px;font-weight:600">Enviar questionário</div>
-        <div style="font-size:11px;color:var(--ink3)">Gera link único por aluno</div></div>
+        <div style="font-size:11px;color:var(--ink3)">${tipo==='entrada'?'Novo aluno':'Mudança de treino'}</div></div>
     </div>
     <div style="padding:16px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px">
 
-      <!-- Busca aluno -->
+      <!-- Tipo badge -->
+      <div style="background:${tipo==='entrada'?'#EDE9FE':'#F0FDF4'};border:1.5px solid ${tipo==='entrada'?'var(--purple-b)':'#86EFAC'};border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:22px">${tipo==='entrada'?'✨':'🔄'}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${tipo==='entrada'?'var(--purple)':'#166534'}">${tipo==='entrada'?'Questionário de Entrada':'Questionário de Mudança de Treino'}</div>
+          <div style="font-size:11px;color:${tipo==='entrada'?'var(--ink3)':'#16A34A'}">${tipo==='entrada'?'Para novos alunos — enviado ao cadastrar':'Para alunos cujo treino está vencido'}</div>
+        </div>
+      </div>
+
+      <!-- Mudança: lista de vencidos -->
+      ${vencidos.length?`
       <div>
-        <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Selecionar aluno</label>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px">⏰ Treino vencido (${vencidos.length} alunos)</label>
+          <span style="font-size:11px;color:var(--ink3)">Mais atrasado primeiro</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto">
+          ${vencidos.map(a=>{
+            const nf = (a.programas&&a.programas[0]&&a.programas[0].fichas&&a.programas[0].fichas.length)||4;
+            const real = parseInt(a.treinos_realizados||0);
+            const exc  = real - nf;
+            const bc   = exc>4?'#FECACA':exc>1?'#FCD34D':'#86EFAC';
+            const tc   = exc>4?'#991B1B':exc>1?'#92400E':'#166534';
+            const ultEnvio = getTokens().filter(t=>t.aluno_id===a.id&&t.tipo==='mudanca').sort((x,y)=>y.criado_em.localeCompare(x.criado_em))[0];
+            const dataEnvio = ultEnvio ? new Date(ultEnvio.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'2-digit'}) : null;
+            return `<div style="background:var(--wh);border:1.5px solid ${bc};border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;align-items:center;gap:10px"
+              onclick="questState.alunoEnvio=${JSON.stringify({id:a.id,mat:a.mat,nm:a.nm,phone:a.phone||''})};questState.buscaEnvio=a.nm;questState._token_ent=null;questState._token_mud=null;render()">
+              <div style="${avStyle(a.nm)};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0">${ini(a.nm)}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nm}</div>
+                <div style="font-size:11px;color:${tc};font-weight:500">${real} treinos / ${nf} na ficha · <strong>+${exc} além</strong></div>
+              </div>
+              ${dataEnvio
+                ?`<div style="text-align:right;flex-shrink:0"><div style="font-size:9px;color:var(--ink3);text-transform:uppercase">Enviado</div><div style="font-size:11px;font-weight:600;color:#D97706">${dataEnvio}</div></div>`
+                :`<div style="font-size:10px;color:var(--ink3);flex-shrink:0">Nunca enviado</div>`}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`
+      :tipo==='mudanca'&&!busca&&!sel?`<div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;padding:12px 14px;font-size:13px;color:#166534">✅ Nenhum aluno com treino vencido no momento.</div>`:''}
+
+      <!-- Busca -->
+      <div>
+        <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">${tipo==='mudanca'&&vencidos.length?'Ou buscar qualquer aluno':'Buscar aluno'}</label>
         <input class="mi" placeholder="Buscar por nome…" value="${busca}"
           oninput="questState.buscaEnvio=this.value;questState.alunoEnvio=null;render()">
         ${alunos.length&&!sel?`<div style="border:1px solid var(--bg3);border-radius:10px;overflow:hidden;margin-top:4px">
-          ${alunos.map(a=>`<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--bg3);font-size:13px;display:flex;align-items:center;gap:8px"
-            onclick="questState.alunoEnvio=${JSON.stringify({id:a.id,mat:a.mat,nm:a.nm,phone:a.phone||''})};questState.buscaEnvio=a.nm;questState._token_ent=null;questState._token_mud=null;render()">
-            <div style="${avStyle(a.nm)};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff">${ini(a.nm)}</div>
-            <span style="flex:1">${a.nm}</span>
-            <span style="font-size:11px;color:var(--ink3)">${a.phone||'Sem telefone'}</span>
-          </div>`).join('')}
+          ${alunos.map(a=>{
+            const ultEnvio = getTokens().filter(t=>t.aluno_id===a.id&&t.tipo===tipo).sort((x,y)=>y.criado_em.localeCompare(x.criado_em))[0];
+            const dataEnvio = ultEnvio ? new Date(ultEnvio.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'2-digit'}) : null;
+            return `<div style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--bg3);font-size:13px;display:flex;align-items:center;gap:8px"
+              onclick="questState.alunoEnvio=${JSON.stringify({id:a.id,mat:a.mat,nm:a.nm,phone:a.phone||''})};questState.buscaEnvio=a.nm;questState._token_ent=null;questState._token_mud=null;render()">
+              <div style="${avStyle(a.nm)};width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff">${ini(a.nm)}</div>
+              <span style="flex:1">${a.nm}</span>
+              ${dataEnvio
+                ?`<span style="font-size:10px;color:#D97706;font-weight:600">📅 ${dataEnvio}</span>`
+                :`<span style="font-size:11px;color:var(--ink3)">${a.phone||'Sem tel'}</span>`}
+            </div>`;
+          }).join('')}
         </div>`:''}
       </div>
 
@@ -4336,53 +4388,33 @@ function renderQuestEnviar(tipo){
             <button onclick="questState.alunoEnvio=null;render()" style="border:none;background:transparent;cursor:pointer;color:#6B5E52;font-size:18px">✕</button>
           </div>
           ${jaEnviado?`<div style="margin-top:8px;padding:7px 10px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;font-size:12px;color:#92400E">
-            ⚠️ Questionário já enviado em <strong>${jaEnviado}</strong>. Gerar novo link vai criar um segundo envio.
+            ⚠️ Já enviado em <strong>${jaEnviado}</strong>. Gerar novo link cria um segundo envio.
           </div>`:''}
         </div>`;
       })()}
 
-      <!-- Tipo info -->
-      <div style="background:${tipo==='entrada'?'#EDE9FE':'#F0FDF4'};border:1.5px solid ${tipo==='entrada'?'var(--purple-b)':'#86EFAC'};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-        <div style="font-size:24px">${tipo==='entrada'?'✨':'🔄'}</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:${tipo==='entrada'?'var(--purple)':'#166534'}">${tipo==='entrada'?'Questionário de Entrada':'Questionário de Mudança de Treino'}</div>
-          <div style="font-size:11px;color:${tipo==='entrada'?'var(--ink3)':'#166534'}">${tipo==='entrada'?'Enviado ao novo aluno para montar o primeiro treino':'Enviado quando a Vanessa vai atualizar o programa'}</div>
-        </div>
-      </div>
-
       <!-- Gerar link -->
       ${(()=>{
         const tokenKey = tipo==='entrada'?'_token_ent':'_token_mud';
-        let link = '';
-        if(questState[tokenKey]){
-          link = getLinkQ(questState[tokenKey], tipo);
-        }
-        const msg = link ? `Olá, ${sel.nm.split(' ')[0]}! 😊\n\nA Vanessa vai ${tipo==='entrada'?'montar o seu treino':'atualizar o seu treino'} em breve e precisa de algumas informações suas. Leva menos de 2 minutinhos!\n\n👉 ${link}\n\n_Estúdio Se7e_` : '';
-        return `<div style="display:flex;flex-direction:column;gap:10px">
-          ${link?`
-          <div>
-            <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Link gerado</label>
-            <div style="display:flex;gap:6px">
-              <input class="mi" readonly value="${link}" style="font-size:12px;flex:1;background:#F9F7F4">
-              <button onclick="navigator.clipboard.writeText('${link}').then(()=>alert('Copiado!'))" style="padding:8px 12px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:12px">📋</button>
-              <button onclick="window.open('${link}','_blank')" style="padding:8px 12px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:12px">👁</button>
-            </div>
+        const link = questState[tokenKey] ? getLinkQ(questState[tokenKey], tipo) : '';
+        const msg  = link ? `Olá, ${sel.nm.split(' ')[0]}! 😊\n\nA Vanessa vai ${tipo==='entrada'?'montar o seu treino':'atualizar o seu treino'} em breve e precisa de algumas informações suas. Leva menos de 2 minutinhos!\n\n👉 ${link}\n\n_Estúdio Se7e_` : '';
+        return link?`
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Link gerado</label>
+          <div style="display:flex;gap:6px">
+            <input class="mi" readonly value="${link}" style="font-size:12px;flex:1;background:#F9F7F4">
+            <button onclick="navigator.clipboard.writeText('${link}').then(()=>alert('Copiado!'))" style="padding:8px 12px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:12px">📋</button>
+            <button onclick="window.open('${link}','_blank')" style="padding:8px 12px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:12px">👁</button>
           </div>
-          <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink2);white-space:pre-wrap;line-height:1.6">${msg}</div>
-          <div style="display:flex;gap:8px">
-            <button onclick="enviarQuestWpp()" style="flex:1;padding:14px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-              📲 Enviar via WhatsApp
-            </button>
-            <button onclick="questState['${tokenKey}']=null;render()" style="padding:14px 16px;background:var(--bg);border:1.5px solid var(--bg3);border-radius:10px;cursor:pointer;font-size:13px;color:var(--ink3)">
-              🔄 Novo link
-            </button>
-          </div>`:`
-          <button onclick="gerarEMostrarLink()" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">
-            🔑 Gerar link de questionário
-          </button>`}
-        </div>`;
+        </div>
+        <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ink2);white-space:pre-wrap;line-height:1.6">${msg}</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="enviarQuestWpp()" style="flex:1;padding:14px;background:#25D366;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">📲 Enviar via WhatsApp</button>
+          <button onclick="questState['${tokenKey}']=null;render()" style="padding:14px 16px;background:var(--bg);border:1.5px solid var(--bg3);border-radius:10px;cursor:pointer;font-size:13px;color:var(--ink3)">🔄 Novo link</button>
+        </div>`
+        :`<button onclick="gerarEMostrarLink()" style="width:100%;padding:14px;background:var(--purple);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">🔑 Gerar link de questionário</button>`;
       })()}
-      `:'<div style="text-align:center;padding:24px;color:var(--ink3);font-size:13px">Busque e selecione um aluno acima.</div>'}
+      `:'<div style="text-align:center;padding:24px;color:var(--ink3);font-size:13px">${tipo==="mudanca"?"Selecione um aluno acima ou da lista.":"Busque e selecione um aluno acima."}</div>'}
     </div>
   </div>`;
 }
