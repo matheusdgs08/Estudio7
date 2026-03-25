@@ -4163,10 +4163,14 @@ async function carregarQuestCache(){
       fetch(API_BASE+'/quest/tokens', {headers:{'x-api-key':API_KEY}}),
       fetch(API_BASE+'/quest/respostas', {headers:{'x-api-key':API_KEY}}),
     ]);
-    _questCache.tokens   = tRes.ok   ? await tRes.json()   : [];
-    _questCache.respostas = rRes.ok  ? await rRes.json()   : [];
-    _questCache.carregado = true;
-  } catch(e){ _questCache.tokens=[]; _questCache.respostas=[]; }
+    _questCache.tokens    = tRes.ok ? await tRes.json() : [];
+    _questCache.respostas = rRes.ok ? await rRes.json() : [];
+  } catch(e){
+    _questCache.tokens    = [];
+    _questCache.respostas = [];
+  } finally {
+    _questCache.carregado = true; // sempre marca como carregado
+  }
 }
 
 async function gerarToken(alunoId, aluno_nm, aluno_phone, tipo){
