@@ -318,3 +318,72 @@ class AvaliacaoCreate(BaseModel):
 async def create_avaliacao(body: AvaliacaoCreate, _=Depends(check_api_key)):
     data = await sb_post("physical_assessments", body.model_dump(exclude_none=True))
     return data
+
+# ══════════════════════════════════════════════════════
+# QUESTIONÁRIOS
+# ══════════════════════════════════════════════════════
+
+class QuestToken(BaseModel):
+    token: str
+    aluno_id: str = ""
+    aluno_nm: str
+    aluno_phone: str = ""
+    tipo: str  # 'entrada' | 'mudanca'
+
+class QuestResposta(BaseModel):
+    token: str
+    tipo: str = ""
+    freq: str = ""
+    objetivo: str = ""
+    treino_atual: str = ""
+    novo_treino: str = ""
+    prioridade: str = ""
+    regioes: list = []
+    patologias: dict = {}
+    prob_saude: list = []
+    dor: str = ""
+    dor_local: str = ""
+    med: str = ""
+    med_nome: str = ""
+    obs: str = ""
+
+# ── Criar token (painel admin) ──
+@app.post("/quest/tokens")
+async def criar_token(body: QuestToken, _=Depends(check_api_key)):
+    data = await sb_post("quest_tokens", body.model_dump())
+    return data
+
+# ── Listar tokens (painel admin) ──
+@app.get("/quest/tokens")
+async def listar_tokens(_=Depends(check_api_key)):
+    return await sb_get("quest_tokens", "order=criado_em.desc")
+
+# ── Marcar token como visto (painel admin) ──
+@app.patch("/quest/tokens/{token}")
+async def marcar_visto(token: str, _=Depends(check_api_key)):
+    return await sb_patch("quest_tokens", f"token=eq.{token}", {"visto": True, "status": "respondido"})
+
+# ── Listar respostas (painel admin) ──
+@app.get("/quest/respostas")
+async def listar_respostas(_=Depends(check_api_key)):
+    return await sb_get("quest_respostas", "order=respondido_em.desc")
+
+# ── Salvar resposta (aluno — sem autenticação) ──
+@app.post("/quest/responder")
+async def salvar_resposta(body: QuestResposta):
+    # Verify token exists
+    tokens = await sb_get("quest_tokens", f"token=eq.{body.token}")
+    if not tokens:
+        raise HTTPException(status_code=404, detail="Token inválido ou expirado")
+    # Upsert resposta
+    data = body.model_dump()
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{SUPABASE_URL}/rest/v1/quest_respostas",
+            headers={**SB_HEADERS, "Prefer": "resolution=merge-duplicates,return=representation"},
+            json=data
+        )
+    # Mark token as respondido
+    await sb_patch("quest_tokens", f"token=eq.{body.token}", {"status": "respondido"})
+    return {"ok": True}
+

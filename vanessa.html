@@ -4146,27 +4146,42 @@ let questState = {
   respostaVer: null,
 };
 
-function getQuestionarios(){
-  try{ return JSON.parse(localStorage.getItem('se7e_questionarios')||'[]'); }catch(e){ return []; }
+// Cache de dados do Supabase
+let _questCache = { tokens: null, respostas: null, carregado: false };
+
+function getQuestionarios(){ return _questCache.respostas||[]; }
+function getTokens(){ return _questCache.tokens||[]; }
+function saveTokens(t){ _questCache.tokens = t; } // local only (otimismo)
+
+const API_BASE = '';  // mesmo domínio
+const API_KEY  = 'se7e2025'; // mesmo API_SECRET do FastAPI
+
+async function carregarQuestCache(){
+  try {
+    const [tRes, rRes] = await Promise.all([
+      fetch(API_BASE+'/quest/tokens', {headers:{'x-api-key':API_KEY}}),
+      fetch(API_BASE+'/quest/respostas', {headers:{'x-api-key':API_KEY}}),
+    ]);
+    _questCache.tokens   = tRes.ok   ? await tRes.json()   : [];
+    _questCache.respostas = rRes.ok  ? await rRes.json()   : [];
+    _questCache.carregado = true;
+  } catch(e){ _questCache.tokens=[]; _questCache.respostas=[]; }
 }
 
-function getTokens(){
-  try{ return JSON.parse(localStorage.getItem('se7e_quest_tokens')||'[]'); }catch(e){ return []; }
-}
-
-function saveTokens(t){ localStorage.setItem('se7e_quest_tokens', JSON.stringify(t)); }
-
-function gerarToken(alunoId, aluno_nm, tipo){
-  const t = {
-    token: 'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),
-    alunoId, aluno_nm, tipo,
-    criado_em: new Date().toISOString(),
-    status: 'pendente',  // 'pendente' | 'respondido'
-  };
-  const tokens = getTokens();
-  tokens.push(t);
-  saveTokens(tokens);
-  return t;
+async function gerarToken(alunoId, aluno_nm, aluno_phone, tipo){
+  const token = 'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const body = {token, aluno_id:alunoId, aluno_nm, aluno_phone, tipo};
+  try {
+    await fetch(API_BASE+'/quest/tokens', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':API_KEY},
+      body:JSON.stringify(body)
+    });
+    // Update local cache
+    if(!_questCache.tokens) _questCache.tokens=[];
+    _questCache.tokens.unshift({...body, criado_em:new Date().toISOString(), status:'pendente', visto:false});
+  } catch(e){ console.error('gerarToken error',e); }
+  return {token, ...body};
 }
 
 function getLinkQ(token, tipo){
@@ -4186,6 +4201,12 @@ function updateQuestBadge(){
 }
 
 function renderQuestionarios(){
+  // Load from API if not yet loaded
+  if(!_questCache.carregado){
+    carregarQuestCache().then(()=>{ updateQuestBadge(); render(); });
+    return `<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--ink3);gap:10px">
+      <div style="font-size:20px">⏳</div><div>Carregando questionários…</div></div>`;
+  }
   updateQuestBadge();
   if(questState.view==='enviar')   return renderQuestEnviar();
   if(questState.view==='resposta') return renderQuestResposta();
@@ -4232,6 +4253,8 @@ function renderQuestLista(){
         <div style="font-size:14px;font-weight:600">Questionários</div>
         <div style="font-size:11px;color:var(--ink3)">${tokens.length} enviados · ${respondidos} respondidos · ${pendentes} pendentes</div>
       </div>
+      <button onclick="_questCache.carregado=false;render()" style="padding:8px 14px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink3)" title="Recarregar">🔄</button>
+      <button onclick="_questCache.carregado=false;render()" style="padding:8px 14px;background:var(--bg);border:1px solid var(--bg3);border-radius:8px;cursor:pointer;font-size:13px;color:var(--ink3)" title="Recarregar">🔄</button>
       <button onclick="questState.view='enviar';questState.alunoEnvio=null;questState.buscaEnvio='';render()"
         style="padding:8px 16px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
         📤 Enviar questionário
@@ -4432,12 +4455,12 @@ function renderQuestResposta(){
 }
 
 // ── Actions ──
-function gerarEMostrarLink(){
+async function gerarEMostrarLink(){
   const sel  = questState.alunoEnvio;
   const tipo = questState.tipoEnvio||'entrada';
   const tokenKey = tipo==='entrada'?'_token_ent':'_token_mud';
   if(!questState[tokenKey]){
-    const tk = gerarToken(sel.id, sel.nm, tipo);
+    const tk = await gerarToken(sel.id, sel.nm, sel.phone||'', tipo);
     questState[tokenKey] = tk.token;
   }
   render();
@@ -4463,9 +4486,12 @@ function verResposta(token){
   const tokens = getTokens();
   const tk = tokens.find(t=>t.token===token);
   if(!tk) return;
-  // Mark as seen
+  // Mark as seen via API
+  fetch(API_BASE+'/quest/tokens/'+tk.token, {
+    method:'PATCH', headers:{'Content-Type':'application/json','x-api-key':API_KEY},
+    body:JSON.stringify({visto:true})
+  }).catch(()=>{});
   tk.visto = true;
-  saveTokens(tokens);
   questState.respostaVer = tk;
   questState.view = 'resposta';
   render();

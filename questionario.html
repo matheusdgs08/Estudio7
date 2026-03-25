@@ -435,7 +435,7 @@ function updateProgress(){
 }
 
 // ── Submit ──
-function submeter(){
+async async function submeter(){
   // Validate
   if(!IS_MUDANCA && !document.getElementById('f-freq').value){
     alert('Por favor, selecione sua frequência semanal.'); return;
@@ -465,14 +465,28 @@ function submeter(){
     obs: document.getElementById('f-obs').value,
   };
 
-  // Save to localStorage (same domain, admin reads it)
+  // Disable button
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Enviando…';
+
+  // POST to API
   try {
-    const existing = JSON.parse(localStorage.getItem('se7e_questionarios')||'[]');
-    // Remove any previous answer for same token
-    const filtered = existing.filter(r=>r.token!==TOKEN);
-    filtered.push(resp);
-    localStorage.setItem('se7e_questionarios', JSON.stringify(filtered));
-  } catch(e){}
+    const apiResp = await fetch('/quest/responder', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(resp)
+    });
+    if(!apiResp.ok){
+      const err = await apiResp.json().catch(()=>({}));
+      throw new Error(err.detail||'Erro ao enviar');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>✓</span> Enviar respostas';
+    alert('Erro ao enviar: '+e.message+'. Por favor, tente novamente.');
+    return;
+  }
 
   // Show success
   document.getElementById('main-content').style.display = 'none';
