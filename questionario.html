@@ -137,7 +137,7 @@
 
       <!-- Só para Entrada -->
       <div class="field" id="f-freq-wrap">
-        <label class="req">Quantas vezes por semana você vai treinar?</label>
+        <label class="req" id="f-freq-label">Quantas vezes por semana você vai treinar?</label>
         <select class="fi" id="f-freq">
           <option value="">Selecione…</option>
           <option value="1">1x por semana</option>
@@ -215,7 +215,7 @@
     <div class="section-header">
       <div class="section-ico" style="background:#FEF3C7">🩺</div>
       <div><div class="section-title">Histórico de Saúde</div>
-        <div class="section-sub">Ajuda a personalizar seu treino com segurança</div></div>
+        <div class="section-sub">Sempre importante — ajuda a montar um treino seguro</div></div>
     </div>
     <div class="section-body">
 
@@ -346,12 +346,14 @@ function setup(){
   // Intro text
   if(IS_MUDANCA){
     document.getElementById('intro-card').innerHTML =
-      'Olá! 👋 A Vanessa vai atualizar o seu treino em breve. <strong>Responda algumas perguntas rápidas</strong> para ela entender o que funcionou, o que pode melhorar e o que você quer focar. Leva menos de 2 minutos!';
+      'Olá! 👋 A Vanessa vai atualizar o seu treino em breve. <strong>Responda algumas perguntas rápidas</strong> sobre seus objetivos e saúde para que ela monte o melhor treino pra você. Leva menos de 2 minutos!';
   }
 
   // Mostrar/esconder campos por tipo
   if(IS_MUDANCA){
-    document.getElementById('f-freq-wrap').classList.add('hidden');
+    // Freq: keep but relabel
+    const freqLabel = document.getElementById('f-freq-label');
+    if(freqLabel){ freqLabel.textContent = 'Quantas vezes por semana você quer treinar no novo programa?'; freqLabel.className=''; }
     document.getElementById('f-treino-atual-wrap').classList.remove('hidden');
     document.getElementById('f-novo-treino-wrap').classList.remove('hidden');
     document.getElementById('f-prioridade-wrap').classList.remove('hidden');
