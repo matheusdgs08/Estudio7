@@ -281,6 +281,7 @@ function renderContent(){
   ta.innerHTML = '';
   if(modulo==='alunos')    renderAlunos(c, ta);
   else if(modulo==='contratos') renderContratos(c, ta);
+  else if(modulo==='agenda')   { renderAgenda(c, ta); return; }
   else c.innerHTML = `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Módulo ${modulo} em construção.</div></div>`;
 }
 
@@ -1926,6 +1927,327 @@ async function confirmarUpgrade(cid, endDate){
     alert('Erro: '+e.message);
     btn.disabled=false; btn.textContent='✓ Confirmar';
   }
+}
+
+
+
+// ══════════════════════════════════════════════════════
+// MÓDULO AGENDA DO DIA
+// ══════════════════════════════════════════════════════
+
+let agendaDia  = new Date().toISOString().slice(0,10);
+let agendaSlots  = [];    // class_slots do dia
+let agendaEnrollments = []; // enrollments do dia
+let agendaTeachers = [];  // professores
+let agendaLoaded = false;
+let rodizioSlotId = null; // slot aberto no rodízio
+
+const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const DIAS_CURTO  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+async function loadAgendaDia(){
+  const wd = new Date(agendaDia+'T12:00').getDay();
+  const [slots, enrollments, teachers] = await Promise.all([
+    sbGet('class_slots', `active=eq.true&weekday=eq.${wd}&order=start_time`),
+    sbGet('class_enrollments',
+      `class_date=eq.${agendaDia}&status=neq.cancelled&select=id,student_id,class_slot_id,status,instructor_id,enrollment_type,checked_in_at,training_session_id`),
+    agendaTeachers.length ? Promise.resolve(agendaTeachers)
+      : sbGet('profiles','role=eq.teacher&active=eq.true&select=id,full_name&order=full_name'),
+  ]);
+
+  agendaSlots       = slots;
+  agendaEnrollments = enrollments;
+  agendaTeachers    = teachers;
+  agendaLoaded      = true;
+
+  // Load student names for enrollments
+  const sids = [...new Set(enrollments.map(e=>e.student_id))];
+  if(sids.length){
+    const profs = await sbGet('profiles',`id=in.(${sids.join(',')})&select=id,full_name`);
+    const map = {};
+    profs.forEach(p=>map[p.id]=p.full_name);
+    agendaEnrollments.forEach(e=>{ e._nm = map[e.student_id]||'—'; });
+  }
+}
+
+async function renderAgenda(container, ta){
+  ta.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px">
+      <button class="btn btn-secondary" style="padding:6px 10px" onclick="mudarDia(-1)">‹</button>
+      <input type="date" value="${agendaDia}" class="mi" style="width:150px;height:36px"
+        onchange="agendaDia=this.value;agendaLoaded=false;renderContent()">
+      <button class="btn btn-secondary" style="padding:6px 10px" onclick="mudarDia(1)">›</button>
+      ${agendaDia!==new Date().toISOString().slice(0,10)?`<button class="btn btn-secondary" style="padding:6px 12px" onclick="agendaDia=new Date().toISOString().slice(0,10);agendaLoaded=false;renderContent()">Hoje</button>`:''}
+    </div>
+    <button class="btn btn-secondary" onclick="agendaLoaded=false;renderContent()">🔄</button>`;
+
+  if(!agendaLoaded){
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando agenda…</div></div>';
+    loadAgendaDia().then(()=>renderContent());
+    return;
+  }
+
+  const dtFmt = new Date(agendaDia+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  const isHoje = agendaDia === new Date().toISOString().slice(0,10);
+
+  // Build slot cards
+  const slotCards = agendaSlots.map(slot=>{
+    const enrollsSlot = agendaEnrollments.filter(e=>e.class_slot_id===slot.id);
+    const confirmados = enrollsSlot.filter(e=>['confirmed','attended'].includes(e.status));
+    const presentes   = enrollsSlot.filter(e=>e.status==='attended'||e.checked_in_at);
+    const vagas       = slot.capacity - confirmados.length;
+    const pct         = Math.round((confirmados.length/slot.capacity)*100);
+    const isRodizio   = rodizioSlotId === slot.id;
+
+    const barColor = pct>=100?'var(--red)':pct>=75?'#F59E0B':'var(--green)';
+
+    const alunoRows = confirmados.map(e=>{
+      const prof = agendaTeachers.find(t=>t.id===e.instructor_id);
+      const hasCheckin = !!e.checked_in_at;
+      return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--bg3);background:${hasCheckin?'#F0FDF4':'var(--wh)'}">
+        <div style="width:28px;height:28px;border-radius:50%;background:${avColor(e._nm||'?')};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${ini(e._nm||'?')}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e._nm}</div>
+          <div style="font-size:10px;color:var(--ink3)">${e.enrollment_type==='fixed'?'Fixo':'Flexível'}</div>
+        </div>
+        ${hasCheckin?`<span style="font-size:10px;background:#ECFDF5;color:#065F46;border-radius:20px;padding:1px 7px;border:1px solid #A7F3D0">✓ Check-in</span>`:''}
+        ${prof?`<span style="font-size:10px;color:var(--ink3);white-space:nowrap">👤 ${prof.full_name.split(' ')[0]}</span>`:''}
+      </div>`;
+    }).join('');
+
+    return `<div class="card" style="min-width:220px;flex:1">
+      <!-- Slot header -->
+      <div style="padding:12px 14px;background:${isRodizio?'var(--purple-l)':'var(--bg)'};border-bottom:1px solid var(--bg3)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:16px;font-weight:800;color:${isRodizio?'var(--purple)':'var(--ink)'}">${slot.start_time.slice(0,5)}</div>
+          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${vagas>0?'#ECFDF5':'#FEF2F2'};color:${vagas>0?'#065F46':'#991B1B'};border:1px solid ${vagas>0?'#A7F3D0':'#FECACA'};font-weight:600">
+            ${confirmados.length}/${slot.capacity} · ${vagas>0?vagas+' vagas':'Lotado'}
+          </span>
+        </div>
+        <!-- Barra de ocupação -->
+        <div style="background:var(--bg3);border-radius:20px;height:5px">
+          <div style="background:${barColor};border-radius:20px;height:5px;width:${Math.min(pct,100)}%;transition:width .3s"></div>
+        </div>
+      </div>
+
+      <!-- Alunos confirmados -->
+      <div style="max-height:240px;overflow-y:auto">
+        ${alunoRows||`<div style="padding:12px 14px;font-size:12px;color:var(--ink3);text-align:center">Nenhum aluno confirmado</div>`}
+      </div>
+
+      <!-- Ações do slot -->
+      <div style="padding:8px 10px;border-top:1px solid var(--bg3);display:flex;gap:6px;flex-wrap:wrap">
+        ${vagas>0?`<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="abrirModalAgendar('${slot.id}','${slot.start_time.slice(0,5)}')">+ Agendar</button>`:''}
+        ${confirmados.length?`<button class="btn ${isRodizio?'btn-primary':'btn-secondary'}" style="font-size:11px;padding:5px 10px" onclick="abrirRodizio('${slot.id}')">
+          ${isRodizio?'🎯 Rodízio aberto':'⚙️ Rodízio'}
+        </button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Rodízio panel
+  const rodizioPanel = rodizioSlotId ? renderRodizioPanel(rodizioSlotId) : '';
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <!-- Subtítulo do dia -->
+      <div style="padding:10px 24px;background:${isHoje?'var(--purple-l)':'var(--bg)'};border-bottom:1px solid var(--bg3);flex-shrink:0;display:flex;align-items:center;gap:10px">
+        <div style="font-size:13px;font-weight:600;color:${isHoje?'var(--purple)':'var(--ink2)'}">
+          ${isHoje?'📅 Hoje — ':''}${dtFmt}
+        </div>
+        <div style="margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--ink3)">
+          <span>🕐 ${agendaSlots.length} horários</span>
+          <span>👥 ${agendaEnrollments.filter(e=>['confirmed','attended'].includes(e.status)).length} alunos</span>
+          <span>✅ ${agendaEnrollments.filter(e=>e.checked_in_at).length} check-ins</span>
+        </div>
+      </div>
+
+      <!-- Grid de slots -->
+      <div style="padding:16px 24px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:16px">
+        ${agendaSlots.length
+          ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${slotCards}</div>`
+          : `<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">Sem horários neste dia</div><div class="empty-sub">${DIAS_SEMANA[new Date(agendaDia+'T12:00').getDay()]} não tem aulas configuradas.</div></div>`}
+
+        ${rodizioPanel}
+      </div>
+    </div>`;
+}
+
+// ── Mudar dia ──
+function mudarDia(d){
+  const dt = new Date(agendaDia+'T12:00');
+  dt.setDate(dt.getDate()+d);
+  agendaDia = dt.toISOString().slice(0,10);
+  agendaLoaded = false;
+  rodizioSlotId = null;
+  renderContent();
+}
+
+// ══════════════════════════════════════
+// AGENDAR ALUNO NO HORÁRIO
+// ══════════════════════════════════════
+function abrirModalAgendar(slotId, hora){
+  const filtrados = busca
+    ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(busca.toLowerCase()))
+    : alunos.slice(0,20);
+
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">+ Agendar aluno — ${hora}</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input class="mi" placeholder="Buscar aluno…" id="ag-busca" autofocus
+          oninput="filtrarAlunosModal(this.value,'${slotId}','${hora}')">
+        <div id="ag-lista" style="max-height:320px;overflow-y:auto;border:1px solid var(--bg3);border-radius:8px;margin-top:4px">
+          ${filtrados.map(a=>renderAlunoAgRow(a,slotId)).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function filtrarAlunosModal(q, slotId, hora){
+  const filtrados = q
+    ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(q.toLowerCase())).slice(0,15)
+    : alunos.slice(0,20);
+  document.getElementById('ag-lista').innerHTML = filtrados.map(a=>renderAlunoAgRow(a,slotId)).join('');
+}
+
+function renderAlunoAgRow(a, slotId){
+  const jaAgendado = agendaEnrollments.find(e=>e.student_id===a.id&&e.class_slot_id===slotId);
+  const cor = avColor(a.full_name||'');
+  return `<div style="padding:9px 12px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:8px;${jaAgendado?'opacity:.5;':'cursor:pointer'}
+    ${jaAgendado?'':'background:var(--wh);'}" ${jaAgendado?'':'onclick="confirmarAgendar(\''+a.id+'\',\''+slotId+'\')"'}>
+    <div class="av" style="background:${cor};width:28px;height:28px;border-radius:50%;font-size:11px;font-weight:700">${ini(a.full_name||'?')}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.full_name}</div>
+      <div style="font-size:11px;color:var(--ink3)">mat. ${a.mat||'—'}</div>
+    </div>
+    ${jaAgendado?`<span style="font-size:10px;color:var(--green);font-weight:600">✓ Já agendado</span>`:'<span style="font-size:12px;color:var(--ink3)">›</span>'}
+  </div>`;
+}
+
+async function confirmarAgendar(studentId, slotId){
+  try {
+    await sbPost('class_enrollments',{
+      student_id:      studentId,
+      class_slot_id:   slotId,
+      class_date:      agendaDia,
+      enrollment_type: 'original_flexible',
+      status:          'confirmed',
+    });
+    fecharModal();
+    agendaLoaded = false;
+    await loadAgendaDia();
+    renderContent();
+    showToast('✅ Aluno agendado!');
+  } catch(e){
+    alert('Erro: '+e.message);
+  }
+}
+
+// ══════════════════════════════════════
+// RODÍZIO DE PROFESSORES
+// ══════════════════════════════════════
+function abrirRodizio(slotId){
+  rodizioSlotId = rodizioSlotId===slotId ? null : slotId;
+  renderContent();
+}
+
+function renderRodizioPanel(slotId){
+  const slot = agendaSlots.find(s=>s.id===slotId);
+  if(!slot) return '';
+
+  const enrollsSlot = agendaEnrollments.filter(e=>
+    e.class_slot_id===slotId && ['confirmed','attended'].includes(e.status)
+  );
+
+  if(!enrollsSlot.length)
+    return `<div class="card" style="padding:16px;text-align:center;color:var(--ink3)">Nenhum aluno neste horário para atribuir professores.</div>`;
+
+  // Contar aulas dadas hoje por cada professor
+  const aulasHoje = {};
+  agendaTeachers.forEach(t=>{ aulasHoje[t.id]=0; });
+  agendaEnrollments.forEach(e=>{
+    if(e.instructor_id && e.instructor_id!==slotId) aulasHoje[e.instructor_id]=(aulasHoje[e.instructor_id]||0)+1;
+  });
+
+  // Professores ordenados por aulas no dia (critério do rodízio)
+  const teachersSorted = [...agendaTeachers].sort((a,b)=>(aulasHoje[a.id]||0)-(aulasHoje[b.id]||0));
+
+  const rows = enrollsSlot.map((e,i)=>{
+    const profAtual = agendaTeachers.find(t=>t.id===e.instructor_id);
+    const sugerido  = teachersSorted[i % teachersSorted.length];
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--bg3)">
+      <div style="width:28px;height:28px;border-radius:50%;background:${avColor(e._nm||'?')};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${ini(e._nm||'?')}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e._nm}</div>
+        ${profAtual?`<div style="font-size:11px;color:var(--purple)">👤 ${profAtual.full_name.split(' ')[0]}</div>`:''}
+      </div>
+      <select onchange="atribuirProfessor('${e.id}',this.value)" style="border:1.5px solid var(--bg3);border-radius:8px;padding:5px 10px;font-size:12px;background:#fff;color:var(--ink);outline:none;cursor:pointer;min-width:140px">
+        <option value="">— Selecionar —</option>
+        ${teachersSorted.map(t=>`<option value="${t.id}" ${e.instructor_id===t.id?'selected':''}>
+          ${t.full_name.split(' ')[0]} (${aulasHoje[t.id]||0} aulas)
+        </option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+
+  const semAtribuicao = enrollsSlot.filter(e=>!e.instructor_id).length;
+
+  return `<div class="card">
+    <div class="card-hdr" style="background:var(--purple-l)">
+      <span style="font-size:16px">🎯</span>
+      <span class="card-hdr-title" style="color:var(--purple)">Rodízio — ${slot.start_time.slice(0,5)}</span>
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        ${semAtribuicao?`<span style="font-size:11px;color:#D97706">${semAtribuicao} sem professor</span>`:'<span style="font-size:11px;color:var(--green)">✅ Todos atribuídos</span>'}
+        <button class="btn btn-primary" style="font-size:11px;padding:5px 12px" onclick="autoAtribuir('${slotId}')">⚡ Auto-atribuir</button>
+        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="rodizioSlotId=null;renderContent()">✕</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--ink3);padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--bg3)">
+      Critério: quem deu menos aulas no dia atende o próximo aluno
+    </div>
+    <div>${rows}</div>
+  </div>`;
+}
+
+async function atribuirProfessor(enrollmentId, instructorId){
+  try {
+    await sbPatch('class_enrollments',`id=eq.${enrollmentId}`,
+      {instructor_id: instructorId||null});
+    const e = agendaEnrollments.find(x=>x.id===enrollmentId);
+    if(e) e.instructor_id = instructorId||null;
+    renderContent();
+  } catch(err){
+    alert('Erro: '+err.message);
+  }
+}
+
+async function autoAtribuir(slotId){
+  const enrollsSlot = agendaEnrollments.filter(e=>
+    e.class_slot_id===slotId && ['confirmed','attended'].includes(e.status)
+  );
+  // Count today's load per teacher
+  const aulasHoje = {};
+  agendaTeachers.forEach(t=>{ aulasHoje[t.id]=0; });
+  agendaEnrollments.forEach(e=>{
+    if(e.instructor_id) aulasHoje[e.instructor_id]=(aulasHoje[e.instructor_id]||0)+1;
+  });
+
+  // Assign greedily: always pick teacher with fewest aulas
+  for(const e of enrollsSlot){
+    if(e.instructor_id) continue; // skip if already assigned
+    const best = agendaTeachers
+      .sort((a,b)=>(aulasHoje[a.id]||0)-(aulasHoje[b.id]||0))[0];
+    if(!best) continue;
+    await atribuirProfessor(e.id, best.id);
+    aulasHoje[best.id]=(aulasHoje[best.id]||0)+1;
+  }
+  showToast('⚡ Professores atribuídos!');
 }
 
 
