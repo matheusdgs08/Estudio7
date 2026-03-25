@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recepção — Estúdio Se7e</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#1C1916;--ink2:#4A453F;--ink3:#8A8278;
+    --bg:#F5F0E8;--bg2:#EDE8E0;--bg3:#E0DAD0;
+    --wh:#FFFEF9;--r:12px;
+    --purple:#6D28D9;--purple-l:#EDE9FE;--purple-b:#C4B5FD;
+    --green:#16A34A;--green-l:#DCFCE7;
+    --gold:#F59E0B;--gold-l:#FEF3C7;
+    --red:#DC2626;--red-l:#FEE2E2;
+    --blue:#1E40AF;--blue-l:#EFF6FF;--blue-b:#BFDBFE;
+    --sidebar:260px;
+  }
+  body{display:flex;height:100vh;overflow:hidden;background:var(--bg);color:var(--ink);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+
+  /* ── Sidebar ── */
+  .sidebar{width:var(--sidebar);background:var(--ink);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+  .sb-brand{padding:20px 20px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+  .sb-brand h1{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.5px}
+  .sb-brand h1 span{color:var(--gold)}
+  .sb-brand p{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+  .sb-user{padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:10px}
+  .sb-avatar{width:34px;height:34px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
+  .sb-user-info{flex:1;min-width:0}
+  .sb-user-name{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sb-user-role{font-size:11px;color:rgba(255,255,255,.4)}
+  .sb-section{padding:14px 20px 6px;font-size:10px;font-weight:700;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.2px}
+  .sb-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5);font-size:13px;font-weight:400;border:none;background:transparent;width:100%;text-align:left;position:relative}
+  .sb-item:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.8)}
+  .sb-item.on{background:rgba(255,255,255,.1);color:#fff;font-weight:500}
+  .sb-item.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold);border-radius:0 2px 2px 0}
+  .sb-ico{font-size:16px;width:20px;text-align:center}
+  .sb-badge{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:auto}
+
+  /* ── Main ── */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{background:var(--wh);border-bottom:1px solid var(--bg3);padding:0 24px;height:54px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+  .topbar h2{font-size:16px;font-weight:700;color:var(--ink)}
+  .topbar p{font-size:12px;color:var(--ink3)}
+  .topbar-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .content{flex:1;overflow:hidden;display:flex}
+
+  /* ── Cards ── */
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 24px;flex-shrink:0}
+  .stat-card{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);padding:14px 16px}
+  .stat-val{font-size:26px;font-weight:800;color:var(--ink);line-height:1}
+  .stat-lbl{font-size:11px;color:var(--ink3);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+  .stat-sub{font-size:12px;color:var(--ink2);margin-top:3px}
+
+  /* ── Alunos list ── */
+  .split{display:flex;flex:1;overflow:hidden}
+  .list-col{width:300px;border-right:1px solid var(--bg3);display:flex;flex-direction:column;flex-shrink:0;background:var(--wh)}
+  .list-search{padding:10px 12px;border-bottom:1px solid var(--bg3)}
+  .search-inp{width:100%;padding:8px 12px;border:1.5px solid var(--bg3);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg);outline:none}
+  .search-inp:focus{border-color:var(--purple)}
+  .list-items{overflow-y:auto;flex:1}
+  .list-item{padding:11px 14px;border-bottom:1px solid var(--bg3);cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s}
+  .list-item:hover{background:var(--bg)}
+  .list-item.sel{background:var(--blue-l);border-right:3px solid var(--blue)}
+  .av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+  .li-name{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li-sub{font-size:11px;color:var(--ink3);margin-top:1px}
+
+  /* ── Detail panel ── */
+  .detail{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+  .card{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden}
+  .card-hdr{padding:12px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:8px;background:var(--bg)}
+  .card-hdr-title{font-size:13px;font-weight:700;color:var(--ink)}
+  .card-body{padding:14px 16px}
+  .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px}
+  .field .val{font-size:13px;color:var(--ink);font-weight:500}
+  .mi{width:100%;padding:9px 12px;border:1.5px solid var(--bg3);border-radius:8px;font-size:13px;color:var(--ink);background:var(--bg);outline:none;font-family:inherit}
+  .mi:focus{border-color:var(--purple);background:#fff}
+  select.mi{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8278' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+  .btn{padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:6px}
+  .btn-primary{background:var(--purple);color:#fff}
+  .btn-primary:hover{opacity:.9}
+  .btn-secondary{background:var(--bg);color:var(--ink2);border:1px solid var(--bg3)}
+  .btn-secondary:hover{background:var(--bg2)}
+  .btn-danger{background:var(--red-l);color:var(--red);border:1px solid #FECACA}
+  .btn-green{background:var(--green-l);color:var(--green);border:1px solid #86EFAC}
+  .badge{display:inline-flex;align-items:center;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid}
+  .tag-active{background:#ECFDF5;color:#065F46;border-color:#A7F3D0}
+  .tag-blocked{background:var(--red-l);color:var(--red);border-color:#FECACA}
+  .tag-expired{background:var(--gold-l);color:#92400E;border-color:#FCD34D}
+
+  /* ── Modal ── */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal{background:var(--wh);border-radius:var(--r);max-width:520px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .modal-hdr{padding:16px 20px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;justify-content:space-between}
+  .modal-title{font-size:16px;font-weight:700}
+  .modal-close{border:none;background:none;font-size:20px;cursor:pointer;color:var(--ink3);padding:0 4px}
+  .modal-body{padding:20px;display:flex;flex-direction:column;gap:12px}
+  .modal-footer{padding:14px 20px;border-top:1px solid var(--bg3);display:flex;gap:8px;justify-content:flex-end}
+
+  /* ── Empty state ── */
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--ink3);gap:10px;padding:40px}
+  .empty-ico{font-size:48px}
+  .empty-title{font-size:16px;font-weight:600;color:var(--ink2)}
+  .empty-sub{font-size:13px;text-align:center;max-width:280px;line-height:1.5}
+
+  /* ── Restricoes badges ── */
+  .rest-badge{font-size:11px;font-weight:600;border-radius:20px;padding:2px 9px;border:1px solid;margin:2px;display:inline-block}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <div class="sb-brand">
+    <h1>ESTÚDIO <span>Se7e</span></h1>
+    <p>Painel da Recepção</p>
+  </div>
+  <div class="sb-user">
+    <div class="sb-avatar">R</div>
+    <div class="sb-user-info">
+      <div class="sb-user-name">Recepção</div>
+      <div class="sb-user-role">estudio7.com.br</div>
+    </div>
+  </div>
+  <div class="sb-section">Alunos</div>
+  <button class="sb-item on" onclick="setMod('alunos',this)"><span class="sb-ico">👥</span> Alunos</button>
+  <button class="sb-item" onclick="setMod('contratos',this)"><span class="sb-ico">📄</span> Contratos</button>
+  <button class="sb-item" onclick="setMod('agenda',this)"><span class="sb-ico">📅</span> Agenda do dia</button>
+  <div class="sb-section">Operação</div>
+  <button class="sb-item" onclick="setMod('experimentais',this)"><span class="sb-ico">🧪</span> Experimentais<span class="sb-badge" id="badge-exp" style="display:none">0</span></button>
+  <button class="sb-item" onclick="setMod('pausas',this)"><span class="sb-ico">⏸️</span> Pausas</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <div>
+      <h2 id="mod-title">Alunos</h2>
+      <p id="mod-sub">Cadastro e ficha dos alunos</p>
+    </div>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+  <div class="content" id="content"></div>
+</div>
+
+<!-- Modal root -->
+<div id="modal-root"></div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+const SUPA_URL = 'https://kfmkcbhalwupgknysukj.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+const SB_HDR  = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer '+SUPA_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+async function sbGet(table, params=''){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`, {headers:SB_HDR});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPost(table, data){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {method:'POST',headers:SB_HDR,body:JSON.stringify(data)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPatch(table, params, data){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`, {method:'PATCH',headers:SB_HDR,body:JSON.stringify(data)});
+  if(!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+// ══════════════════════════════════════
+// STATE
+// ══════════════════════════════════════
+let modulo     = 'alunos';
+let alunos     = [];       // lista completa
+let alunoSel   = null;     // aluno selecionado na lista
+let busca      = '';
+let loading    = false;
+
+const MOD_TITLES = {
+  alunos:       ['Alunos', 'Cadastro e ficha dos alunos'],
+  contratos:    ['Contratos', 'Criar e gerenciar contratos'],
+  agenda:       ['Agenda do dia', 'Horários, vagas e check-in'],
+  experimentais:['Experimentais', 'Pipeline de leads e agendamentos'],
+  pausas:       ['Pausas', 'Pausas de contrato'],
+};
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function ini(nm){ return nm.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+const PALETA = ['#1E40AF','#6D28D9','#065F46','#92400E','#991B1B','#1D4ED8','#7C3AED','#0F766E','#B45309'];
+function avColor(nm){ let h=0;for(const c of nm)h=(h*31+c.charCodeAt(0))%PALETA.length;return PALETA[Math.abs(h)]; }
+
+function fmtPhone(p){
+  if(!p) return '';
+  const n = p.replace(/\D/g,'');
+  if(n.startsWith('55')) return `+55 (${n.slice(2,4)}) ${n.slice(4,9)}-${n.slice(9)}`;
+  return p;
+}
+
+function fmtDate(d){
+  if(!d) return '—';
+  return new Date(d+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+}
+
+function waLink(phone, msg=''){
+  const n = (phone||'').replace(/\D/g,'');
+  const base = n.startsWith('55') ? n : '55'+n;
+  return `https://wa.me/${base}${msg?'?text='+encodeURIComponent(msg):''}`;
+}
+
+// ══════════════════════════════════════
+// RESTRICOES (igual ao vanessa.html)
+// ══════════════════════════════════════
+const RESTRICOES_MAP = {
+  Cervical:['Hernia','Protusao','Artrose'],
+  Ombro:['Bursite','Tendinite','Ruptura','Artrose','Ligamento'],
+  Cotovelo:['Epicondilite','Tendinite'],
+  Punho:['Cisto','Tendinite'],
+  Torax:['Hernia','Escoliose','Artrose','Ruptura Ligamento'],
+  Lombar:['Lombalgia','Hernia','Escoliose','Lordose','Protusao','Artrose'],
+  Quadril:['Tendinite','Artrose','Desgaste','Protese'],
+  Joelho:['Tendinite','Artrose','Desgaste','Cirurgia','Ligamento','Menisco','Protese'],
+  Tornozelo:['Ruptura Ligamento','Artrose'],
+};
+const REGIOES = Object.keys(RESTRICOES_MAP);
+
+function parseRestricoesStr(s){
+  const r={};
+  if(!s) return r;
+  s.split(' · ').forEach(part=>{
+    const idx=part.indexOf(':');
+    if(idx<0) return;
+    let k=part.slice(0,idx).trim();
+    const canonical=REGIOES.find(reg=>reg.toLowerCase()===k.toLowerCase());
+    if(canonical) k=canonical;
+    r[k]=part.slice(idx+1).trim();
+  });
+  return r;
+}
+
+function restricoesObjToStr(obj){
+  return Object.entries(obj).filter(([,v])=>v&&v!=='Sem Restricao').map(([k,v])=>`${k}: ${v}`).join(' · ');
+}
+
+function renderRestricoesBadges(restricoesStr){
+  if(!restricoesStr) return '<span style="color:var(--ink3);font-size:12px">Nenhuma</span>';
+  const rObj = parseRestricoesStr(restricoesStr);
+  return Object.entries(rObj).map(([reg,cond])=>{
+    const grave = ['Hernia','Ruptura','Ruptura Ligamento','Cirurgia','Protese'].includes(cond);
+    const bg = grave?'#FEF2F2':'#FFFBEB';
+    const tc = grave?'#991B1B':'#92400E';
+    const bc = grave?'#FECACA':'#FCD34D';
+    return `<span class="rest-badge" style="background:${bg};color:${tc};border-color:${bc}">${reg}: ${cond}</span>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+// ROUTING
+// ══════════════════════════════════════
+function setMod(m, el){
+  modulo = m;
+  document.querySelectorAll('.sb-item').forEach(x=>x.classList.remove('on'));
+  if(el) el.classList.add('on');
+  const [title,sub] = MOD_TITLES[m]||[m,''];
+  document.getElementById('mod-title').textContent = title;
+  document.getElementById('mod-sub').textContent   = sub;
+  renderContent();
+}
+
+function renderContent(){
+  const c = document.getElementById('content');
+  const ta = document.getElementById('topbar-actions');
+  ta.innerHTML = '';
+  if(modulo==='alunos') renderAlunos(c, ta);
+  else c.innerHTML = `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Módulo ${modulo} em construção.</div></div>`;
+}
+
+// ══════════════════════════════════════
+// MÓDULO ALUNOS
+// ══════════════════════════════════════
+async function loadAlunos(){
+  loading = true;
+  try {
+    // Busca profiles (role=student) + students join
+    const [profiles, students] = await Promise.all([
+      sbGet('profiles', 'role=eq.student&active=eq.true&select=id,full_name,phone&order=full_name'),
+      sbGet('students', 'select=id,matricula,phone_secondary,birth_date,notes,next_training_session,blocked,blocked_reason,treinos_realizados,current_program_id'),
+    ]);
+    const stMap = {};
+    students.forEach(s=>{ stMap[s.id]=s; });
+    alunos = profiles.map(p=>({
+      ...p,
+      ...(stMap[p.id]||{}),
+      // compatibilidade com data.js
+      nm: p.full_name,
+      mat: stMap[p.id]?.matricula||'',
+    }));
+  } catch(e){
+    console.error('loadAlunos error', e);
+    alunos = [];
+  }
+  loading = false;
+}
+
+function renderAlunos(container, ta){
+  // Toolbar button
+  ta.innerHTML = `
+    <button class="btn btn-secondary" onclick="reloadAlunos()">🔄</button>
+    <button class="btn btn-primary" onclick="abrirModalNovoAluno()">+ Novo aluno</button>`;
+
+  if(loading){
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando alunos…</div></div>';
+    return;
+  }
+
+  const filtrados = busca
+    ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(busca.toLowerCase()) || String(a.mat).includes(busca))
+    : alunos;
+
+  const listItems = filtrados.map(a=>{
+    const isSel = alunoSel && alunoSel.id === a.id;
+    const cor = avColor(a.full_name||'');
+    const status = a.blocked ? 'blocked' : '';
+    return `<div class="list-item ${isSel?'sel':''}" onclick="selecionarAluno('${a.id}')">
+      <div class="av" style="background:${cor}">${ini(a.full_name||'?')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="li-name">${a.full_name||'—'}</div>
+        <div class="li-sub">mat. ${a.mat||'—'} ${a.phone?'· '+fmtPhone(a.phone):''}</div>
+      </div>
+      ${a.blocked?'<span style="font-size:16px">🔴</span>':''}
+    </div>`;
+  }).join('') || '<div style="padding:24px;text-align:center;color:var(--ink3);font-size:13px">Nenhum aluno encontrado</div>';
+
+  container.innerHTML = `
+    <div class="split">
+      <div class="list-col">
+        <div class="list-search">
+          <input class="search-inp" placeholder="Buscar por nome ou matrícula…"
+            value="${busca}" oninput="busca=this.value;renderContent()">
+        </div>
+        <div class="list-items">${listItems}</div>
+        <div style="padding:10px 14px;border-top:1px solid var(--bg3);font-size:11px;color:var(--ink3)">
+          ${filtrados.length} aluno${filtrados.length!==1?'s':''} ${busca?'encontrado':'cadastrado'}${filtrados.length!==1?'s':''}
+        </div>
+      </div>
+      <div class="detail" id="detalhe-col">
+        ${alunoSel ? renderDetalheAluno(alunoSel) : `
+          <div class="empty">
+            <div class="empty-ico">👤</div>
+            <div class="empty-title">Selecione um aluno</div>
+            <div class="empty-sub">Clique em um aluno para ver a ficha completa.</div>
+          </div>`}
+      </div>
+    </div>`;
+}
+
+function selecionarAluno(id){
+  alunoSel = alunos.find(a=>a.id===id);
+  renderContent();
+}
+
+async function reloadAlunos(){
+  alunoSel = null;
+  await loadAlunos();
+  renderContent();
+}
+
+function renderDetalheAluno(a){
+  const cor = avColor(a.full_name||'');
+  const statusBadge = a.blocked
+    ? '<span class="badge tag-blocked">🔴 Bloqueado</span>'
+    : '<span class="badge tag-active">✅ Ativo</span>';
+
+  const excessoTreinos = () => {
+    // vencido = treinos_realizados >= freq_semana × 8
+    // freq_semana não está no Supabase diretamente, usamos notes ou default 2
+    return 0; // será alimentado quando programa for associado
+  };
+
+  return `
+    <!-- Header do aluno -->
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="av" style="background:${cor};width:52px;height:52px;border-radius:50%;font-size:18px;font-weight:800">${ini(a.full_name||'?')}</div>
+          <div style="flex:1">
+            <div style="font-size:18px;font-weight:800;color:var(--ink)">${a.full_name||'—'}</div>
+            <div style="font-size:12px;color:var(--ink3);margin-top:3px">mat. ${a.mat||'—'} · ${statusBadge}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            ${a.phone?`<a href="${waLink(a.phone)}" target="_blank" class="btn btn-green">📲 WhatsApp</a>`:''}
+            <button class="btn btn-secondary" onclick="abrirModalEditarAluno('${a.id}')">✏️ Editar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dados pessoais -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">👤</span><span class="card-hdr-title">Dados pessoais</span></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label>Nome completo</label><div class="val">${a.full_name||'—'}</div></div>
+          <div class="field"><label>Matrícula</label><div class="val">${a.mat||'—'}</div></div>
+          <div class="field"><label>WhatsApp principal</label>
+            <div class="val">${a.phone?`<a href="${waLink(a.phone)}" target="_blank" style="color:var(--blue)">${fmtPhone(a.phone)}</a>`:'—'}</div></div>
+          <div class="field"><label>Telefone secundário</label><div class="val">${a.phone_secondary?fmtPhone(a.phone_secondary):'—'}</div></div>
+          <div class="field"><label>Data de nascimento</label><div class="val">${fmtDate(a.birth_date)}</div></div>
+          <div class="field"><label>Cadastrado em</label><div class="val">${fmtDate(a.created_at)}</div></div>
+        </div>
+        ${a.notes?`<div style="margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:8px;font-size:12px;color:var(--ink2)">📝 ${a.notes}</div>`:''}
+      </div>
+    </div>
+
+    <!-- Status do treino -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">💪</span><span class="card-hdr-title">Status do treino</span></div>
+      <div class="card-body">
+        <div class="field-grid">
+          <div class="field"><label>Treinos realizados</label>
+            <div class="val" style="font-size:22px;font-weight:800">${a.treinos_realizados||0}</div></div>
+          <div class="field"><label>Próxima ficha</label>
+            <div class="val" style="font-size:22px;font-weight:800">Ficha ${a.next_training_session||1}</div></div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-secondary" onclick="enviarQuestionario('${a.id}','${(a.full_name||'').replace(/'/g,"\\'")}','${a.phone||''}')">
+            📋 Enviar questionário
+          </button>
+          ${a.blocked
+            ? `<button class="btn btn-green" onclick="desbloquearAluno('${a.id}')">✅ Desbloquear</button>`
+            : `<button class="btn btn-danger" onclick="bloquearAluno('${a.id}')">🔴 Bloquear</button>`}
+        </div>
+        ${a.blocked&&a.blocked_reason?`<div style="margin-top:8px;padding:8px 12px;background:var(--red-l);border-radius:8px;font-size:12px;color:var(--red)">⛔ ${a.blocked_reason}</div>`:''}
+      </div>
+    </div>
+
+    <!-- Restrições -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">⚠️</span><span class="card-hdr-title">Restrições</span>
+        <button class="btn btn-secondary" style="margin-left:auto;padding:4px 10px;font-size:11px" onclick="abrirModalEditarRestricoes('${a.id}')">✏️ Editar</button>
+      </div>
+      <div class="card-body">
+        ${renderRestricoesBadges(a.notes_restricoes||'')}
+      </div>
+    </div>
+
+    <!-- Ações rápidas -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding-bottom:20px">
+      <button class="btn btn-primary" onclick="setMod('contratos',document.querySelector('.sb-item:nth-child(5)'))">
+        📄 Ver contratos
+      </button>
+      <button class="btn btn-secondary" onclick="alert('Agenda em breve')">📅 Agenda</button>
+    </div>`;
+}
+
+// ══════════════════════════════════════
+// MODAL — NOVO ALUNO
+// ══════════════════════════════════════
+function abrirModalNovoAluno(){
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">➕ Novo aluno</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field" style="grid-column:span 2">
+            <label>Nome completo *</label>
+            <input class="mi" id="na-nome" placeholder="Ex: Maria Silva Santos" autofocus>
+          </div>
+          <div class="field">
+            <label>WhatsApp (com DDD)</label>
+            <input class="mi" id="na-phone" placeholder="11987654321" type="tel">
+          </div>
+          <div class="field">
+            <label>Matrícula</label>
+            <input class="mi" id="na-mat" placeholder="Número único" type="number">
+          </div>
+          <div class="field">
+            <label>Data de nascimento</label>
+            <input class="mi" id="na-birth" type="date">
+          </div>
+          <div class="field">
+            <label>Telefone secundário</label>
+            <input class="mi" id="na-phone2" placeholder="Opcional" type="tel">
+          </div>
+          <div class="field" style="grid-column:span 2">
+            <label>Observações</label>
+            <input class="mi" id="na-notes" placeholder="Observações gerais sobre o aluno…">
+          </div>
+        </div>
+        <div style="background:var(--blue-l);border:1px solid var(--blue-b);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--blue)">
+          ✨ Ao salvar, o questionário de entrada será enviado automaticamente via WhatsApp.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarNovoAluno()">✓ Cadastrar aluno</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function salvarNovoAluno(){
+  const nome  = document.getElementById('na-nome').value.trim();
+  const phone = document.getElementById('na-phone').value.trim().replace(/\D/g,'');
+  const mat   = document.getElementById('na-mat').value.trim();
+  const birth = document.getElementById('na-birth').value;
+  const phone2= document.getElementById('na-phone2').value.trim().replace(/\D/g,'');
+  const notes = document.getElementById('na-notes').value.trim();
+
+  if(!nome){ alert('Nome é obrigatório.'); return; }
+
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled = true;
+  btn.textContent = '⏳ Salvando…';
+
+  try {
+    // 1. Criar profile
+    const phoneFormatted = phone ? (phone.startsWith('55')?phone:'55'+phone) : null;
+    const profile = await sbPost('profiles', {
+      full_name: nome,
+      phone: phoneFormatted,
+      role: 'student',
+      active: true,
+    });
+    const pid = Array.isArray(profile) ? profile[0].id : profile.id;
+
+    // 2. Criar student record
+    await sbPost('students', {
+      id: pid,
+      matricula: mat ? parseInt(mat) : null,
+      phone_secondary: phone2 ? (phone2.startsWith('55')?phone2:'55'+phone2) : null,
+      birth_date: birth || null,
+      notes: notes || null,
+      next_training_session: 1,
+      treinos_realizados: 0,
+      blocked: false,
+    });
+
+    // 3. Recarregar e selecionar novo aluno
+    await loadAlunos();
+    alunoSel = alunos.find(a=>a.id===pid);
+    fecharModal();
+    renderContent();
+
+    // 4. Enviar questionário de entrada se tiver telefone
+    if(phone){
+      const token = 'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      const link  = `${window.location.origin}/questionario?t=${token}&tipo=entrada`;
+      const msg   = `Olá, ${nome.split(' ')[0]}! 😊\n\nBem-vindo ao Estúdio Se7e! Para montarmos o seu treino personalizado, precisamos de algumas informações. Leva menos de 2 minutinhos!\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+      // Salvar token no Supabase via API
+      try {
+        await fetch('/quest/tokens', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-api-key':'se7e2025'},
+          body:JSON.stringify({token, aluno_id:pid, aluno_nm:nome, aluno_phone:phoneFormatted||'', tipo:'entrada'})
+        });
+      } catch(e){ console.warn('quest token error', e); }
+      // Abrir WhatsApp
+      const phoneNum = phoneFormatted || '55'+phone;
+      window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    showToast(`✅ ${nome} cadastrado!`);
+  } catch(e){
+    alert('Erro ao cadastrar: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = '✓ Cadastrar aluno';
+  }
+}
+
+// ══════════════════════════════════════
+// MODAL — EDITAR ALUNO
+// ══════════════════════════════════════
+function abrirModalEditarAluno(id){
+  const a = alunos.find(x=>x.id===id);
+  if(!a) return;
+  const phone = (a.phone||'').replace(/\D/g,'').replace(/^55/,'');
+  const phone2 = (a.phone_secondary||'').replace(/\D/g,'').replace(/^55/,'');
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">✏️ Editar — ${a.full_name}</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field-grid">
+          <div class="field" style="grid-column:span 2">
+            <label>Nome completo</label>
+            <input class="mi" id="ea-nome" value="${a.full_name||''}">
+          </div>
+          <div class="field">
+            <label>WhatsApp (com DDD)</label>
+            <input class="mi" id="ea-phone" value="${phone}" placeholder="11987654321" type="tel">
+          </div>
+          <div class="field">
+            <label>Matrícula</label>
+            <input class="mi" id="ea-mat" value="${a.mat||''}" type="number">
+          </div>
+          <div class="field">
+            <label>Data de nascimento</label>
+            <input class="mi" id="ea-birth" type="date" value="${a.birth_date||''}">
+          </div>
+          <div class="field">
+            <label>Telefone secundário</label>
+            <input class="mi" id="ea-phone2" value="${phone2}" placeholder="Opcional" type="tel">
+          </div>
+          <div class="field" style="grid-column:span 2">
+            <label>Observações</label>
+            <input class="mi" id="ea-notes" value="${a.notes||''}">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarEdicaoAluno('${id}')">✓ Salvar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function salvarEdicaoAluno(id){
+  const nome   = document.getElementById('ea-nome').value.trim();
+  const phone  = document.getElementById('ea-phone').value.trim().replace(/\D/g,'');
+  const mat    = document.getElementById('ea-mat').value.trim();
+  const birth  = document.getElementById('ea-birth').value;
+  const phone2 = document.getElementById('ea-phone2').value.trim().replace(/\D/g,'');
+  const notes  = document.getElementById('ea-notes').value.trim();
+
+  if(!nome){ alert('Nome é obrigatório.'); return; }
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Salvando…';
+
+  try {
+    const phoneFormatted = phone ? (phone.startsWith('55')?phone:'55'+phone) : null;
+    const phone2Formatted = phone2 ? (phone2.startsWith('55')?phone2:'55'+phone2) : null;
+
+    await Promise.all([
+      sbPatch('profiles', `id=eq.${id}`, {full_name:nome, phone:phoneFormatted}),
+      sbPatch('students', `id=eq.${id}`, {
+        matricula: mat?parseInt(mat):null,
+        phone_secondary: phone2Formatted,
+        birth_date: birth||null,
+        notes: notes||null,
+      }),
+    ]);
+
+    await loadAlunos();
+    alunoSel = alunos.find(a=>a.id===id);
+    fecharModal();
+    renderContent();
+    showToast('✅ Dados atualizados!');
+  } catch(e){
+    alert('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='✓ Salvar';
+  }
+}
+
+// ══════════════════════════════════════
+// BLOQUEAR / DESBLOQUEAR
+// ══════════════════════════════════════
+async function bloquearAluno(id){
+  const motivo = prompt('Motivo do bloqueio:');
+  if(motivo===null) return;
+  await sbPatch('students', `id=eq.${id}`, {blocked:true, blocked_reason:motivo});
+  await loadAlunos();
+  alunoSel = alunos.find(a=>a.id===id);
+  renderContent();
+  showToast('🔴 Aluno bloqueado');
+}
+
+async function desbloquearAluno(id){
+  if(!confirm('Desbloquear este aluno?')) return;
+  await sbPatch('students', `id=eq.${id}`, {blocked:false, blocked_reason:null});
+  await loadAlunos();
+  alunoSel = alunos.find(a=>a.id===id);
+  renderContent();
+  showToast('✅ Aluno desbloqueado');
+}
+
+// ══════════════════════════════════════
+// ENVIAR QUESTIONÁRIO
+// ══════════════════════════════════════
+async function enviarQuestionario(id, nm, phone){
+  const tipo = confirm(`Enviar questionário para ${nm}?\n\nOK = Mudança de Treino\nCancelar = Entrada`) ? 'mudanca' : 'entrada';
+  if(!phone){ alert('Este aluno não tem telefone cadastrado.'); return; }
+  const token = 'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const link  = `${window.location.origin}/questionario?t=${token}&tipo=${tipo}`;
+  const msg   = `Olá, ${nm.split(' ')[0]}! 😊\n\nA Vanessa vai ${tipo==='entrada'?'montar o seu treino':'atualizar o seu treino'} em breve. Responda rapidinho:\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+  try {
+    await fetch('/quest/tokens', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':'se7e2025'},
+      body:JSON.stringify({token, aluno_id:id, aluno_nm:nm, aluno_phone:phone, tipo})
+    });
+  } catch(e){ console.warn('quest token', e); }
+  const phoneNum = phone.startsWith('55')?phone:'55'+phone.replace(/\D/g,'');
+  window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(msg)}`, '_blank');
+  showToast('📲 WhatsApp aberto!');
+}
+
+// ══════════════════════════════════════
+// MODAL RESTRIÇÕES
+// ══════════════════════════════════════
+function abrirModalEditarRestricoes(id){
+  const a = alunos.find(x=>x.id===id);
+  if(!a) return;
+  const rObj = parseRestricoesStr(a.notes_restricoes||'');
+  const selects = REGIOES.map(reg=>{
+    const current = rObj[reg]||'';
+    const opts = ['<option value="">Sem Restrição</option>',
+      ...RESTRICOES_MAP[reg].map(o=>`<option value="${o}"${current===o?' selected':''}>${o}</option>`)
+    ].join('');
+    const hasr = !!current;
+    const bc = hasr?'#FCD34D':'var(--bg3)';
+    return `<div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font-size:10px;font-weight:700;color:var(--ink3)">${reg}</span>
+      <select id="rsel-${reg}" style="border:1.5px solid ${bc};border-radius:8px;padding:6px 8px;font-size:12px;background:#fff;color:var(--ink);outline:none;cursor:pointer"
+        onchange="this.style.borderColor=this.value?'#FCD34D':'var(--bg3)'">
+        ${opts}
+      </select>
+    </div>`;
+  }).join('');
+
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr">
+        <div class="modal-title">⚠️ Restrições — ${a.full_name.split(' ')[0]}</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${selects}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="salvarRestricoes('${id}')">✓ Salvar restrições</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function salvarRestricoes(id){
+  const obj = {};
+  REGIOES.forEach(reg=>{
+    const v = document.getElementById('rsel-'+reg)?.value;
+    if(v) obj[reg] = v;
+  });
+  const str = restricoesObjToStr(obj);
+  // Save in notes_restricoes (we use students.notes for now, ideally a separate column)
+  await sbPatch('students', `id=eq.${id}`, {notes: str || null});
+  // Update local
+  const a = alunos.find(x=>x.id===id);
+  if(a){ a.notes_restricoes = str; a.notes = str; }
+  fecharModal();
+  if(alunoSel?.id===id){ alunoSel.notes_restricoes=str; }
+  renderContent();
+  showToast('✅ Restrições salvas!');
+}
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+function fecharModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+function showToast(msg){
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1C1916;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:200;animation:fadeIn .2s';
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 2800);
+}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+(async()=>{
+  renderContent(); // show loading state
+  await loadAlunos();
+  renderContent(); // render with data
+})();
+</script>
+</body>
+</html>

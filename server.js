@@ -9,6 +9,7 @@ const ROUTES = {
   '/vanessa': 'vanessa.html',
   '/coordenacao': 'vanessa.html',
   '/agendar': 'agendar.html',
+  '/recepcao': 'recepcao.html',
   '/questionario': 'questionario.html',
 };
 
