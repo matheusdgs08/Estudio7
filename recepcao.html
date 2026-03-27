@@ -207,6 +207,8 @@ let modulo     = 'alunos';
 let alunos     = [];       // lista completa
 let alunoSel   = null;     // aluno selecionado na lista
 let busca      = '';
+let _buscaTimer = null;
+function debounceBusca(v){ busca=v; clearTimeout(_buscaTimer); _buscaTimer=setTimeout(()=>renderContent(),250); }
 let loading    = false;
 
 const MOD_TITLES = {
@@ -380,7 +382,7 @@ function renderAlunos(container, ta){
       <div class="list-col">
         <div class="list-search">
           <input class="search-inp" placeholder="Buscar por nome ou matrícula…"
-            value="${busca}" oninput="busca=this.value;renderContent()">
+            value="${busca}" oninput="debounceBusca(this.value)">
         </div>
         <div class="list-items">${listItems}</div>
         <div style="padding:10px 14px;border-top:1px solid var(--bg3);font-size:11px;color:var(--ink3)">
@@ -884,7 +886,7 @@ function renderContratos(container, ta){
     container.innerHTML = `<div class="split">
       <div class="list-col">
         <div class="list-search">
-          <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="busca=this.value;renderContent()">
+          <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="debounceBusca(this.value)">
         </div>
         <div class="list-items">${renderListaAlunos()}</div>
       </div>
@@ -1448,7 +1450,7 @@ function renderContratos(container, ta){
     container.innerHTML = `<div class="split">
       <div class="list-col">
         <div class="list-search">
-          <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="busca=this.value;renderContent()">
+          <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="debounceBusca(this.value)">
         </div>
         <div class="list-items">${renderListaAlunos()}</div>
       </div>
@@ -2169,18 +2171,28 @@ function abrirModalAgendarAgenda(horario, eventId, cap, total){
           </select>
         </div>
         <div id="ag-lista" style="max-height:320px;overflow-y:auto;border:1px solid var(--bg3);border-radius:8px;margin-top:8px">
-          ${alunos.slice(0,15).map(a=>renderAgendarAgendaRow(a,horario,eventId)).join('')}
+          <div style="padding:16px;text-align:center;font-size:12px;color:var(--ink3)">Digite o nome do aluno</div>
         </div>
       </div>
     </div>
   </div>`;
 }
 
+let _agDebounce = null;
 function filtrarAgendarAgenda(q, horario, eventId){
-  const filtrados = q
-    ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(q.toLowerCase())).slice(0,15)
-    : alunos.slice(0,15);
-  document.getElementById('ag-lista').innerHTML = filtrados.map(a=>renderAgendarAgendaRow(a,horario,eventId)).join('');
+  clearTimeout(_agDebounce);
+  _agDebounce = setTimeout(()=>{
+    const filtrados = q && q.length >= 2
+      ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(q.toLowerCase())).slice(0,10)
+      : [];
+    document.getElementById('ag-lista').innerHTML = !q
+      ? '<div style="padding:16px;text-align:center;font-size:12px;color:var(--ink3)">Digite o nome do aluno</div>'
+      : q.length < 2
+      ? '<div style="padding:16px;text-align:center;font-size:12px;color:var(--ink3)">Continue digitando…</div>'
+      : filtrados.length
+      ? filtrados.map(a=>renderAgendarAgendaRow(a,horario,eventId)).join('')
+      : '<div style="padding:16px;text-align:center;font-size:12px;color:var(--ink3)">Nenhum aluno encontrado</div>';
+  }, 200);
 }
 
 function renderAgendarAgendaRow(a, horario, eventId){
@@ -3307,7 +3319,7 @@ function renderRelatorio(container, ta){
       <div class="split">
         <div class="list-col">
           <div class="list-search">
-            <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="busca=this.value;renderContent()">
+            <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="debounceBusca(this.value)">
           </div>
           <div class="list-items">
             ${filtrados.map(a=>`
