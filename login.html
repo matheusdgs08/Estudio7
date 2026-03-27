@@ -115,7 +115,7 @@
 
   <div class="field">
     <label>Nome</label>
-    <input class="inp" id="inp-nome" placeholder="Seu nome completo" autocomplete="off" autocapitalize="words">
+    <input class="inp" id="inp-nome" placeholder="Ex: Vanessa, Matheus, Recepção…" autocomplete="off" autocapitalize="words">
   </div>
 
   <div class="field">
@@ -176,7 +176,9 @@ async function fazerLogin(){
 
   try {
     // Busca perfil por nome + PIN
-    const query = `full_name=ilike.*${encodeURIComponent(nome)}*&pin=eq.${pin}&active=eq.true&select=id,full_name,role,pin`;
+    // Build query - try exact match first, then partial
+    const nomeEnc = encodeURIComponent(nome);
+    const query = `full_name=ilike.*${nomeEnc}*&pin=eq.${pin}&active=eq.true&select=id,full_name,role,pin`;
     const r = await fetch(`${SUPA_URL}/rest/v1/profiles?${query}`, {
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
