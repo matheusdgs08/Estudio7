@@ -3545,97 +3545,84 @@ let agendaState = {
 };
 
 // Dados da agenda (persistidos em localStorage)
+// ── Agenda de Avaliação — dados via Supabase ──
+let _agendaCache = { slots_fixos:null, excecoes:null, agendamentos:null };
+
+async function loadAgendaCache(){
+  const SURL = 'https://kfmkcbhalwupgknysukj.supabase.co';
+  const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+  const h = {'apikey':SKEY,'Authorization':'Bearer '+SKEY};
+  const [sf,exc,tks] = await Promise.all([
+    fetch(`${SURL}/rest/v1/aval_slots_fixos?ativo=eq.true&order=weekday,hora`,{headers:h}).then(r=>r.json()),
+    fetch(`${SURL}/rest/v1/aval_excecoes?order=created_at`,{headers:h}).then(r=>r.json()),
+    fetch(`${SURL}/rest/v1/aval_tokens?select=token,student_nm,student_phone,student_id,status,scheduled_date,scheduled_time,liberated_at,visto&order=created_at.desc`,{headers:h}).then(r=>r.json()),
+  ]);
+  _agendaCache.slots_fixos  = sf||[];
+  _agendaCache.excecoes     = exc||[];
+  _agendaCache.agendamentos = (tks||[]).filter(t=>t.status==='agendado');
+  _agendaCache._tokens_all  = tks||[];
+}
+
 function getAgendaData(){
-  try {
-    const raw = localStorage.getItem('se7e_agenda_aval');
-    if(raw) return JSON.parse(raw);
-  } catch(e){}
   return {
-    // Slots recorrentes: [{id, weekday(0=dom..6=sab), hora:'08:00', ativo:true}]
-    slots_fixos: [
-      {id:'sf1', weekday:1, hora:'08:00', ativo:true},
-      {id:'sf2', weekday:1, hora:'09:00', ativo:true},
-      {id:'sf3', weekday:3, hora:'08:00', ativo:true},
-      {id:'sf4', weekday:3, hora:'09:00', ativo:true},
-      {id:'sf5', weekday:5, hora:'08:00', ativo:true},
-    ],
-    // Exceções: [{id, data:'2026-03-25', hora:'08:00', tipo:'add'|'remove', motivo:''}]
-    excecoes: [],
-    // Agendamentos: [{id, data, hora, aluno_id, aluno_nm, aluno_phone, status:'agendado'|'realizado'|'cancelado', criado_em}]
-    agendamentos: [],
-    // Config Z-API
-    zapi_instance: '',
-    zapi_token: '',
+    slots_fixos:  _agendaCache.slots_fixos  || [],
+    excecoes:     _agendaCache.excecoes     || [],
+    agendamentos: (_agendaCache.agendamentos||[]).map(t=>({
+      data: t.scheduled_date,
+      hora: (t.scheduled_time||'').slice(0,5),
+      status: 'agendado',
+      aluno_nm: t.student_nm,
+    })),
   };
 }
 
-function saveAgendaData(data){
-  localStorage.setItem('se7e_agenda_aval', JSON.stringify(data));
+async function saveSlotFixo(weekday, hora){
+  const SURL = 'https://kfmkcbhalwupgknysukj.supabase.co'; const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+  const h = {'apikey':SKEY,'Authorization':'Bearer '+SKEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  const r = await fetch(`${SURL}/rest/v1/aval_slots_fixos`,{method:'POST',headers:h,body:JSON.stringify({weekday,hora,ativo:true})});
+  const data = await r.json();
+  if(_agendaCache.slots_fixos) _agendaCache.slots_fixos.push(Array.isArray(data)?data[0]:data);
 }
 
-// Gera os slots disponíveis de uma semana (weekOffset relativo a hoje)
-function getSlotsParaSemana(weekOffset){
-  const data = getAgendaData();
-  const hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  const minDate = new Date(hoje.getTime() + 48*3600*1000); // 48h mínimo
-
-  // Segunda da semana alvo
-  const seg = new Date(hoje);
-  seg.setDate(seg.getDate() - seg.getDay() + 1 + weekOffset*7);
-
-  const dias = [];
-  for(let d=0; d<7; d++){
-    const dia = new Date(seg);
-    dia.setDate(seg.getDate() + d);
-    const isoDate = dia.toISOString().slice(0,10);
-    const wd = dia.getDay();
-
-    // Slots fixos para este dia da semana
-    const fixos = data.slots_fixos.filter(s=>s.ativo && s.weekday===wd);
-
-    // Exceções do tipo 'remove' para este dia (pontual ou a partir de)
-    const removidos = data.excecoes
-      .filter(e=>{
-        if(e.tipo==='remove') return e.data===isoDate;
-        if(e.tipo==='remove_from') return e.weekday===wd && e.data_inicio<=isoDate && e.hora;
-        return false;
-      }).map(e=>e.hora);
-
-    // Exceções do tipo 'add' para este dia (pontual ou a partir de)
-    const adicionados = data.excecoes
-      .filter(e=>{
-        if(e.tipo==='add') return e.data===isoDate;
-        if(e.tipo==='add_from') return e.weekday===wd && e.data_inicio<=isoDate;
-        return false;
-      }).map(e=>({id:'ex_'+e.id, hora:e.hora}));
-
-    // Monta slots do dia
-    let slots = [
-      ...fixos.filter(s=>!removidos.includes(s.hora)).map(s=>({id:s.id, hora:s.hora, tipo:'fixo'})),
-      ...adicionados.map(s=>({...s, tipo:'extra'})),
-    ].sort((a,b)=>a.hora.localeCompare(b.hora));
-
-    // Remove duplicatas de hora
-    const horasVistas = new Set();
-    slots = slots.filter(s=>{ if(horasVistas.has(s.hora)) return false; horasVistas.add(s.hora); return true; });
-
-    // Marca cada slot como disponível, agendado ou passado
-    slots = slots.map(slot=>{
-      const slotDT = new Date(isoDate+'T'+slot.hora);
-      const agend = data.agendamentos.find(a=>a.data===isoDate && a.hora===slot.hora && a.status==='agendado');
-      const status = slotDT < minDate ? 'passado' : agend ? 'ocupado' : 'disponivel';
-      return {...slot, status, agendamento: agend||null};
-    });
-
-    dias.push({data:isoDate, weekday:wd, label:dia.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short'}), slots});
-  }
-  return {dias, seg};
+async function deleteSlotFixo(id){
+  const SURL = 'https://kfmkcbhalwupgknysukj.supabase.co'; const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+  const h = {'apikey':SKEY,'Authorization':'Bearer '+SKEY};
+  await fetch(`${SURL}/rest/v1/aval_slots_fixos?id=eq.${id}`,{method:'DELETE',headers:h});
+  if(_agendaCache.slots_fixos) _agendaCache.slots_fixos = _agendaCache.slots_fixos.filter(s=>s.id!==id);
 }
 
-// ── Render principal ──
+async function saveExcecao(exc){
+  const SURL = 'https://kfmkcbhalwupgknysukj.supabase.co'; const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+  const h = {'apikey':SKEY,'Authorization':'Bearer '+SKEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  const r = await fetch(`${SURL}/rest/v1/aval_excecoes`,{method:'POST',headers:h,body:JSON.stringify(exc)});
+  const data = await r.json();
+  if(_agendaCache.excecoes) _agendaCache.excecoes.push(Array.isArray(data)?data[0]:data);
+}
+
+async function deleteExcecao(id){
+  const SURL = 'https://kfmkcbhalwupgknysukj.supabase.co'; const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+  const h = {'apikey':SKEY,'Authorization':'Bearer '+SKEY};
+  await fetch(`${SURL}/rest/v1/aval_excecoes?id=eq.${id}`,{method:'DELETE',headers:h});
+  if(_agendaCache.excecoes) _agendaCache.excecoes = _agendaCache.excecoes.filter(e=>e.id!==id);
+}
+
+async function salvarAvalToken(token, student_id, student_nm, student_phone){
+  const SURL = 'https://kfmkcbhalwupgknysukj.supabase.co'; const SKEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+  const h = {'apikey':SKEY,'Authorization':'Bearer '+SKEY,'Content-Type':'application/json','Prefer':'return=representation'};
+  const r = await fetch(`${SURL}/rest/v1/aval_tokens`,{method:'POST',headers:h,
+    body:JSON.stringify({token,student_id,student_nm,student_phone,status:'ativo'})});
+  return r.json();
+}
+
+
 function renderAgendaAval(){
   const s = agendaState;
+  // Load from Supabase if not yet loaded
+  if(!_agendaCache.slots_fixos){
+    loadAgendaCache().then(()=>render());
+    return `<div style="display:flex;align-items:center;justify-content:center;flex:1;color:var(--ink3);gap:10px">
+      <div style="font-size:20px">⏳</div><div>Carregando agenda…</div></div>`;
+  }
   if(s.view==='slots') return renderGerenciarSlots();
   if(s.view==='agendamentos') return renderListaAgendamentos();
   if(s.view==='enviar') return renderEnviarLink();

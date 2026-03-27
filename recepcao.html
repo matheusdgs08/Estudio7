@@ -428,7 +428,25 @@ function renderDetalheAluno(a){
 
     <!-- Status do treino -->
     <div class="card">
-      <div class="card-hdr"><span class="sb-ico">💪</span><span class="card-hdr-title">Status do treino</span></div>
+      <div class="card-hdr"><span class="sb-ico">💪</span><span class="card-hdr-title">Status do treino</span>
+        ${(()=>{
+          // 3-month evaluation counter
+          const fetch3 = async()=>{
+            const av=await sbGet('physical_assessments',\`student_id=eq.${a.id}&order=assessed_at.desc&limit=1&select=assessed_at\`);
+            const dt=av[0]?.assessed_at;
+            const dias=dt?Math.floor((new Date()-new Date(dt))/864e5):999;
+            const el=document.getElementById('aval-counter-${a.id}');
+            if(!el)return;
+            const meses=Math.floor(dias/30);
+            const due=dias>=90;
+            el.innerHTML=due
+              ?\`<span style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600">⚠️ Avaliação: \${meses}m sem avaliar</span>\`
+              :\`<span style="background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600">✓ Avaliação em dia (\${90-dias}d)</span>\`;
+          };
+          setTimeout(fetch3,100);
+          return \`<div id="aval-counter-${a.id}" style="margin-left:auto"></div>\`;
+        })()}
+      </div>
       <div class="card-body">
         <div class="field-grid">
           <div class="field"><label>Treinos realizados</label>
@@ -439,6 +457,9 @@ function renderDetalheAluno(a){
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-secondary" onclick="enviarQuestionario('${a.id}','${(a.full_name||'').replace(/'/g,"\\'")}','${a.phone||''}')">
             📋 Enviar questionário
+          </button>
+          <button class="btn btn-secondary" onclick="liberarAvaliacao('${a.id}','${(a.full_name||'').replace(/'/g,"\\'")}',${'\'' + (a.phone||'') + '\''})">
+            📊 Liberar avaliação
           </button>
           ${a.blocked
             ? `<button class="btn btn-green" onclick="desbloquearAluno('${a.id}')">✅ Desbloquear</button>`
@@ -2955,6 +2976,119 @@ async function salvarEditarLead(leadId){
   showToast('✅ Lead atualizado!');
 }
 
+
+// ══════════════════════════════════════
+// LIBERAR AVALIAÇÃO
+// ══════════════════════════════════════
+let _avalTokenCache = {};  // {student_id: token_data}
+
+async function carregarAvalTokens(){
+  const r = await sbGet('aval_tokens','order=created_at.desc&select=token,student_id,status,scheduled_date,liberated_at');
+  r.forEach(t=>{
+    if(!_avalTokenCache[t.student_id]) _avalTokenCache[t.student_id] = t;
+  });
+}
+
+async function liberarAvaliacao(studentId, studentNm, studentPhone){
+  // Carregar última avaliação do aluno
+  const avaliacoes = await sbGet('physical_assessments',`student_id=eq.${studentId}&order=assessed_at.desc&limit=1&select=assessed_at`);
+  const ultimaAval = avaliacoes[0]?.assessed_at;
+  
+  const hoje    = new Date();
+  const diasDesde = ultimaAval ? Math.floor((hoje - new Date(ultimaAval)) / 864e5) : 999;
+  const mesesDesde = Math.floor(diasDesde / 30);
+  const nome1 = studentNm.split(' ')[0];
+
+  // Verificar se já tem token ativo/agendado
+  const tokens = await sbGet('aval_tokens',`student_id=eq.${studentId}&order=liberated_at.desc&limit=1`);
+  const tkAtual = tokens[0];
+
+  let msg = `Liberar avaliação para ${studentNm}?`;
+  if(tkAtual?.status === 'agendado'){
+    msg = `${studentNm} já tem avaliação agendada em ${fmtDate(tkAtual.scheduled_date)}. Gerar mesmo assim?`;
+  }
+  if(tkAtual?.status === 'ativo' && tkAtual.liberated_at){
+    const diasLib = Math.floor((hoje - new Date(tkAtual.liberated_at)) / 864e5);
+    msg = `${studentNm} já tem um link ativo (liberado há ${diasLib} dias). Gerar novo?`;
+  }
+
+  if(!confirm(msg)) return;
+
+  if(!studentPhone){ alert('Este aluno não tem telefone cadastrado.'); return; }
+
+  const token = 'av'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const link  = `${window.location.origin}/agendar?t=${token}`;
+
+  // Salvar no Supabase
+  try {
+    await sbPost('aval_tokens',{
+      token,
+      student_id:    studentId,
+      student_nm:    studentNm,
+      student_phone: studentPhone,
+      status:        'ativo',
+    });
+  } catch(e) { alert('Erro ao gerar token: '+e.message); return; }
+
+  // Montar mensagem WhatsApp
+  const msgWpp = ultimaAval
+    ? `Olá, ${nome1}! 😊 Já fazem ${mesesDesde} ${mesesDesde===1?'mês':'meses'} desde sua última avaliação com a Vanessa. Que tal agendar a próxima?\n\n👉 ${link}\n\n_Estúdio Se7e_`
+    : `Olá, ${nome1}! 😊 Está na hora de fazer sua avaliação física com a Vanessa! Escolha o melhor horário pelo link abaixo:\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+
+  const phone = studentPhone.replace(/\D/g,'');
+  const phoneNum = phone.startsWith('55') ? phone : '55'+phone;
+  window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(msgWpp)}`,'_blank');
+  showToast(`✅ Link enviado para ${nome1}!`);
+}
+
+
+// ══════════════════════════════════════
+// LIBERAR AVALIAÇÃO
+// ══════════════════════════════════════
+
+async function liberarAvaliacao(studentId, studentNm, studentPhone){
+  const hoje = new Date();
+  const nome1 = studentNm.split(' ')[0];
+
+  // Última avaliação física
+  const avaliacoes = await sbGet('physical_assessments',`student_id=eq.${studentId}&order=assessed_at.desc&limit=1&select=assessed_at`);
+  const ultimaAval = avaliacoes[0]?.assessed_at;
+  const diasDesde  = ultimaAval ? Math.floor((hoje - new Date(ultimaAval)) / 864e5) : 999;
+  const mesesDesde = Math.floor(diasDesde / 30);
+
+  // Token existente
+  const tokens = await sbGet('aval_tokens',`student_id=eq.${studentId}&order=liberated_at.desc&limit=1`);
+  const tkAtual = tokens[0];
+
+  let confirMsg = `Liberar link de avaliação para ${studentNm}?`;
+  if(tkAtual?.status==='agendado')
+    confirMsg = `${studentNm} já tem avaliação agendada em ${fmtDate(tkAtual.scheduled_date)}.\nGerar novo link mesmo assim?`;
+  else if(tkAtual?.status==='ativo' && tkAtual.liberated_at){
+    const diasLib = Math.floor((hoje-new Date(tkAtual.liberated_at))/864e5);
+    confirMsg = `${studentNm} já tem link ativo (liberado há ${diasLib} dias).\nGerar novo link?`;
+  }
+  if(!confirm(confirMsg)) return;
+  if(!studentPhone){ alert('Este aluno não tem telefone cadastrado.'); return; }
+
+  const token = 'av'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  const link  = `${window.location.origin}/agendar?t=${token}`;
+
+  try {
+    await sbPost('aval_tokens',{
+      token, student_id:studentId, student_nm:studentNm,
+      student_phone:studentPhone, status:'ativo',
+    });
+  } catch(e){ alert('Erro: '+e.message); return; }
+
+  const msgWpp = ultimaAval
+    ? `Olá, ${nome1}! 😊 Já fazem ${mesesDesde} ${mesesDesde===1?'mês':'meses'} desde sua última avaliação com a Vanessa. Que tal agendar a próxima?\n\n👉 ${link}\n\n_Estúdio Se7e_`
+    : `Olá, ${nome1}! 😊 Está na hora de fazer sua avaliação física com a Vanessa! Escolha o melhor horário:\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+
+  const phone = studentPhone.replace(/\D/g,'');
+  const phoneNum = phone.startsWith('55')?phone:'55'+phone;
+  window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(msgWpp)}`,'_blank');
+  showToast(`✅ Link de avaliação enviado para ${nome1}!`);
+}
 
 // ══════════════════════════════════════
 // INIT
