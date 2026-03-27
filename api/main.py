@@ -758,7 +758,7 @@ async def tf_login():
     async with httpx.AsyncClient() as client:
         r = await client.post(
             f"{TECNOFIT_BASE}/api-core/auth",
-            json={"email": TECNOFIT_EMAIL, "senha": TECNOFIT_PASSWORD},
+            json={"email": TECNOFIT_EMAIL, "password": TECNOFIT_PASSWORD},
             timeout=15
         )
         r.raise_for_status()
