@@ -3216,6 +3216,8 @@ function renderAvalForm(){
           <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px">Peso Ideal</div>
         </div>`:''}
       </div>
+    ${rcq?tabelaRCQ():''}
+    ${gordPct?tabelaGordura():''}
     </div>`:
     '<div style="color:var(--ink3);font-size:13px;text-align:center;padding:16px">Preencha os campos para ver os índices calculados.</div>';
 
@@ -3246,13 +3248,15 @@ function renderAvalForm(){
 
     ${sec('Dobras Cutâneas — Pollock 7','📏')}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${inp('peitoral','Peitoral','mm')}
-      ${inp('abdominal','Abdominal','mm')}
-      ${inp('coxa_dobra','Coxa','mm')}
+      ${inp('biceps','Bíceps','mm')}
       ${inp('triceps','Tríceps','mm')}
+      ${inp('peitoral','Peitoral','mm')}
+      ${inp('axilar','Axilar média','mm')}
       ${inp('subescapular','Subescapular','mm')}
       ${inp('suprailiaca','Supra-ilíaca','mm')}
-      ${inp('axilar','Axilar média','mm')}
+      ${inp('abdominal','Abdominal','mm')}
+      ${inp('coxa_dobra','Coxa','mm')}
+      ${inp('panturrilha_dobra','Panturrilha','mm')}
     </div>
 
     <!-- Resultados composição corporal calculados -->
@@ -3285,6 +3289,14 @@ function renderAvalForm(){
       ${bi('coxa_rel_d','coxa_rel_e','Coxa Relaxada')}
       ${bi('coxa_con_d','coxa_con_e','Coxa Contraída')}
       ${bi('panturrilha_d','panturrilha_e','Panturrilha')}
+    </div>
+
+    ${sec('Diâmetro Ósseo','🦴')}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${inp('diam_punho','Punho','cm')}
+      ${inp('diam_femur','Fêmur','cm')}
+      ${inp('diam_umero','Úmero','cm')}
+      ${inp('diam_tornozelo','Tornozelo','cm')}
     </div>
 
     ${sec('Objetivo / Meta','🎯')}
