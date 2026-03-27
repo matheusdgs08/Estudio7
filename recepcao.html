@@ -2060,7 +2060,7 @@ async function renderAgenda(container, ta){
 
     const barColor = pct>=100?'var(--red)':pct>=75?'#F59E0B':'var(--green)';
 
-    const tipoLabel = {'agenda_fixa':'Fixo','avulsa':'Avulsa','reposicao':'Reposição','reagendamento':'Reagend.','?':'—'};
+    const tipoLabel = {'agenda_fixa':'Fixa','avulsa':'Fixa','reposicao':'Reposição','reagendamento':'Reposição','?':'—'};
 
     const alunoRows = alunos.map(a=>{
       const avatarHtml = a.photo
