@@ -1420,15 +1420,6 @@ async function confirmarUpgrade(cid, endDate){
 
 
 
-// ══════════════════════════════════════════════════════
-// MÓDULO CONTRATOS
-// ══════════════════════════════════════════════════════
-
-let contratos   = [];   // contratos do aluno selecionado
-let planos      = [];   // planos disponíveis
-let classSlots  = [];   // horários disponíveis
-let contratoSel = null; // contrato em visualização
-let novoContrato = null;// form de novo contrato
 
 async function loadPlanos(){
   if(planos.length) return;
