@@ -3780,17 +3780,21 @@ function renderAbaContrato(a){
   if(!contratoAbaData){
     setTimeout(async()=>{
       try {
-        const [contracts, replacements, fixedSlots] = await Promise.all([
+        await loadPlanos();
+        const [contracts, replacements] = await Promise.all([
           sbGet('contracts',`student_id=eq.${a.id}&order=created_at.desc&select=*`),
           sbGet('replacement_credits',`student_id=eq.${a.id}&active=eq.true&select=*`).catch(()=>[]),
-          sbGet('fixed_slots',`student_id=eq.${a.id}&active=eq.true&select=class_slot_id`).catch(()=>[]),
         ]);
         let fixedHorarios = [];
-        if(fixedSlots.length){
-          const slotIds = fixedSlots.map(f=>f.class_slot_id);
-          const slotsData = await sbGet('class_slots','id=in.('+slotIds.join(',')+')&select=weekday,start_time&order=weekday,start_time');
-          const WD = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-          fixedHorarios = slotsData.map(s=>({dia: WD[s.weekday], horario: s.start_time.slice(0,5), wd: s.weekday}));
+        if(contracts.length){
+          const ct0 = contracts[0];
+          const fixedSlots = await sbGet('fixed_slots',`contract_id=eq.${ct0.id}&active=eq.true&select=class_slot_id`).catch(()=>[]);
+          if(fixedSlots.length){
+            const slotIds = fixedSlots.map(f=>f.class_slot_id);
+            const slotsData = await sbGet('class_slots','id=in.('+slotIds.join(',')+')&select=weekday,start_time&order=weekday,start_time');
+            const WD = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+            fixedHorarios = slotsData.map(s=>({dia: WD[s.weekday], horario: s.start_time.slice(0,5), wd: s.weekday}));
+          }
         }
         contratoAbaData = {contracts, replacements, fixedHorarios};
         // Load check-ins for the most recent contract
@@ -3865,7 +3869,7 @@ function renderAbaContrato(a){
     <!-- Check-ins -->
     <div class="card">
       <div class="card-hdr"><span class="sb-ico">📌</span><span class="card-hdr-title">Horários fixos</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--ink3)">${fixedHorarios.length} horário${fixedHorarios.length!==1?'s':''}</span>
+        <span style="margin-left:auto;font-size:11px;color:${fixedHorarios.length===(plan.frequency_per_week||0)?'var(--green)':'#D97706'}">${fixedHorarios.length}/${plan.frequency_per_week||'?'} horários definidos</span>
       </div>
       <div class="card-body">
         ${fixedHorarios.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">
