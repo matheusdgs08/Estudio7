@@ -325,7 +325,7 @@ async function loadAlunos(){
   try {
     // Busca profiles (role=student) + students join
     const [profiles, students] = await Promise.all([
-      sbGet('profiles', 'role=eq.student&active=eq.true&select=id,full_name,phone&order=full_name'),
+      sbGet('profiles', 'role=eq.student&active=eq.true&select=id,full_name,phone,photo_url&order=full_name'),
       sbGet('students', 'select=id,matricula,phone_secondary,birth_date,notes,next_training_session,blocked,blocked_reason,treinos_realizados,current_program_id'),
     ]);
     const stMap = {};
@@ -364,7 +364,9 @@ function renderAlunos(container, ta){
     const cor = avColor(a.full_name||'');
     const status = a.blocked ? 'blocked' : '';
     return `<div class="list-item ${isSel?'sel':''}" onclick="selecionarAluno('${a.id}')">
-      <div class="av" style="background:${cor}">${ini(a.full_name||'?')}</div>
+      ${a.photo_url
+        ? '<img src="'+a.photo_url+'" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.outerHTML=\'<div class=av style=background:'+cor+'>'+ini(a.full_name||'?')+'</div>\'">'
+        : '<div class="av" style="background:'+cor+'">'+ini(a.full_name||'?')+'</div>'}
       <div style="flex:1;min-width:0">
         <div class="li-name">${a.full_name||'—'}</div>
         <div class="li-sub">mat. ${a.mat||'—'} ${a.phone?'· '+fmtPhone(a.phone):''}</div>
@@ -430,7 +432,9 @@ function renderDetalheAlunoVisao(a){
     <div class="card">
       <div class="card-body">
         <div style="display:flex;align-items:center;gap:14px">
-          <div class="av" style="background:${cor};width:52px;height:52px;border-radius:50%;font-size:18px;font-weight:800">${ini(a.full_name||'?')}</div>
+          ${a.photo_url
+            ? '<img src="'+a.photo_url+'" style="width:52px;height:52px;border-radius:50%;object-fit:cover" onerror="this.outerHTML=\'<div class=av style=background:'+cor+';width:52px;height:52px;border-radius:50%;font-size:18px;font-weight:800>'+ini(a.full_name||'?')+'</div>\'">'
+            : '<div class="av" style="background:'+cor+';width:52px;height:52px;border-radius:50%;font-size:18px;font-weight:800">'+ini(a.full_name||'?')+'</div>'}
           <div style="flex:1">
             <div style="font-size:18px;font-weight:800;color:var(--ink)">${a.full_name||'—'}</div>
             <div style="font-size:12px;color:var(--ink3);margin-top:3px">mat. ${a.mat||'—'} · ${statusBadge}</div>
