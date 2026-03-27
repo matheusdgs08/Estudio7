@@ -3954,7 +3954,7 @@ function renderAbaContrato(a){
           const transferred = contratoAbaData.replacements_transferred;
           const prevTotal = prevReps.reduce((s,r)=>s+(r.quantity_remaining||0),0);
           if(transferred) return '<div style="margin-top:10px;padding:8px 12px;background:var(--green-l);border-radius:8px;font-size:12px;color:var(--green)">✅ Reposições do contrato anterior já foram transferidas.</div>';
-          if(prevTotal > 0) return '<div style="margin-top:10px;padding:10px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px"><div style="font-size:12px;color:#1E40AF;margin-bottom:6px">📦 Contrato anterior tem <strong>'+prevTotal+'</strong> reposição(ões) disponível(is).</div><button class="btn btn-primary" style="padding:5px 14px;font-size:12px" onclick="transferirReposicoes(\\''+ct.id+'\\',\\''+contratoAbaData.prevContractId+'\\')">↗️ Transferir reposições</button></div>';
+          if(prevTotal > 0) return '<div style="margin-top:10px;padding:10px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px"><div style="font-size:12px;color:#1E40AF;margin-bottom:6px">📦 Contrato anterior tem <strong>'+prevTotal+'</strong> reposição(ões) disponível(is).</div><button class="btn btn-primary" style="padding:5px 14px;font-size:12px" onclick="transferirReposicoes(&quot;'+ct.id+'&quot;,&quot;'+(contratoAbaData.prevContractId||'')+'&quot;)">↗️ Transferir reposições</button></div>';
           return '';
         })()}
       </div>
@@ -3970,16 +3970,23 @@ function renderAbaContrato(a){
           const valor = priceMap[ct.payment_type] || plan.monthly_price || 0;
           const statusPag = {pending:'🟡 Pendente', paid:'🟢 Pago', failed:'🔴 Falhou', refunded:'↩️ Estornado'};
           const metodoMap = {pix:'Pix', credit_card:'Cartão', link:'Link'};
-          if(!payments.length){
-            return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Valor do plano</span><span style="font-size:13px;font-weight:700">R$ '+(valor?valor.toFixed(2).replace('.',','):'—')+'</span></div><div style="margin-top:8px;font-size:12px;color:var(--ink3)">Sem pagamentos registrados.</div>';
-          }
+          const fmtVal = v => v ? 'R$ '+v.toFixed(2).replace('.',',') : '—';
+          const pRow = (l,v) => '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">'+l+'</span><span style="font-size:13px;font-weight:600">'+v+'</span></div>';
+          let html = pRow('Valor do plano', fmtVal(valor));
+          if(!payments.length) return html + '<div style="margin-top:8px;font-size:12px;color:var(--ink3)">Sem pagamentos registrados.</div>';
           const last = payments[0];
-          return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Valor do plano</span><span style="font-size:13px;font-weight:700">R$ '+(valor?valor.toFixed(2).replace('.',','):'—')+'</span></div>'
-            +'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Último pagamento</span><span style="font-size:13px;font-weight:600">'+(statusPag[last.status]||last.status)+'</span></div>'
-            +(last.paid_at?'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Data do pagamento</span><span style="font-size:13px">'+fmtDate(last.paid_at.slice(0,10))+'</span></div>':'')
-            +(last.payment_method?'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Método</span><span style="font-size:13px">'+(metodoMap[last.payment_method]||last.payment_method)+'</span></div>':'')
-            +(last.due_date?'<div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:13px;color:var(--ink3)">Próximo vencimento</span><span style="font-size:13px;font-weight:600">'+fmtDate(last.due_date)+'</span></div>':'')
-            +(payments.length>1?'<div style="margin-top:8px;font-size:11px;color:var(--ink3);cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\\'none\\'?\\'block\\':\\'none\\'">📋 Histórico ('+payments.length+' pagamentos) ›</div><div style="display:none;margin-top:6px">'+payments.slice(1,5).map(p=>'<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:var(--ink3)"><span>'+fmtDate(p.due_date)+'</span><span>R$ '+(p.amount?p.amount.toFixed(2).replace('.',','):'—')+'</span><span>'+(statusPag[p.status]||p.status)+'</span></div>').join('')+'</div>':'');
+          html += pRow('Último pagamento', statusPag[last.status]||last.status);
+          if(last.paid_at) html += pRow('Data do pagamento', fmtDate(last.paid_at.slice(0,10)));
+          if(last.payment_method) html += pRow('Método', metodoMap[last.payment_method]||last.payment_method);
+          if(last.due_date) html += pRow('Próximo vencimento', fmtDate(last.due_date));
+          if(payments.length>1){
+            html += '<details style="margin-top:8px"><summary style="font-size:11px;color:var(--ink3);cursor:pointer">📋 Histórico ('+payments.length+' pagamentos)</summary><div style="margin-top:6px">';
+            payments.slice(1,5).forEach(p => {
+              html += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:var(--ink3)"><span>'+fmtDate(p.due_date)+'</span><span>'+fmtVal(p.amount)+'</span><span>'+(statusPag[p.status]||p.status)+'</span></div>';
+            });
+            html += '</div></details>';
+          }
+          return html;
         })()}
       </div>
     </div>
