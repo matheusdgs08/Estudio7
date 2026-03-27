@@ -157,6 +157,8 @@
   <button class="sb-item" onclick="setMod('impressao',this)"><span class="sb-ico">🖨️</span> Impressão de fichas</button>
   <button class="sb-item" onclick="setMod('experimentais',this)"><span class="sb-ico">🧪</span> Experimentais<span class="sb-badge" id="badge-exp" style="display:none">0</span></button>
   <button class="sb-item" onclick="setMod('pausas',this)"><span class="sb-ico">⏸️</span> Pausas</button>
+  <button class="sb-item" onclick="setMod('relatorio',this)"><span class="sb-ico">📊</span> Relatório de presença</button>
+  <button class="sb-item" onclick="setMod('relatorio',this)"><span class="sb-ico">📊</span> Relatório de presença</button>
 </div>
 
 <!-- Main -->
@@ -212,7 +214,8 @@ const MOD_TITLES = {
   contratos:    ['Contratos', 'Criar e gerenciar contratos'],
   agenda:       ['Agenda do dia', 'Horários, vagas e check-in'],
   experimentais:['Experimentais', 'Pipeline de leads e agendamentos de aulas experimentais'],
-  pausas:       ['Pausas', 'Pausas de contrato'],
+  pausas:       ['Pausas', 'Contratos em pausa'],
+  relatorio:    ['Relatório de Presença', 'Frequência e faltas por aluno'],
   impressao:    ['Impressão de fichas', 'Configure e monitore a impressão automática'],
 };
 
@@ -309,6 +312,8 @@ function renderContent(){
   else if(modulo==='agenda')   { renderAgenda(c, ta); return; }
   else if(modulo==='impressao')    renderImpressao(c, ta);
   else if(modulo==='experimentais'){ renderExperimentais(c, ta); return; }
+  else if(modulo==='pausas')        renderPausas(c, ta);
+  else if(modulo==='relatorio')     renderRelatorio(c, ta);
   else c.innerHTML = `<div class="empty"><div class="empty-ico">🚧</div><div class="empty-title">Em breve</div><div class="empty-sub">Módulo ${modulo} em construção.</div></div>`;
 }
 
@@ -3112,6 +3117,308 @@ async function liberarAvaliacao(studentId, studentNm, studentPhone){
   window.open(`https://wa.me/${phoneNum}?text=${encodeURIComponent(msgWpp)}`,'_blank');
   showToast(`✅ Link de avaliação enviado para ${nome1}!`);
 }
+
+
+// ══════════════════════════════════════════════════════
+// MÓDULO PAUSAS
+// ══════════════════════════════════════════════════════
+let pausasLoaded = false;
+let pausasContratos = [];
+
+async function loadPausas(){
+  const [pausados, historico] = await Promise.all([
+    sbGet('contracts','status=eq.paused&select=*&order=pause_start.desc'),
+    sbGet('contracts','status=eq.active&pause_start=not.is.null&select=*&order=pause_end.desc&limit=20'),
+  ]);
+  const all = [...pausados, ...historico];
+  if(all.length){
+    const sids = [...new Set(all.map(c=>c.student_id))];
+    const profs = await sbGet('profiles',`id=in.(${sids.join(',')})&select=id,full_name`);
+    const pmap = {}; profs.forEach(p=>pmap[p.id]=p);
+    all.forEach(c=>{ c._aluno = pmap[c.student_id]||{}; });
+  }
+  pausasContratos = all;
+  pausasLoaded = true;
+}
+
+function renderPausas(container, ta){
+  ta.innerHTML = `<button class="btn btn-secondary" onclick="pausasLoaded=false;renderContent()">🔄</button>`;
+  if(!pausasLoaded){
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando…</div></div>';
+    loadPausas().then(()=>renderContent());
+    return;
+  }
+
+  const pausados  = pausasContratos.filter(c=>c.status==='paused');
+  const historico = pausasContratos.filter(c=>c.status==='active'&&c.pause_start);
+  const tipoMap   = {vacation:'🏖️ Férias',medical:'🏥 Médico',administrative:'📋 Administrativo'};
+
+  const cardPausado = c => {
+    const dias = c.pause_end ? Math.ceil((new Date(c.pause_end+'T12:00')-new Date())/(864e5)) : '?';
+    return `<div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="av" style="background:${avColor(c._aluno.full_name||'?')};width:42px;height:42px;border-radius:50%;font-size:14px;font-weight:700;flex-shrink:0">${ini(c._aluno.full_name||'?')}</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700">${c._aluno.full_name||'—'}</div>
+            <div style="font-size:12px;color:var(--ink3);margin-top:2px">
+              ${tipoMap[c.pause_type]||'Pausa'} · ${fmtDate(c.pause_start)} → ${fmtDate(c.pause_end)}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:26px;font-weight:800;color:${dias>0?'#D97706':'var(--red)'}">${dias>0?dias:'Venceu'}</div>
+            <div style="font-size:10px;color:var(--ink3)">${dias>0?'dias restantes':'retorno pendente'}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;padding:10px 12px;background:#FEF3C7;border-radius:8px;font-size:12px;color:#92400E;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>Retorna em <strong>${fmtDate(c.pause_end)}</strong> · Término do contrato: <strong>${fmtDate(c.end_date)}</strong></span>
+          <button onclick="retomarPausaRec('${c.id}')" class="btn btn-green" style="padding:6px 14px;font-size:12px;white-space:nowrap">▶️ Retomar</button>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="padding:10px 24px;background:var(--bg);border-bottom:1px solid var(--bg3);flex-shrink:0;display:flex;gap:12px">
+        <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 18px;text-align:center">
+          <div style="font-size:28px;font-weight:800;color:#D97706">${pausados.length}</div>
+          <div style="font-size:11px;color:var(--ink3)">Pausados agora</div>
+        </div>
+        <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:10px;padding:10px 18px;text-align:center">
+          <div style="font-size:28px;font-weight:800">${historico.length}</div>
+          <div style="font-size:11px;color:var(--ink3)">Retomados recente</div>
+        </div>
+      </div>
+      <div style="padding:16px 24px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px">
+        ${pausados.length
+          ? pausados.map(cardPausado).join('')
+          : '<div class="empty"><div class="empty-ico">✅</div><div class="empty-title">Nenhum contrato pausado</div><div class="empty-sub">Todos os contratos estão ativos.</div></div>'}
+        ${historico.length ? `
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Histórico de pausas</div>
+          <div class="card" style="overflow:hidden;padding:0">
+            ${historico.map(c=>`
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--bg3)">
+                <div class="av" style="background:${avColor(c._aluno.full_name||'?')};width:30px;height:30px;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0">${ini(c._aluno.full_name||'?')}</div>
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:600">${c._aluno.full_name||'—'}</div>
+                  <div style="font-size:11px;color:var(--ink3)">${fmtDate(c.pause_start)} → ${fmtDate(c.pause_end)} · ${tipoMap[c.pause_type]||'Pausa'}</div>
+                </div>
+                <span style="font-size:10px;background:#ECFDF5;color:#065F46;border-radius:20px;padding:2px 8px;border:1px solid #A7F3D0">✓ Retomado</span>
+              </div>`).join('')}
+          </div>` : ''}
+        <div style="padding-bottom:20px"></div>
+      </div>
+    </div>`;
+}
+
+async function retomarPausaRec(cid){
+  if(!confirm('Retomar este contrato agora?')) return;
+  await sbPatch('contracts',`id=eq.${cid}`,{status:'active'});
+  showToast('▶️ Contrato retomado!');
+  pausasLoaded = false;
+  renderContent();
+}
+
+// ══════════════════════════════════════════════════════
+// MÓDULO RELATÓRIO DE PRESENÇA
+// ══════════════════════════════════════════════════════
+let relState = { alunoId:null, alunoNm:'', periodo:'30d', dataIni:'', dataFim:'', dados:null };
+
+function renderRelatorio(container, ta){
+  ta.innerHTML = `<button class="btn btn-secondary" onclick="relState.dados=null;renderContent()">🔄</button>`;
+
+  if(!relState.alunoId){
+    const filtrados = busca
+      ? alunos.filter(a=>(a.full_name||'').toLowerCase().includes(busca.toLowerCase()))
+      : alunos;
+    container.innerHTML = `
+      <div class="split">
+        <div class="list-col">
+          <div class="list-search">
+            <input class="search-inp" placeholder="Buscar aluno…" value="${busca}" oninput="busca=this.value;renderContent()">
+          </div>
+          <div class="list-items">
+            ${filtrados.map(a=>`
+              <div class="list-item" onclick="abrirRelatorio('${a.id}','${(a.full_name||'').replace(/'/g,"\\'")}')">
+                <div class="av" style="background:${avColor(a.full_name||'')}">${ini(a.full_name||'?')}</div>
+                <div style="flex:1;min-width:0">
+                  <div class="li-name">${a.full_name||'—'}</div>
+                  <div class="li-sub">mat. ${a.mat||'—'}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>
+        <div class="empty"><div class="empty-ico">📊</div><div class="empty-title">Selecione um aluno</div><div class="empty-sub">Para ver o relatório de presença.</div></div>
+      </div>`;
+    return;
+  }
+
+  if(!relState.dados){
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando…</div></div>';
+    carregarRelatorio().then(()=>renderContent());
+    return;
+  }
+
+  const {alunoNm, dataIni, dataFim, dados, periodo} = relState;
+  const cor = avColor(alunoNm);
+  const presentes  = dados.filter(e=>e.status==='attended').length;
+  const ausentes   = dados.filter(e=>e.status==='missed').length;
+  const cancelados = dados.filter(e=>e.status==='cancelled').length;
+  const total      = presentes + ausentes;
+  const pct        = total>0?Math.round((presentes/total)*100):0;
+  const pcor       = pct>=80?'var(--green)':pct>=60?'#D97706':'var(--red)';
+
+  // Agrupar por semana
+  const byWeek = {};
+  dados.filter(e=>['attended','missed','confirmed'].includes(e.status)).forEach(e=>{
+    const d = new Date(e.class_date+'T12:00');
+    const mon = new Date(d); mon.setDate(d.getDate()-((d.getDay()||7)-1));
+    const key = mon.toISOString().slice(0,10);
+    if(!byWeek[key]) byWeek[key]={pres:0,aus:0,conf:0};
+    if(e.status==='attended')  byWeek[key].pres++;
+    else if(e.status==='missed')    byWeek[key].aus++;
+    else byWeek[key].conf++;
+  });
+
+  const semRows = Object.entries(byWeek).sort().map(([seg,w])=>{
+    const tot  = w.pres+w.aus;
+    const pctW = tot>0?Math.round((w.pres/tot)*100):0;
+    const wc   = pctW===100?'var(--green)':pctW>=50?'#D97706':'var(--red)';
+    const semLbl = new Date(seg+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+    return `<tr style="border-bottom:1px solid var(--bg3)">
+      <td style="padding:7px 12px;font-size:12px">Sem. ${semLbl}</td>
+      <td style="padding:7px 12px;text-align:center;font-weight:600;color:var(--green)">${w.pres}</td>
+      <td style="padding:7px 12px;text-align:center;color:var(--red)">${w.aus}</td>
+      <td style="padding:7px 12px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="flex:1;background:var(--bg3);border-radius:20px;height:5px">
+            <div style="width:${pctW}%;height:5px;border-radius:20px;background:${wc}"></div>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:${wc};min-width:30px">${pctW}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Timeline mini-cards
+  const timeline = dados.filter(e=>e.status!=='cancelled').map(e=>{
+    const lbl = new Date(e.class_date+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+    const hora = (e._slot?.start_time||'').slice(0,5);
+    const bg  = e.status==='attended'?'#16A34A':e.status==='missed'?'#DC2626':'#D97706';
+    return `<div style="background:${bg};border-radius:6px;padding:4px 7px;text-align:center;min-width:42px">
+      <div style="font-size:11px;font-weight:700;color:#fff">${lbl}</div>
+      ${hora?`<div style="font-size:10px;color:rgba(255,255,255,.8)">${hora}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const perBtns = [['7d','7d'],['30d','30d'],['90d','3m'],['180d','6m']].map(([k,l])=>
+    `<button onclick="filtrarPeriodo('${k}')"
+      style="padding:5px 11px;font-size:11px;font-weight:600;border-radius:6px;cursor:pointer;border:1px solid var(--bg3);
+      background:${periodo===k?'var(--purple)':'var(--wh)'};color:${periodo===k?'#fff':'var(--ink2)'}">${l}</button>`
+  ).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div style="background:var(--wh);border-bottom:1px solid var(--bg3);padding:12px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0;flex-wrap:wrap">
+        <button onclick="relState.alunoId=null;relState.dados=null;busca='';renderContent()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
+        <div class="av" style="background:${cor};width:34px;height:34px;border-radius:50%;font-size:12px;font-weight:700;flex-shrink:0">${ini(alunoNm)}</div>
+        <div style="flex:1;min-width:120px">
+          <div style="font-size:14px;font-weight:700">${alunoNm}</div>
+          <div style="font-size:11px;color:var(--ink3)">${fmtDate(dataIni)} → ${fmtDate(dataFim)}</div>
+        </div>
+        <div style="display:flex;gap:4px">${perBtns}</div>
+      </div>
+
+      <div style="padding:16px 24px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px">
+
+        <!-- Stats -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          ${[[presentes,'Presenças','var(--green)'],
+             [ausentes,'Faltas','var(--red)'],
+             [cancelados,'Cancelamentos','#D97706'],
+             [pct+'%','Frequência',pcor]
+            ].map(([v,l,c])=>`
+            <div style="background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);padding:12px 14px">
+              <div style="font-size:24px;font-weight:800;color:${c}">${v}</div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:2px">${l}</div>
+            </div>`).join('')}
+        </div>
+
+        <!-- Barra frequência -->
+        <div class="card">
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:13px;font-weight:600">Taxa de presença no período</span>
+              <span style="font-size:20px;font-weight:800;color:${pcor}">${pct}%</span>
+            </div>
+            <div style="background:var(--bg3);border-radius:20px;height:10px">
+              <div style="width:${pct}%;height:10px;border-radius:20px;background:${pcor};transition:width .5s"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:var(--ink3)">
+              <span>0%</span><span style="color:var(--green)">↑ 80% meta</span><span>100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Por semana -->
+        ${semRows?`<div class="card">
+          <div class="card-hdr"><span class="sb-ico">📅</span><span class="card-hdr-title">Por semana</span></div>
+          <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+            <thead><tr style="background:var(--bg)">
+              <th style="padding:6px 12px;font-size:11px;text-align:left;font-weight:700;color:var(--ink3)">Semana</th>
+              <th style="padding:6px 12px;font-size:11px;text-align:center;color:var(--green)">✅</th>
+              <th style="padding:6px 12px;font-size:11px;text-align:center;color:var(--red)">❌</th>
+              <th style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--ink3)">Freq.</th>
+            </tr></thead>
+            <tbody>${semRows}</tbody>
+          </table></div>
+        </div>`:''}
+
+        <!-- Timeline -->
+        ${timeline?`<div class="card">
+          <div class="card-hdr"><span class="sb-ico">🗓️</span><span class="card-hdr-title">Aulas no período</span>
+            <div style="margin-left:auto;display:flex;gap:8px;font-size:10px;color:var(--ink3)">
+              <span>🟩 Presente</span><span>🟥 Faltou</span><span>🟧 Confirmado</span>
+            </div>
+          </div>
+          <div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:5px">${timeline}</div></div>
+        </div>`:''}
+
+        <div style="padding-bottom:20px"></div>
+      </div>
+    </div>`;
+}
+
+async function abrirRelatorio(id, nm){
+  relState.alunoId = id; relState.alunoNm = nm; relState.dados = null;
+  filtrarPeriodo('30d', false);
+}
+
+async function carregarRelatorio(){
+  const {alunoId, dataIni, dataFim} = relState;
+  const enrolls = await sbGet('class_enrollments',
+    `student_id=eq.${alunoId}&class_date=gte.${dataIni}&class_date=lte.${dataFim}&select=id,class_date,status,class_slot_id&order=class_date.asc`);
+  if(!classSlots.length) await loadClassSlots();
+  const slotMap = {}; classSlots.forEach(s=>slotMap[s.id]=s);
+  enrolls.forEach(e=>{ e._slot = slotMap[e.class_slot_id]||{}; });
+  relState.dados = enrolls;
+}
+
+function filtrarPeriodo(k, render=true){
+  relState.periodo = k;
+  const hoje = new Date();
+  relState.dataFim = hoje.toISOString().slice(0,10);
+  const ini = new Date(hoje);
+  if(k==='7d')   ini.setDate(hoje.getDate()-7);
+  if(k==='30d')  ini.setDate(hoje.getDate()-30);
+  if(k==='90d')  ini.setDate(hoje.getDate()-90);
+  if(k==='180d') ini.setDate(hoje.getDate()-180);
+  relState.dataIni = ini.toISOString().slice(0,10);
+  relState.dados = null;
+  if(render) renderContent();
+}
+
 
 // ══════════════════════════════════════
 // INIT
