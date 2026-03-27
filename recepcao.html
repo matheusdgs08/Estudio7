@@ -2040,6 +2040,7 @@ async function renderAgenda(container, ta){
       <select class="mi" style="height:36px;width:auto;font-size:12px" onchange="agendaFiltro=this.value;renderContent()">
         <option value="todas" ${agendaFiltro==='todas'?'selected':''}>Todas</option>
         <option value="vagas" ${agendaFiltro==='vagas'?'selected':''}>Com vagas</option>
+        <option value="vagas_fixas" ${agendaFiltro==='vagas_fixas'?'selected':''}>Vagas fixas disponíveis</option>
         <option value="lotadas" ${agendaFiltro==='lotadas'?'selected':''}>Lotadas</option>
       </select>
       <button class="btn btn-secondary" onclick="agendaLoaded=false;renderContent()">🔄</button>
@@ -2063,7 +2064,9 @@ async function renderAgenda(container, ta){
   const filteredHorarios = agendaHorarios.filter(slot=>{
     const cap = slot.capacidade || 9;
     const total = slot.total || 0;
+    const fixos = slot.fixos || 0;
     if(agendaFiltro==='vagas') return total < cap;
+    if(agendaFiltro==='vagas_fixas') return fixos < cap;
     if(agendaFiltro==='lotadas') return total >= cap;
     return true;
   });
@@ -2100,9 +2103,14 @@ async function renderAgenda(container, ta){
       <div style="padding:12px 14px;background:var(--bg);border-bottom:1px solid var(--bg3)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="font-size:16px;font-weight:800;color:var(--ink)">${slot.horario}</div>
-          <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${vagas>0?'#ECFDF5':'#FEF2F2'};color:${vagas>0?'#065F46':'#991B1B'};border:1px solid ${vagas>0?'#A7F3D0':'#FECACA'};font-weight:600">
-            ${total}/${cap} · ${vagas>0?vagas+' vagas':'Lotado'}
-          </span>
+          <div style="display:flex;gap:4px;align-items:center">
+            ${agendaFiltro==='vagas_fixas'?`<span style="font-size:10px;padding:2px 7px;border-radius:20px;background:#EFF6FF;color:#1D4ED8;border:1px solid #BFDBFE;font-weight:600">
+              ${(cap-(slot.fixos||0))} fixas livres
+            </span>`:''}
+            <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${vagas>0?'#ECFDF5':'#FEF2F2'};color:${vagas>0?'#065F46':'#991B1B'};border:1px solid ${vagas>0?'#A7F3D0':'#FECACA'};font-weight:600">
+              ${total}/${cap} · ${vagas>0?vagas+' vagas':'Lotado'}
+            </span>
+          </div>
         </div>
         <!-- Barra de ocupação -->
         <div style="background:var(--bg3);border-radius:20px;height:5px">
