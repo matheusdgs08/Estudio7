@@ -3788,12 +3788,16 @@ function renderAbaContrato(a){
         let fixedHorarios = [];
         if(contracts.length){
           const ct0 = contracts[0];
-          const fixedSlots = await sbGet('fixed_slots',`contract_id=eq.${ct0.id}&active=eq.true&select=class_slot_id`).catch(()=>[]);
+          // Try by contract_id first, fallback to student_id
+          let fixedSlots = await sbGet('fixed_slots',`contract_id=eq.${ct0.id}&active=eq.true&select=class_slot_id`).catch(()=>[]);
+          if(!fixedSlots.length){
+            fixedSlots = await sbGet('fixed_slots',`student_id=eq.${a.id}&active=eq.true&select=class_slot_id`).catch(()=>[]);
+          }
           if(fixedSlots.length){
             const slotIds = fixedSlots.map(f=>f.class_slot_id);
-            const slotsData = await sbGet('class_slots','id=in.('+slotIds.join(',')+')&select=weekday,start_time&order=weekday,start_time');
+            const slotsData = await sbGet('class_slots','id=in.('+slotIds.join(',')+')&select=weekday,start_time,end_time&order=weekday,start_time');
             const WD = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-            fixedHorarios = slotsData.map(s=>({dia: WD[s.weekday], horario: s.start_time.slice(0,5), wd: s.weekday}));
+            fixedHorarios = slotsData.map(s=>({dia: WD[s.weekday], horario: s.start_time.slice(0,5), fim: s.end_time.slice(0,5), wd: s.weekday}));
           }
         }
         contratoAbaData = {contracts, replacements, fixedHorarios};
@@ -3874,7 +3878,7 @@ function renderAbaContrato(a){
       <div class="card-body">
         ${fixedHorarios.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">
           ${fixedHorarios.map(h=>`<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--purple-l);border-radius:10px;border:1px solid #E9D5FF">
-            <span style="font-size:14px;font-weight:800;color:var(--purple)">${h.horario}</span>
+            <span style="font-size:14px;font-weight:800;color:var(--purple)">${h.horario}–${h.fim}</span>
             <span style="font-size:12px;color:var(--purple);font-weight:600">${h.dia}</span>
           </div>`).join('')}
         </div>`
