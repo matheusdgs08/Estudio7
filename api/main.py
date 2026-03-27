@@ -778,6 +778,28 @@ async def tf_get(path: str):
         r.raise_for_status()
         return r.json()
 
+async def tf_post(path: str, data=None):
+    """POST no Tecnofit API com autenticação."""
+    token = await tf_login()
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/{path}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"},
+            json=data,
+            timeout=20
+        )
+        r.raise_for_status()
+        return r.json()
+
+async def tf_get_agenda_dia(data: str):
+    """Busca agenda completa do dia via POST /agenda/grade/{data}/{data}.
+    Retorna lista de eventos com IDs, quorum e staff."""
+    result = await tf_post(f"agenda/grade/{data}/{data}")
+    grid = result.get("grid", [])
+    if not grid:
+        return []
+    return grid[0].get("events", [])
+
 
 @app.get("/tecnofit/status")
 async def tecnofit_status(_=Depends(check_api_key)):
@@ -810,25 +832,13 @@ async def tecnofit_grids(data: str, _=Depends(check_api_key)):
 @app.get("/tecnofit/aula/{data}/{horario}")
 async def tecnofit_aula(data: str, horario: str, _=Depends(check_api_key)):
     """Busca alunos de um horário no Tecnofit. Ex: /tecnofit/aula/2026-03-27/16:30"""
-    from datetime import date as dt_date
-    d = dt_date.fromisoformat(data)
-    tf_day = d.weekday() + 1
+    events = await tf_get_agenda_dia(data)
+    evt = next((e for e in events if e.get("start") == horario), None)
+    if not evt:
+        raise HTTPException(404, f"Horário {horario} não encontrado para {data}")
 
-    result = await tf_get(f"agenda/grids?date={data}")
-    grids = result.get("grids", [])
-    matching = [g for g in grids if g.get("startTime") == horario and "PERSONAL" in g.get("name", "")]
-    if not matching:
-        raise HTTPException(404, f"Horário {horario} não encontrado")
-
-    target = next((g for g in matching if g.get("day") == tf_day), matching[0])
-    grade_data = await tf_get(f"agenda/grade/{target['id']}")
-    event = grade_data.get("event")
-    if not event:
-        return {"data": data, "horario": horario, "alunos": [], "total": 0,
-                "message": "Evento ainda não criado"}
-
-    evt_id = event["id"]
-    quorum = event.get("quorum", {})
+    evt_id = evt["id"]
+    quorum = evt.get("quorum", {})
     checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
     origin_map = {0: "agenda_fixa", 1: "avulsa", 2: "reposicao", 3: "reagendamento"}
 
@@ -845,42 +855,37 @@ async def tecnofit_aula(data: str, horario: str, _=Depends(check_api_key)):
 
 @app.get("/tecnofit/dia/{data}")
 async def tecnofit_dia(data: str, _=Depends(check_api_key)):
-    """Agenda completa do dia — todos os horários com alunos. Igual ao Bubble."""
+    """Agenda completa do dia — todos os horários com alunos. 24/7."""
     from datetime import date as dt_date
     d = dt_date.fromisoformat(data)
-    tf_day = d.weekday() + 1
 
-    result = await tf_get(f"agenda/grids?date={data}")
-    grids = result.get("grids", [])
-    personal = [g for g in grids if "PERSONAL" in g.get("name", "") and g.get("day") == tf_day]
+    events = await tf_get_agenda_dia(data)
+    # Filter only PERSONAL (skip MANUTENCAO etc)
+    personal = [e for e in events if "PERSONAL" in e.get("name", "")]
 
     origin_map = {0: "agenda_fixa", 1: "avulsa", 2: "reposicao", 3: "reagendamento"}
     horarios = []
 
-    for g in sorted(personal, key=lambda x: x["startTime"]):
+    for evt in sorted(personal, key=lambda x: x.get("start", "")):
+        evt_id = evt["id"]
+        quorum = evt.get("quorum", {})
         try:
-            grade_data = await tf_get(f"agenda/grade/{g['id']}")
-            event = grade_data.get("event")
-            if not event:
-                horarios.append({"horario": g["startTime"], "capacidade": g.get("capacity", 9),
-                                 "alunos": [], "total": 0})
-                continue
-
-            evt_id = event["id"]
-            quorum = event.get("quorum", {})
             checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
+        except:
+            checkins = []
 
-            horarios.append({
-                "horario": g["startTime"], "event_id": evt_id,
-                "capacidade": quorum.get("capacity", 9),
-                "alunos": [{"code": c.get("code"), "name": c.get("name"),
-                            "tipo": origin_map.get(c.get("origin"), "?"),
-                            "checkin": c.get("checkin")} for c in checkins],
-                "total": len(checkins), "fixos": quorum.get("fixed", 0),
-                "reposicoes": quorum.get("replacements", 0),
-            })
-        except Exception as e:
-            horarios.append({"horario": g["startTime"], "error": str(e), "alunos": [], "total": 0})
+        horarios.append({
+            "horario": evt.get("start", ""),
+            "event_id": evt_id,
+            "capacidade": quorum.get("capacity", 9),
+            "alunos": [{"code": c.get("code"), "name": c.get("name"),
+                        "photo": c.get("photo"),
+                        "tipo": origin_map.get(c.get("origin"), "?"),
+                        "checkin": c.get("checkin")} for c in checkins],
+            "total": quorum.get("total", len(checkins)),
+            "fixos": quorum.get("fixed", 0),
+            "reposicoes": quorum.get("replacements", 0),
+        })
 
     return {
         "data": data,
