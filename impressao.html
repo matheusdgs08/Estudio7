@@ -168,9 +168,9 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <div class="topbar-sub" id="topbar-date"></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <div class="svc-status" id="svc-status">
-          <div class="svc-dot off"></div>
-          <span>Serviço local</span>
+        <div class="svc-status" id="auto-status" onclick="toggleAutoprint()" style="cursor:pointer">
+          <div class="svc-dot on" id="auto-dot"></div>
+          <span id="auto-label">Auto-print ON</span>
         </div>
         <button class="btn" onclick="refreshData()">🔄 Atualizar</button>
       </div>
@@ -198,6 +198,10 @@ let fichasCache = {};
 let openSlots = {};
 let refreshTimer = null;
 let countdownTimer = null;
+let autoPrintOn = true;
+let autoPrintedSlots = new Set(); // slots já impressos automaticamente hoje
+let autoPrintTimer = null;
+let printLog = []; // log de impressões
 
 // ── Session guard ──
 (function(){
@@ -609,27 +613,71 @@ function previewFicha(slotId, enrollmentId){
 }
 function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
-// ── Service status check ──
-async function checkService(){
-  // The local service exposes /health on localhost:8899 — we can't check from browser
-  // Instead, check if recent fichas have printed_at set recently (last 10min = service active)
-  const svc = document.getElementById('svc-status');
-  let recentPrint = false;
-  for(const d of Object.values(fichasCache)){
-    if(!d) continue;
-    for(const f of (d.fichas||[])){
-      if(f.ja_impressa) recentPrint = true;
+// ── Auto-print toggle ──
+function toggleAutoprint(){
+  autoPrintOn = !autoPrintOn;
+  const dot = document.getElementById('auto-dot');
+  const label = document.getElementById('auto-label');
+  dot.className = 'svc-dot ' + (autoPrintOn ? 'on' : 'off');
+  label.textContent = autoPrintOn ? 'Auto-print ON' : 'Auto-print OFF';
+  toast(autoPrintOn ? '✅ Impressão automática ligada' : '⏸️ Impressão automática pausada');
+}
+
+// ── Auto-print check (runs every 30s) ──
+async function checkAutoprint(){
+  if(!autoPrintOn || !horariosData) return;
+
+  const now = agora();
+  const h = hoje();
+
+  for(const sl of (horariosData.horarios||[])){
+    const aula = new Date(`${h}T${sl.horario}:00`);
+    const diffMin = (aula - now) / 60000;
+
+    // Janela: entre 5min e 3min antes da aula (T-5 a T-3)
+    if(diffMin >= 3 && diffMin <= 5.5 && !autoPrintedSlots.has(sl.slot_id)){
+      autoPrintedSlots.add(sl.slot_id);
+      addLog(`⏰ Auto-print disparado: aula das ${sl.horario}`);
+      await imprimirSlotAuto(sl.slot_id, sl.horario);
     }
   }
-  const dot = svc.querySelector('.svc-dot');
-  const txt = svc.querySelector('span');
-  if(recentPrint){
-    dot.className='svc-dot on';
-    txt.textContent='Fichas sendo impressas';
-  } else {
-    dot.className='svc-dot off';
-    txt.textContent='Serviço local';
+}
+
+async function imprimirSlotAuto(slotId, hora){
+  const data = await fetchFichas(slotId);
+  const fichas = (data.fichas || []).filter(f => !f.ja_impressa);
+
+  if(!fichas.length){
+    addLog(`ℹ️ ${hora} — todas as fichas já foram impressas`);
+    return;
   }
+
+  addLog(`🖨️ ${hora} — imprimindo ${fichas.length} ficha(s)…`);
+
+  for(let i = 0; i < fichas.length; i++){
+    const f = fichas[i];
+    imprimirFichaPopup(f);
+    await marcarImpresso(f.enrollment_id);
+    f.ja_impressa = true;
+    addLog(`  ✓ ${f.nome} — ${f.ficha_nome}`);
+    if(i < fichas.length - 1){
+      await new Promise(r => setTimeout(r, 1500)); // delay entre fichas
+    }
+  }
+
+  addLog(`✅ ${hora} — ${fichas.length} ficha(s) impressa(s)`);
+  toast(`🖨️ Auto-print: ${fichas.length} ficha(s) da aula das ${hora}`);
+
+  // Refresh cache
+  fichasCache[slotId] = null;
+  await fetchFichas(slotId);
+  render();
+}
+
+function addLog(msg){
+  const now = horaStr(agora());
+  printLog.unshift({time: now, msg});
+  if(printLog.length > 50) printLog.pop();
 }
 
 // ── Refresh loop ──
@@ -654,10 +702,9 @@ async function init(){
   horariosData = await fetchHorarios();
   render();
 
-  // Refresh every 30s
+  // Refresh data every 30s
   refreshTimer = setInterval(async()=>{
     horariosData = await fetchHorarios();
-    // Refresh cached fichas for open slots
     for(const slotId of Object.keys(openSlots)){
       if(openSlots[slotId]){
         fichasCache[slotId] = null;
@@ -665,13 +712,26 @@ async function init(){
       }
     }
     render();
-    checkService();
+    await checkAutoprint();
   }, REFRESH_SEC * 1000);
 
   // Update countdown every 10s
   countdownTimer = setInterval(()=>{
     if(horariosData) renderCountdown(horariosData.horarios||[]);
   }, 10000);
+
+  // First auto-print check
+  await checkAutoprint();
+
+  // Reset autoPrintedSlots at midnight
+  const msToMidnight = new Date().setHours(24,0,0,0) - Date.now();
+  setTimeout(()=>{
+    autoPrintedSlots.clear();
+    fichasCache = {};
+    printLog = [];
+    addLog('🔄 Reset diário à meia-noite');
+    refreshData();
+  }, msToMidnight);
 }
 
 init();

@@ -734,3 +734,158 @@ async def horarios_com_alunos(data: str, _=Depends(check_api_key)):
 
     return {"data": data, "horarios": result}
 
+
+# ════════════════════════════════════════════════════════
+# INTEGRAÇÃO TECNOFIT
+# Puxa dados em tempo real do Tecnofit (check-ins, agenda)
+# Igual ao sistema do Bubble — mesma lógica, mesma API
+# ════════════════════════════════════════════════════════
+
+TECNOFIT_EMAIL    = os.getenv("TECNOFIT_EMAIL",    "matheusdgs@hotmail.com")
+TECNOFIT_PASSWORD = os.getenv("TECNOFIT_PASSWORD", "Estudio7@")
+TECNOFIT_BASE     = "https://app.tecnofit.com.br"
+TECNOFIT_EMPRESA  = "103025"
+
+_tf_token = None
+_tf_token_ts = 0
+
+async def tf_login():
+    """Autentica no Tecnofit e retorna o token JWT."""
+    global _tf_token, _tf_token_ts
+    import time
+    if _tf_token and (time.time() - _tf_token_ts) < 43200:
+        return _tf_token
+    async with httpx.AsyncClient() as client:
+        r = await client.post(
+            f"{TECNOFIT_BASE}/api-core/auth",
+            json={"email": TECNOFIT_EMAIL, "senha": TECNOFIT_PASSWORD},
+            timeout=15
+        )
+        r.raise_for_status()
+        _tf_token = r.json().get("token")
+        _tf_token_ts = time.time()
+        return _tf_token
+
+async def tf_get(path: str):
+    """GET no Tecnofit API com autenticação."""
+    token = await tf_login()
+    async with httpx.AsyncClient() as client:
+        r = await client.get(
+            f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/{path}",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            timeout=20
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+@app.get("/tecnofit/status")
+async def tecnofit_status(_=Depends(check_api_key)):
+    """Verifica se a integração Tecnofit está funcionando."""
+    try:
+        token = await tf_login()
+        return {"status": "ok", "authenticated": bool(token), "empresa": TECNOFIT_EMPRESA}
+    except Exception as e:
+        return {"status": "error", "authenticated": False, "message": str(e)}
+
+
+@app.get("/tecnofit/grids/{data}")
+async def tecnofit_grids(data: str, _=Depends(check_api_key)):
+    """Lista horários do dia no Tecnofit."""
+    result = await tf_get(f"agenda/grids?date={data}")
+    grids = result.get("grids", [])
+    personal = [g for g in grids if "PERSONAL" in g.get("name", "")]
+    from collections import defaultdict
+    by_time = defaultdict(list)
+    for g in personal:
+        by_time[g["startTime"]].append(g)
+    horarios = []
+    for t in sorted(by_time.keys()):
+        gl = by_time[t]
+        horarios.append({"horario": t, "capacidade": gl[0].get("capacity", 9),
+                         "grids": [{"id": g["id"], "day": g["day"]} for g in gl]})
+    return {"data": data, "horarios": horarios}
+
+
+@app.get("/tecnofit/aula/{data}/{horario}")
+async def tecnofit_aula(data: str, horario: str, _=Depends(check_api_key)):
+    """Busca alunos de um horário no Tecnofit. Ex: /tecnofit/aula/2026-03-27/16:30"""
+    from datetime import date as dt_date
+    d = dt_date.fromisoformat(data)
+    tf_day = d.weekday() + 1
+
+    result = await tf_get(f"agenda/grids?date={data}")
+    grids = result.get("grids", [])
+    matching = [g for g in grids if g.get("startTime") == horario and "PERSONAL" in g.get("name", "")]
+    if not matching:
+        raise HTTPException(404, f"Horário {horario} não encontrado")
+
+    target = next((g for g in matching if g.get("day") == tf_day), matching[0])
+    grade_data = await tf_get(f"agenda/grade/{target['id']}")
+    event = grade_data.get("event")
+    if not event:
+        return {"data": data, "horario": horario, "alunos": [], "total": 0,
+                "message": "Evento ainda não criado"}
+
+    evt_id = event["id"]
+    quorum = event.get("quorum", {})
+    checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
+    origin_map = {0: "agenda_fixa", 1: "avulsa", 2: "reposicao", 3: "reagendamento"}
+
+    return {
+        "data": data, "horario": horario, "event_id": evt_id,
+        "capacidade": quorum.get("capacity", 9),
+        "alunos": [{"code": c.get("code"), "name": c.get("name"), "photo": c.get("photo"),
+                     "contract": c.get("contract"), "tipo": origin_map.get(c.get("origin"), "?"),
+                     "checkin": c.get("checkin"), "phone": c.get("cellphone")} for c in checkins],
+        "total": len(checkins), "fixos": quorum.get("fixed", 0),
+        "reposicoes": quorum.get("replacements", 0),
+    }
+
+
+@app.get("/tecnofit/dia/{data}")
+async def tecnofit_dia(data: str, _=Depends(check_api_key)):
+    """Agenda completa do dia — todos os horários com alunos. Igual ao Bubble."""
+    from datetime import date as dt_date
+    d = dt_date.fromisoformat(data)
+    tf_day = d.weekday() + 1
+
+    result = await tf_get(f"agenda/grids?date={data}")
+    grids = result.get("grids", [])
+    personal = [g for g in grids if "PERSONAL" in g.get("name", "") and g.get("day") == tf_day]
+
+    origin_map = {0: "agenda_fixa", 1: "avulsa", 2: "reposicao", 3: "reagendamento"}
+    horarios = []
+
+    for g in sorted(personal, key=lambda x: x["startTime"]):
+        try:
+            grade_data = await tf_get(f"agenda/grade/{g['id']}")
+            event = grade_data.get("event")
+            if not event:
+                horarios.append({"horario": g["startTime"], "capacidade": g.get("capacity", 9),
+                                 "alunos": [], "total": 0})
+                continue
+
+            evt_id = event["id"]
+            quorum = event.get("quorum", {})
+            checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
+
+            horarios.append({
+                "horario": g["startTime"], "event_id": evt_id,
+                "capacidade": quorum.get("capacity", 9),
+                "alunos": [{"code": c.get("code"), "name": c.get("name"),
+                            "tipo": origin_map.get(c.get("origin"), "?"),
+                            "checkin": c.get("checkin")} for c in checkins],
+                "total": len(checkins), "fixos": quorum.get("fixed", 0),
+                "reposicoes": quorum.get("replacements", 0),
+            })
+        except Exception as e:
+            horarios.append({"horario": g["startTime"], "error": str(e), "alunos": [], "total": 0})
+
+    return {
+        "data": data,
+        "dia_semana": ["dom","seg","ter","qua","qui","sex","sab"][(d.weekday()+1)%7],
+        "horarios": horarios,
+        "total_horarios": len(horarios),
+        "total_alunos": sum(h["total"] for h in horarios),
+    }
