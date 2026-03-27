@@ -1992,38 +1992,36 @@ async function confirmarUpgrade(cid, endDate){
 // ══════════════════════════════════════════════════════
 
 let agendaDia  = new Date().toISOString().slice(0,10);
-let agendaSlots  = [];    // class_slots do dia
-let agendaEnrollments = []; // enrollments do dia
+let agendaHorarios = [];  // horários do Tecnofit
 let agendaTeachers = [];  // professores
 let agendaLoaded = false;
 let rodizioSlotId = null; // slot aberto no rodízio
+// Compat: old code references
+let agendaSlots = [];
+let agendaEnrollments = [];
 
 const DIAS_SEMANA = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const DIAS_CURTO  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
+const API_URL = 'https://dynamic-smile-production-9fc8.up.railway.app';
+const API_KEY = 'se7e2025';
+
+async function apiGet(path){
+  const r = await fetch(`${API_URL}${path}`, {headers:{'x-api-key':API_KEY}});
+  if(!r.ok) throw new Error('API error: '+r.status);
+  return r.json();
+}
+
 async function loadAgendaDia(){
-  const wd = new Date(agendaDia+'T12:00').getDay();
-  const [slots, enrollments, teachers] = await Promise.all([
-    sbGet('class_slots', `active=eq.true&weekday=eq.${wd}&order=start_time`),
-    sbGet('class_enrollments',
-      `class_date=eq.${agendaDia}&status=neq.cancelled&select=id,student_id,class_slot_id,status,instructor_id,enrollment_type,checked_in_at,training_session_id`),
+  const [tfData, teachers] = await Promise.all([
+    apiGet(`/tecnofit/dia/${agendaDia}`),
     agendaTeachers.length ? Promise.resolve(agendaTeachers)
       : sbGet('profiles','role=eq.teacher&active=eq.true&select=id,full_name&order=full_name'),
   ]);
 
-  agendaSlots       = slots;
-  agendaEnrollments = enrollments;
-  agendaTeachers    = teachers;
-  agendaLoaded      = true;
-
-  // Load student names for enrollments
-  const sids = [...new Set(enrollments.map(e=>e.student_id))];
-  if(sids.length){
-    const profs = await sbGet('profiles',`id=in.(${sids.join(',')})&select=id,full_name`);
-    const map = {};
-    profs.forEach(p=>map[p.id]=p.full_name);
-    agendaEnrollments.forEach(e=>{ e._nm = map[e.student_id]||'—'; });
-  }
+  agendaHorarios  = tfData.horarios || [];
+  agendaTeachers  = teachers;
+  agendaLoaded    = true;
 }
 
 async function renderAgenda(container, ta){
@@ -2038,46 +2036,51 @@ async function renderAgenda(container, ta){
     <button class="btn btn-secondary" onclick="agendaLoaded=false;renderContent()">🔄</button>`;
 
   if(!agendaLoaded){
-    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando agenda…</div></div>';
-    loadAgendaDia().then(()=>renderContent());
+    container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando agenda do Tecnofit…</div></div>';
+    loadAgendaDia().then(()=>renderContent()).catch(e=>{
+      container.innerHTML = '<div class="empty"><div class="empty-ico">⚠️</div><div class="empty-title">Erro ao carregar Tecnofit</div><div class="empty-sub">'+e.message+'</div></div>';
+    });
     return;
   }
 
   const dtFmt = new Date(agendaDia+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   const isHoje = agendaDia === new Date().toISOString().slice(0,10);
 
-  // Build slot cards
-  const slotCards = agendaSlots.map(slot=>{
-    const enrollsSlot = agendaEnrollments.filter(e=>e.class_slot_id===slot.id);
-    const confirmados = enrollsSlot.filter(e=>['confirmed','attended'].includes(e.status));
-    const presentes   = enrollsSlot.filter(e=>e.status==='attended'||e.checked_in_at);
-    const vagas       = slot.capacity - confirmados.length;
-    const pct         = Math.round((confirmados.length/slot.capacity)*100);
-    const isRodizio   = rodizioSlotId === slot.id;
+  const totalAlunos = agendaHorarios.reduce((s,h)=>s+h.total,0);
+  const totalCheckins = agendaHorarios.reduce((s,h)=>s+(h.alunos||[]).filter(a=>a.checkin).length,0);
+
+  // Build slot cards from Tecnofit data
+  const slotCards = agendaHorarios.map(slot=>{
+    const cap     = slot.capacidade || 9;
+    const total   = slot.total || 0;
+    const alunos  = slot.alunos || [];
+    const vagas   = cap - total;
+    const pct     = Math.round((total/cap)*100);
+    const hasError = !!slot.error;
 
     const barColor = pct>=100?'var(--red)':pct>=75?'#F59E0B':'var(--green)';
 
-    const alunoRows = confirmados.map(e=>{
-      const prof = agendaTeachers.find(t=>t.id===e.instructor_id);
-      const hasCheckin = !!e.checked_in_at;
+    const tipoLabel = {'agenda_fixa':'Fixo','avulsa':'Avulsa','reposicao':'Reposição','reagendamento':'Reagend.','?':'—'};
+
+    const alunoRows = alunos.map(a=>{
+      const hasCheckin = !!a.checkin;
       return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--bg3);background:${hasCheckin?'#F0FDF4':'var(--wh)'}">
-        <div style="width:28px;height:28px;border-radius:50%;background:${avColor(e._nm||'?')};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${ini(e._nm||'?')}</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:${avColor(a.name||'?')};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${ini(a.name||'?')}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e._nm}</div>
-          <div style="font-size:10px;color:var(--ink3)">${e.enrollment_type==='fixed'?'Fixo':'Flexível'}</div>
+          <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.name||'—'}</div>
+          <div style="font-size:10px;color:var(--ink3)">${tipoLabel[a.tipo]||a.tipo||'—'}</div>
         </div>
-        ${hasCheckin?`<span style="font-size:10px;background:#ECFDF5;color:#065F46;border-radius:20px;padding:1px 7px;border:1px solid #A7F3D0">✓ Check-in</span>`:''}
-        ${prof?`<span style="font-size:10px;color:var(--ink3);white-space:nowrap">👤 ${prof.full_name.split(' ')[0]}</span>`:''}
+        ${hasCheckin?'<span style="font-size:10px;background:#ECFDF5;color:#065F46;border-radius:20px;padding:1px 7px;border:1px solid #A7F3D0">✓ Check-in</span>':''}
       </div>`;
     }).join('');
 
     return `<div class="card" style="min-width:220px;flex:1">
       <!-- Slot header -->
-      <div style="padding:12px 14px;background:${isRodizio?'var(--purple-l)':'var(--bg)'};border-bottom:1px solid var(--bg3)">
+      <div style="padding:12px 14px;background:var(--bg);border-bottom:1px solid var(--bg3)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:16px;font-weight:800;color:${isRodizio?'var(--purple)':'var(--ink)'}">${slot.start_time.slice(0,5)}</div>
+          <div style="font-size:16px;font-weight:800;color:var(--ink)">${slot.horario}</div>
           <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${vagas>0?'#ECFDF5':'#FEF2F2'};color:${vagas>0?'#065F46':'#991B1B'};border:1px solid ${vagas>0?'#A7F3D0':'#FECACA'};font-weight:600">
-            ${confirmados.length}/${slot.capacity} · ${vagas>0?vagas+' vagas':'Lotado'}
+            ${total}/${cap} · ${vagas>0?vagas+' vagas':'Lotado'}
           </span>
         </div>
         <!-- Barra de ocupação -->
@@ -2086,23 +2089,20 @@ async function renderAgenda(container, ta){
         </div>
       </div>
 
-      <!-- Alunos confirmados -->
+      <!-- Alunos -->
       <div style="max-height:240px;overflow-y:auto">
-        ${alunoRows||`<div style="padding:12px 14px;font-size:12px;color:var(--ink3);text-align:center">Nenhum aluno confirmado</div>`}
+        ${hasError
+          ? '<div style="padding:12px 14px;font-size:12px;color:#D97706;text-align:center">⚠️ Erro ao carregar</div>'
+          : alunoRows||'<div style="padding:12px 14px;font-size:12px;color:var(--ink3);text-align:center">Nenhum aluno agendado</div>'}
       </div>
 
-      <!-- Ações do slot -->
-      <div style="padding:8px 10px;border-top:1px solid var(--bg3);display:flex;gap:6px;flex-wrap:wrap">
-        ${vagas>0?`<button class="btn btn-secondary" style="font-size:11px;padding:5px 10px" onclick="abrirModalAgendar('${slot.id}','${slot.start_time.slice(0,5)}')">+ Agendar</button>`:''}
-        ${confirmados.length?`<button class="btn ${isRodizio?'btn-primary':'btn-secondary'}" style="font-size:11px;padding:5px 10px" onclick="abrirRodizio('${slot.id}')">
-          ${isRodizio?'🎯 Rodízio aberto':'⚙️ Rodízio'}
-        </button>`:''}
-      </div>
+      <!-- Fixos / Reposições -->
+      ${total>0?`<div style="padding:6px 10px;border-top:1px solid var(--bg3);display:flex;gap:10px;font-size:10px;color:var(--ink3)">
+        <span>Fixos: ${slot.fixos||0}</span>
+        <span>Reposições: ${slot.reposicoes||0}</span>
+      </div>`:''}
     </div>`;
   }).join('');
-
-  // Rodízio panel
-  const rodizioPanel = rodizioSlotId ? renderRodizioPanel(rodizioSlotId) : '';
 
   container.innerHTML = `
     <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
@@ -2112,19 +2112,18 @@ async function renderAgenda(container, ta){
           ${isHoje?'📅 Hoje — ':''}${dtFmt}
         </div>
         <div style="margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--ink3)">
-          <span>🕐 ${agendaSlots.length} horários</span>
-          <span>👥 ${agendaEnrollments.filter(e=>['confirmed','attended'].includes(e.status)).length} alunos</span>
-          <span>✅ ${agendaEnrollments.filter(e=>e.checked_in_at).length} check-ins</span>
+          <span>🕐 ${agendaHorarios.length} horários</span>
+          <span>👥 ${totalAlunos} alunos</span>
+          <span>✅ ${totalCheckins} check-ins</span>
+          <span style="font-size:10px;color:var(--ink3);opacity:.6">via Tecnofit</span>
         </div>
       </div>
 
       <!-- Grid de slots -->
-      <div style="padding:16px 24px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:16px">
-        ${agendaSlots.length
+      <div style="padding:16px 24px;overflow:auto;flex:1">
+        ${agendaHorarios.length
           ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${slotCards}</div>`
-          : `<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">Sem horários neste dia</div><div class="empty-sub">${DIAS_SEMANA[new Date(agendaDia+'T12:00').getDay()]} não tem aulas configuradas.</div></div>`}
-
-        ${rodizioPanel}
+          : `<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">Sem horários neste dia</div><div class="empty-sub">O Tecnofit não retornou eventos. Pode ser fora do horário de funcionamento ou dia sem aulas.</div></div>`}
       </div>
     </div>`;
 }
