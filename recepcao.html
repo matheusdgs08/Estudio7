@@ -398,6 +398,7 @@ function renderAlunos(container, ta){
 
 function selecionarAluno(id){
   alunoSel = alunos.find(a=>a.id===id);
+  alunoAba='visao'; freqEnrolls=null; turmaEnrolls=null;
   renderContent();
 }
 
@@ -408,6 +409,11 @@ async function reloadAlunos(){
 }
 
 function renderDetalheAluno(a){
+  return renderDetalheAlunoComAbas(a);
+}
+
+// ── Visão geral (conteúdo original) ──
+function renderDetalheAlunoVisao(a){
   const cor = avColor(a.full_name||'');
   const statusBadge = a.blocked
     ? '<span class="badge tag-blocked">🔴 Bloqueado</span>'
@@ -732,6 +738,7 @@ async function bloquearAluno(id){
   await sbPatch('students', `id=eq.${id}`, {blocked:true, blocked_reason:motivo});
   await loadAlunos();
   alunoSel = alunos.find(a=>a.id===id);
+  alunoAba='visao'; freqEnrolls=null; turmaEnrolls=null;
   renderContent();
   showToast('🔴 Aluno bloqueado');
 }
@@ -741,6 +748,7 @@ async function desbloquearAluno(id){
   await sbPatch('students', `id=eq.${id}`, {blocked:false, blocked_reason:null});
   await loadAlunos();
   alunoSel = alunos.find(a=>a.id===id);
+  alunoAba='visao'; freqEnrolls=null; turmaEnrolls=null;
   renderContent();
   showToast('✅ Aluno desbloqueado');
 }
@@ -3417,6 +3425,432 @@ function filtrarPeriodo(k, render=true){
   relState.dataIni = ini.toISOString().slice(0,10);
   relState.dados = null;
   if(render) renderContent();
+}
+
+
+
+// ══════════════════════════════════════════════════════
+// ABA TURMA + FREQUÊNCIA + CONTRATO DETALHADO + PAUSA
+// ══════════════════════════════════════════════════════
+
+let alunoAba     = 'visao';   // 'visao' | 'turma' | 'frequencia' | 'contrato'
+let freqMes      = new Date().toISOString().slice(0,7); // YYYY-MM
+let freqEnrolls  = null;
+let turmaEnrolls = null;
+let contratoDetalhe = null;
+
+// Tabs do aluno
+function abaTab(aba, label, ico){
+  const on = alunoAba===aba;
+  return `<button onclick="alunoAba='${aba}';freqEnrolls=null;turmaEnrolls=null;renderContent()"
+    style="padding:8px 14px;font-size:12px;font-weight:${on?'700':'500'};
+    border:none;background:transparent;cursor:pointer;
+    color:${on?'var(--purple)':'var(--ink3)'};
+    border-bottom:2px solid ${on?'var(--purple)':'transparent'};
+    margin-bottom:-1px;white-space:nowrap">
+    ${ico} ${label}
+  </button>`;
+}
+
+// ── WRAPPER com tabs ──
+function renderDetalheAlunoComAbas(a){
+  const tabs = `
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--bg3);background:var(--wh);padding:0 16px;overflow-x:auto;flex-shrink:0">
+      ${abaTab('visao','Visão Geral','👤')}
+      ${abaTab('turma','Turma & Aulas','📅')}
+      ${abaTab('frequencia','Frequência','📊')}
+      ${abaTab('contrato','Contrato','📄')}
+    </div>`;
+
+  if(alunoAba==='turma')      return tabs + renderAbasTurma(a);
+  if(alunoAba==='frequencia') return tabs + renderAbaFrequencia(a);
+  if(alunoAba==='contrato')   return tabs + renderAbaContrato(a);
+  return tabs + renderDetalheAlunoVisao(a);
+}
+
+// ── ABA TURMA ──
+async function renderAbasTurma(a){
+  if(!turmaEnrolls){
+    setTimeout(async()=>{
+      // últimos 60 dias + próximos 30
+      const hoje = new Date().toISOString().slice(0,10);
+      const ini  = new Date(); ini.setDate(ini.getDate()-60);
+      const fim  = new Date(); fim.setDate(fim.getDate()+30);
+      turmaEnrolls = await sbGet('class_enrollments',
+        `student_id=eq.${a.id}&class_date=gte.${ini.toISOString().slice(0,10)}&class_date=lte.${fim.toISOString().slice(0,10)}&order=class_date.desc&select=*`);
+      // Load fixed slots
+      const fixos = await sbGet('fixed_slots',`student_id=eq.${a.id}&active=eq.true&select=*`);
+      a._fixed_slots = fixos;
+      renderContent();
+    },0);
+    return '<div style="padding:40px;text-align:center;color:var(--ink3)">⏳ Carregando…</div>';
+  }
+
+  const hoje = new Date().toISOString().slice(0,10);
+  const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  // Agenda fixa
+  const fixos = a._fixed_slots||[];
+  const fixosHtml = fixos.length ? fixos.map(fs=>{
+    const slot = classSlots.find(s=>s.id===fs.class_slot_id)||{};
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bg3)">
+      <div style="min-width:36px;font-size:11px;font-weight:700;color:var(--purple)">${DIAS_SEMANA[slot.weekday]||'?'}</div>
+      <div style="font-size:13px;font-weight:600">${(slot.start_time||'').slice(0,5)} – ${(slot.end_time||'').slice(0,5)}</div>
+      <div style="margin-left:auto;font-size:11px;color:var(--ink3)">até ${fmtDate(fs.end_date)}</div>
+    </div>`;
+  }).join('')
+  : '<div style="padding:12px 14px;font-size:12px;color:var(--ink3)">Sem horários fixos cadastrados.</div>';
+
+  // Histórico de aulas
+  const STATUS_STYLE = {
+    attended:  {bg:'#ECFDF5',tc:'#065F46',lbl:'Presente'},
+    missed:    {bg:'#FEF2F2',tc:'#991B1B',lbl:'Faltou'},
+    cancelled: {bg:'#F3F4F6',tc:'#6B7280',lbl:'Cancelado'},
+    confirmed: {bg:'#EFF6FF',tc:'#1E40AF',lbl:'Matriculado'},
+  };
+
+  const histHtml = turmaEnrolls.length ? turmaEnrolls.map(e=>{
+    const st  = STATUS_STYLE[e.status]||{bg:'var(--bg)',tc:'var(--ink3)',lbl:e.status};
+    const slot = classSlots.find(s=>s.id===e.class_slot_id)||{};
+    const hora = (slot.start_time||'').slice(0,5);
+    const isFut = e.class_date > hoje;
+    return `<tr style="border-bottom:1px solid var(--bg3);opacity:${isFut?.6:1}">
+      <td style="padding:7px 12px;font-size:12px">${fmtDate(e.class_date)}</td>
+      <td style="padding:7px 12px;font-size:12px;color:var(--ink3)">${hora}</td>
+      <td style="padding:7px 12px">
+        <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:${st.bg};color:${st.tc};font-weight:600">${isFut?'🔲 Agendado':st.lbl}</span>
+      </td>
+      <td style="padding:7px 12px;font-size:11px;color:var(--ink3)">${e.enrollment_type==='fixed'?'📌 Fixo':e.enrollment_type==='replacement'?'🔄 Reposição':'Flexível'}</td>
+    </tr>`;
+  }).join('')
+  : '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ink3)">Sem aulas no período</td></tr>';
+
+  return `<div class="detail">
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">📌</span><span class="card-hdr-title">Agenda fixa</span></div>
+      <div style="padding:0">${fixosHtml}</div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">📋</span><span class="card-hdr-title">Histórico de aulas (últimos 60d + próximos 30d)</span></div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:7px 12px;font-size:11px;text-align:left;font-weight:700;color:var(--ink3)">Data</th>
+            <th style="padding:7px 12px;font-size:11px;text-align:left;font-weight:700;color:var(--ink3)">Hora</th>
+            <th style="padding:7px 12px;font-size:11px;text-align:left;font-weight:700;color:var(--ink3)">Status</th>
+            <th style="padding:7px 12px;font-size:11px;text-align:left;font-weight:700;color:var(--ink3)">Tipo</th>
+          </tr></thead>
+          <tbody>${histHtml}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── ABA FREQUÊNCIA ──
+async function renderAbaFrequencia(a){
+  if(!freqEnrolls){
+    setTimeout(async()=>{
+      const ini = freqMes+'-01';
+      const d   = new Date(freqMes+'-01'); d.setMonth(d.getMonth()+1); d.setDate(0);
+      const fim = d.toISOString().slice(0,10);
+      freqEnrolls = await sbGet('class_enrollments',
+        `student_id=eq.${a.id}&class_date=gte.${ini}&class_date=lte.${fim}&order=class_date.asc&select=*`);
+      renderContent();
+    },0);
+    return '<div style="padding:40px;text-align:center;color:var(--ink3)">⏳ Carregando…</div>';
+  }
+
+  const [ano,mes] = freqMes.split('-').map(Number);
+  const diasMes = new Date(ano, mes, 0).getDate();
+  const primeiroDia = new Date(ano, mes-1, 1).getDay(); // 0=dom
+
+  // Stats
+  const pres  = freqEnrolls.filter(e=>e.status==='attended').length;
+  const falt  = freqEnrolls.filter(e=>e.status==='missed').length;
+  const canc  = freqEnrolls.filter(e=>e.status==='cancelled').length;
+  const matr  = freqEnrolls.filter(e=>e.status==='confirmed').length;
+  const pct   = (pres+falt)>0?Math.round(pres/(pres+falt)*100):0;
+
+  // Map by date
+  const byDate = {};
+  freqEnrolls.forEach(e=>{ byDate[e.class_date]=e; });
+
+  // Calendário
+  const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const mesAnterior = () => { const d=new Date(ano,mes-2,1); return d.toISOString().slice(0,7); };
+  const mesProximo  = () => { const d=new Date(ano,mes,1);   return d.toISOString().slice(0,7); };
+  const mesNome = new Date(ano,mes-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  let dias = '';
+  // Empty cells before first day
+  for(let i=0;i<primeiroDia;i++) dias+='<div></div>';
+  // Days
+  for(let d=1;d<=diasMes;d++){
+    const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const e = byDate[dateStr];
+    let bg='transparent'; let tc='var(--ink3)'; let emoji='';
+    if(e){
+      if(e.status==='attended')  { bg='#DCFCE7';tc='#166534';emoji='✅'; }
+      if(e.status==='missed')    { bg='#FEE2E2';tc='#991B1B';emoji='❌'; }
+      if(e.status==='cancelled') { bg='#F3F4F6';tc='#6B7280';emoji='🔄'; }
+      if(e.status==='confirmed') { bg='#EFF6FF';tc='#1E40AF';emoji='📅'; }
+    }
+    const isHoje = dateStr===new Date().toISOString().slice(0,10);
+    dias+=`<div style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;background:${bg};border:${isHoje?'2px solid var(--purple)':'none'};cursor:${e?'default':'default'}">
+      <div style="font-size:13px;font-weight:${isHoje?'800':'400'};color:${e?tc:'var(--ink2)'}">${d}</div>
+      ${emoji?`<div style="font-size:10px">${emoji}</div>`:''}
+    </div>`;
+  }
+
+  // Tabela de aulas
+  const STATUS_STYLE = {
+    attended:  {bg:'#ECFDF5',tc:'#065F46',lbl:'Presente'},
+    missed:    {bg:'#FEF2F2',tc:'#991B1B',lbl:'Faltou'},
+    cancelled: {bg:'#F3F4F6',tc:'#6B7280',lbl:'Cancelado'},
+    confirmed: {bg:'#EFF6FF',tc:'#1E40AF',lbl:'Matriculado'},
+  };
+  const tabela = freqEnrolls.filter(e=>e.status!=='cancelled').map(e=>{
+    const st = STATUS_STYLE[e.status]||{bg:'var(--bg)',tc:'var(--ink)',lbl:e.status};
+    const slot = classSlots.find(s=>s.id===e.class_slot_id)||{};
+    return `<tr style="border-bottom:1px solid var(--bg3)">
+      <td style="padding:7px 12px;font-size:12px">${fmtDate(e.class_date)}</td>
+      <td style="padding:7px 12px;font-size:12px;color:var(--ink3)">${(slot.start_time||'').slice(0,5)} às ${(slot.end_time||'').slice(0,5)}</td>
+      <td style="padding:7px 12px;font-size:11px;color:var(--ink3)">${e.enrollment_type==='fixed'?'Matrícula':'Reposição'}</td>
+      <td style="padding:7px 12px">
+        <span style="font-size:11px;padding:2px 9px;border-radius:20px;background:${st.bg};color:${st.tc};font-weight:600">${st.lbl}</span>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--ink3)">Sem aulas neste mês</td></tr>';
+
+  return `<div class="detail">
+    <!-- Navegação mês -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <button onclick="freqMes='${mesAnterior()}';freqEnrolls=null;renderContent()" style="border:1px solid var(--bg3);background:var(--wh);border-radius:8px;padding:6px 12px;cursor:pointer">‹</button>
+      <span style="font-size:14px;font-weight:700;text-transform:capitalize">${mesNome}</span>
+      <button onclick="freqMes='${mesProximo()}';freqEnrolls=null;renderContent()" style="border:1px solid var(--bg3);background:var(--wh);border-radius:8px;padding:6px 12px;cursor:pointer">›</button>
+    </div>
+
+    <!-- Stats rápidas -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+      ${[[pres,'Presenças','var(--green)'],[falt,'Faltas','var(--red)'],[canc,'Cancelam.','#D97706'],[pct+'%','Frequência',pct>=80?'var(--green)':pct>=60?'#D97706':'var(--red)']].map(([v,l,c])=>
+        `<div style="background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);padding:10px 12px">
+          <div style="font-size:22px;font-weight:800;color:${c}">${v}</div>
+          <div style="font-size:10px;color:var(--ink3);margin-top:2px">${l}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Calendário -->
+    <div class="card">
+      <div class="card-body" style="padding:10px">
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px">
+          ${DIAS.map(d=>`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--ink3);padding:4px">${d}</div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${dias}</div>
+        <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:var(--ink3)">
+          <span>✅ Presente</span><span>❌ Faltou</span><span>📅 Agendado</span><span>🔄 Cancelado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">📋</span><span class="card-hdr-title">Check-ins do mês</span></div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg)">
+            ${['Data','Período','Tipo','Status'].map(h=>`<th style="padding:7px 12px;font-size:11px;text-align:left;font-weight:700;color:var(--ink3)">${h}</th>`).join('')}
+          </tr></thead>
+          <tbody>${tabela}</tbody>
+        </table>
+      </div>
+    </div>
+    <div style="padding-bottom:20px"></div>
+  </div>`;
+}
+
+// ── ABA CONTRATO ──
+async function renderAbaContrato(a){
+  // Load contracts + replacement_credits
+  const [contracts, replacements] = await Promise.all([
+    sbGet('contracts',`student_id=eq.${a.id}&order=created_at.desc&select=*`),
+    sbGet('replacement_credits',`student_id=eq.${a.id}&active=eq.true&select=*`).catch(()=>[]),
+  ]);
+
+  if(!contracts.length) return `<div class="detail">
+    <div class="empty"><div class="empty-ico">📄</div><div class="empty-title">Sem contratos</div></div>
+  </div>`;
+
+  const ct = contracts[0]; // mais recente
+  const plan = planos.find(p=>p.id===ct.plan_id)||{};
+  const repDisp = replacements.reduce((s,r)=>s+(r.quantity_remaining||0),0);
+  const repTotal = replacements.reduce((s,r)=>s+(r.quantity_total||0),0);
+  const STATUS = {active:'✅ Ativo',paused:'⏸️ Pausado',ended:'📁 Encerrado',cancelled:'❌ Cancelado'};
+  const tipoMap = {monthly:'Mensal',recurring:'Recorrente',annual:'Anual'};
+
+  // Check-ins no contrato
+  const enrolls = await sbGet('class_enrollments',
+    `student_id=eq.${a.id}&class_date=gte.${ct.start_date}&class_date=lte.${ct.end_date}&select=status`).catch(()=>[]);
+  const presencas = enrolls.filter(e=>e.status==='attended').length;
+  const faltas    = enrolls.filter(e=>e.status==='missed').length;
+  const cancelados= enrolls.filter(e=>e.status==='cancelled').length;
+
+  const row=(l,v,bold=false)=>`<div style="display:flex;padding:8px 0;border-bottom:1px solid var(--bg3);gap:10px">
+    <div style="font-size:13px;color:var(--ink3);min-width:180px">${l}</div>
+    <div style="font-size:13px;font-weight:${bold?'700':'500'};color:var(--ink)">${v}</div>
+  </div>`;
+
+  // Historical contracts
+  const histContratos = contracts.slice(1).map(c2=>{
+    const p2=planos.find(p=>p.id===c2.plan_id)||{};
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bg3)">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600">${p2.name||'Plano'} · ${tipoMap[c2.payment_type]||''}</div>
+        <div style="font-size:11px;color:var(--ink3)">${fmtDate(c2.start_date)} → ${fmtDate(c2.end_date)}</div>
+      </div>
+      <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg);color:var(--ink3);border:1px solid var(--bg3)">${STATUS[c2.status]||c2.status}</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="detail">
+    <!-- Contrato ativo -->
+    <div class="card">
+      <div class="card-hdr" style="background:var(--purple-l)">
+        <span class="sb-ico">📄</span>
+        <span class="card-hdr-title" style="color:var(--purple)">${plan.name||'Contrato'} · ${tipoMap[ct.payment_type]||''}</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--purple)">${STATUS[ct.status]||ct.status}</span>
+      </div>
+      <div class="card-body">
+        ${row('Data de início',fmtDate(ct.start_date))}
+        ${row('Data de vencimento',fmtDate(ct.end_date))}
+        ${row('Sessões por semana',plan.frequency_per_week?plan.frequency_per_week+'x/semana':'—')}
+        ${row('Total de sessões',ct.total_classes||'—')}
+        ${row('Aulas restantes',ct.remaining_classes??'—',true)}
+        ${row('Tipo de horário',ct.has_fixed_schedule?'📌 Agenda fixa':'🔄 Flexível')}
+        ${ct.due_date?row('Vencimento pagamento',fmtDate(ct.due_date)):''}
+      </div>
+    </div>
+
+    <!-- Check-ins -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">✅</span><span class="card-hdr-title">Check-ins no contrato</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div style="text-align:center;padding:12px;background:var(--green-l);border-radius:10px">
+            <div style="font-size:26px;font-weight:800;color:var(--green)">${presencas}</div>
+            <div style="font-size:11px;color:var(--green)">Presenças</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--red-l);border-radius:10px">
+            <div style="font-size:26px;font-weight:800;color:var(--red)">${faltas}</div>
+            <div style="font-size:11px;color:var(--red)">Faltas</div>
+          </div>
+          <div style="text-align:center;padding:12px;background:var(--gold-l);border-radius:10px">
+            <div style="font-size:26px;font-weight:800;color:#92400E">${cancelados}</div>
+            <div style="font-size:11px;color:#92400E">Cancelamentos</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reposições -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">🔄</span><span class="card-hdr-title">Reposições</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div style="padding:12px;background:var(--purple-l);border-radius:10px;text-align:center">
+            <div style="font-size:28px;font-weight:800;color:var(--purple)">${repDisp}</div>
+            <div style="font-size:11px;color:var(--purple)">Disponíveis</div>
+          </div>
+          <div style="padding:12px;background:var(--bg);border-radius:10px;text-align:center">
+            <div style="font-size:28px;font-weight:800;color:var(--ink)">${repTotal}</div>
+            <div style="font-size:11px;color:var(--ink3)">Total geradas</div>
+          </div>
+        </div>
+        ${replacements.length?`<div style="margin-top:10px;font-size:11px;color:var(--ink3)">
+          ${replacements.map(r=>`<div style="padding:4px 0">
+            ${r.origin_type==='cancellation'?'🔄':r.origin_type==='transferred'?'↗️':'✨'}
+            ${r.quantity_remaining}/${r.quantity_total} — ${r.origin_type==='cancellation'?'Cancelamento':r.origin_type==='transferred'?'Transferida':'Crédito extra'}
+          </div>`).join('')}
+        </div>`:'<div style="margin-top:8px;font-size:12px;color:var(--ink3)">Sem reposições acumuladas.</div>'}
+      </div>
+    </div>
+
+    <!-- Pausa -->
+    ${ct.status==='active'||ct.status==='paused'?`<div class="card">
+      <div class="card-hdr"><span class="sb-ico">⏸️</span><span class="card-hdr-title">Pausa / Licença</span>
+        ${ct.status==='paused'?`<button onclick="retomarPausaRec('${ct.id}')" class="btn btn-green" style="margin-left:auto;padding:5px 12px;font-size:11px">▶️ Retomar</button>`
+          :`<button onclick="abrirModalPausaAluno('${ct.id}','${ct.end_date}')" class="btn btn-secondary" style="margin-left:auto;padding:5px 12px;font-size:11px">+ Registrar pausa</button>`}
+      </div>
+      <div class="card-body">
+        ${ct.status==='paused'?`<div style="padding:8px 12px;background:#FEF3C7;border-radius:8px;font-size:13px;color:#92400E">
+          ⏸️ Pausado de ${fmtDate(ct.pause_start)} até ${fmtDate(ct.pause_end)}
+          · ${{vacation:'Férias',medical:'Médico',administrative:'Administrativo'}[ct.pause_type]||ct.pause_type||'—'}
+        </div>` : '<div style="font-size:12px;color:var(--ink3)">Nenhuma pausa ativa.</div>'}
+      </div>
+    </div>`:''}
+
+    <!-- Histórico de contratos -->
+    ${histContratos?`<div class="card">
+      <div class="card-hdr"><span class="sb-ico">📁</span><span class="card-hdr-title">Contratos anteriores</span></div>
+      <div style="padding:0">${histContratos}</div>
+    </div>`:''}
+
+    <div style="padding-bottom:20px"></div>
+  </div>`;
+}
+
+// ── Modal Pausa rápida (da aba contrato) ──
+function abrirModalPausaAluno(cid, endDate){
+  const hoje = new Date().toISOString().slice(0,10);
+  document.getElementById('modal-root').innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-hdr"><div class="modal-title">⏸️ Registrar pausa / licença</div>
+        <button class="modal-close" onclick="fecharModal()">✕</button></div>
+      <div class="modal-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label>Início da pausa *</label>
+            <input class="mi" id="mp-start" type="date" value="${hoje}" min="${hoje}"></div>
+          <div class="field"><label>Término da pausa *</label>
+            <input class="mi" id="mp-end" type="date" min="${hoje}"></div>
+        </div>
+        <div class="field"><label>Tipo de pausa</label>
+          <select class="mi" id="mp-type">
+            <option value="vacation">🏖️ Férias</option>
+            <option value="medical">🏥 Médico / Atestado</option>
+            <option value="administrative">📋 Administrativo</option>
+          </select>
+        </div>
+        <div class="field"><label>Motivo (opcional)</label>
+          <input class="mi" id="mp-motivo" placeholder="Descreva o motivo da pausa…"></div>
+        <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400E">
+          ⏸️ O término do contrato será estendido automaticamente pela duração da pausa.<br>
+          Término atual: <strong>${fmtDate(endDate)}</strong>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarPausaAluno('${cid}','${endDate}')">✓ Registrar pausa</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function confirmarPausaAluno(cid, endDateAtual){
+  const ps = document.getElementById('mp-start').value;
+  const pe = document.getElementById('mp-end').value;
+  const pt = document.getElementById('mp-type').value;
+  if(!ps||!pe||pe<=ps){ alert('Datas inválidas.'); return; }
+  const dias = Math.ceil((new Date(pe)-new Date(ps))/(864e5));
+  const novaEnd = new Date(new Date(endDateAtual).getTime()+dias*864e5).toISOString().slice(0,10);
+  const btn = document.querySelector('.modal-footer .btn-primary');
+  btn.disabled=true; btn.textContent='⏳ Salvando…';
+  try {
+    await sbPatch('contracts',`id=eq.${cid}`,{status:'paused',pause_start:ps,pause_end:pe,pause_type:pt,end_date:novaEnd});
+    fecharModal();
+    contratoDetalhe=null;
+    showToast(`✅ Pausado! Novo término: ${fmtDate(novaEnd)}`);
+    renderContent();
+  } catch(e){ alert('Erro: '+e.message); btn.disabled=false; btn.textContent='✓ Registrar pausa'; }
 }
 
 
