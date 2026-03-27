@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Estúdio 7 — Acesso</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#0A0907;--ink2:#1C1710;
+    --gold:#C9A84C;--gold-l:#E8C97A;
+    --purple:#6D28D9;--wh:#FAF8F5;
+    --muted:#6B6055;--light:#B8AEA4;
+    --red:#DC2626;
+  }
+  html,body{height:100%}
+  body{
+    background:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Segoe UI',system-ui,sans-serif;
+    min-height:100vh;padding:20px;
+    position:relative;overflow:hidden;
+  }
+
+  /* Background texture */
+  body::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse 70% 60% at 50% 40%, rgba(201,168,76,.06) 0%, transparent 65%);
+    pointer-events:none;
+  }
+  body::after{
+    content:'';position:absolute;inset:0;opacity:.3;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.1'/%3E%3C/svg%3E");
+    pointer-events:none;
+  }
+
+  .card{
+    position:relative;z-index:1;
+    width:100%;max-width:380px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(201,168,76,.15);
+    padding:48px 40px 40px;
+    animation:fadeUp .6s ease both;
+  }
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+  .logo{text-align:center;margin-bottom:40px}
+  .logo-txt{
+    font-family:'Playfair Display',Georgia,serif;
+    font-size:32px;font-weight:900;
+    letter-spacing:2px;color:#fff;
+  }
+  .logo-txt span{color:var(--gold)}
+  .logo-sub{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-top:4px}
+  .logo-line{width:40px;height:1px;background:var(--gold);margin:14px auto 0;opacity:.5}
+
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+  .field label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase}
+  .inp{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.1);
+    color:#fff;padding:13px 16px;
+    font-size:15px;font-family:inherit;
+    outline:none;transition:border-color .2s;
+    width:100%;
+    border-radius:2px;
+  }
+  .inp::placeholder{color:rgba(255,255,255,.2)}
+  .inp:focus{border-color:rgba(201,168,76,.5);background:rgba(255,255,255,.07)}
+  .inp-pin{
+    letter-spacing:12px;font-size:22px;font-weight:700;
+    text-align:center;text-security:disc;-webkit-text-security:disc;
+  }
+
+  .btn{
+    width:100%;padding:15px;margin-top:8px;
+    background:var(--gold);color:var(--ink);
+    border:none;font-size:14px;font-weight:600;
+    letter-spacing:1.5px;text-transform:uppercase;
+    cursor:pointer;transition:all .2s;border-radius:2px;
+  }
+  .btn:hover{background:var(--gold-l)}
+  .btn:active{transform:scale(.99)}
+  .btn:disabled{background:rgba(201,168,76,.3);color:rgba(10,9,7,.5);cursor:not-allowed}
+
+  .error{
+    background:rgba(220,38,38,.1);border:1px solid rgba(220,38,38,.3);
+    color:#FCA5A5;font-size:13px;padding:10px 14px;
+    text-align:center;margin-top:10px;display:none;border-radius:2px;
+  }
+  .error.show{display:block;animation:shake .3s ease}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+  .spinner{display:none;text-align:center;padding:8px;color:var(--gold);font-size:13px;letter-spacing:1px}
+  .spinner.show{display:block}
+
+  /* PIN dots */
+  .pin-dots{display:flex;justify-content:center;gap:12px;margin:6px 0 2px;height:10px}
+  .pin-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15);transition:background .15s}
+  .pin-dot.filled{background:var(--gold)}
+
+  .version{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:10px;color:rgba(255,255,255,.1);letter-spacing:1px}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-txt">ESTÚDIO <span>7</span></div>
+    <div class="logo-sub">Sistema interno</div>
+    <div class="logo-line"></div>
+  </div>
+
+  <div class="field">
+    <label>Nome</label>
+    <input class="inp" id="inp-nome" placeholder="Seu nome completo" autocomplete="off" autocapitalize="words">
+  </div>
+
+  <div class="field">
+    <label>PIN de acesso</label>
+    <input class="inp inp-pin" id="inp-pin" type="password"
+      inputmode="numeric" maxlength="4" placeholder="• • • •"
+      oninput="atualizarDots(this.value)" autocomplete="off">
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+  </div>
+
+  <button class="btn" id="btn-login" onclick="fazerLogin()">Entrar</button>
+  <div class="error" id="error">Usuário ou PIN incorretos.</div>
+  <div class="spinner" id="spinner">Verificando…</div>
+</div>
+
+<div class="version">v3.0 · 2025</div>
+
+<script>
+const SUPA_URL = 'https://kfmkcbhalwupgknysukj.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+
+// Redireciona se já tem sessão válida
+const sess = JSON.parse(localStorage.getItem('se7e_session')||'null');
+if(sess && sess.role && sess.expires > Date.now()){
+  redirecionar(sess.role);
+}
+
+function atualizarDots(val){
+  for(let i=0;i<4;i++){
+    document.getElementById('d'+i).classList.toggle('filled', i<val.length);
+  }
+}
+
+document.getElementById('inp-pin').addEventListener('keydown', e=>{
+  if(e.key==='Enter') fazerLogin();
+});
+document.getElementById('inp-nome').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('inp-pin').focus();
+});
+
+async function fazerLogin(){
+  const nome = document.getElementById('inp-nome').value.trim();
+  const pin  = document.getElementById('inp-pin').value.trim();
+
+  if(!nome){ document.getElementById('inp-nome').focus(); return; }
+  if(pin.length!==4){ document.getElementById('inp-pin').focus(); return; }
+
+  const btn = document.getElementById('btn-login');
+  const err = document.getElementById('error');
+  const spin= document.getElementById('spinner');
+
+  btn.disabled=true; err.classList.remove('show'); spin.classList.add('show');
+
+  try {
+    // Busca perfil por nome + PIN
+    const query = `full_name=ilike.*${encodeURIComponent(nome)}*&pin=eq.${pin}&active=eq.true&select=id,full_name,role,pin`;
+    const r = await fetch(`${SUPA_URL}/rest/v1/profiles?${query}`, {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    const data = await r.json();
+
+    if(!data.length){
+      throw new Error('not found');
+    }
+
+    const user = data[0];
+    const rolesPermitidos = ['admin','coordinator','receptionist'];
+    if(!rolesPermitidos.includes(user.role)){
+      throw new Error('sem permissão');
+    }
+
+    // Salvar sessão (8 horas)
+    const session = {
+      id:       user.id,
+      name:     user.full_name,
+      role:     user.role,
+      expires:  Date.now() + 8*3600*1000,
+    };
+    localStorage.setItem('se7e_session', JSON.stringify(session));
+
+    // Redirecionar
+    redirecionar(user.role);
+
+  } catch(e){
+    spin.classList.remove('show');
+    btn.disabled=false;
+    err.textContent = e.message==='sem permissão'
+      ? 'Seu perfil não tem acesso a este sistema.'
+      : 'Nome ou PIN incorretos. Tente novamente.';
+    err.classList.add('show');
+    document.getElementById('inp-pin').value='';
+    atualizarDots('');
+    document.getElementById('inp-pin').focus();
+  }
+}
+
+function redirecionar(role){
+  if(role==='coordinator'||role==='admin'){
+    window.location.href='/vanessa';
+  } else if(role==='receptionist'){
+    window.location.href='/recepcao';
+  }
+}
+</script>
+</body>
+</html>

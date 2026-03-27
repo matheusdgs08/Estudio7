@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>
+// ── Verificação de sessão ──
+(function(){
+  const sess = JSON.parse(localStorage.getItem('se7e_session')||'null');
+  const rolesVanessa = ['admin','coordinator'];
+  const rolesRecepcao = ['admin','receptionist'];
+  const path = window.location.pathname;
+  if(!sess || sess.expires < Date.now()){
+    window.location.href='/login'; return;
+  }
+  if(path.includes('vanessa') && !rolesVanessa.includes(sess.role)){
+    window.location.href='/login'; return;
+  }
+  if(path.includes('recepcao') && !rolesRecepcao.includes(sess.role)){
+    window.location.href='/login'; return;
+  }
+})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -313,7 +331,7 @@ button{cursor:pointer}
 <div class="app">
   <div class="sidebar" id="sidebar">
     <div class="sb-logo"><div class="sb-brand">Estúdio Se7e</div><div class="sb-role">Painel da Coordenação</div></div>
-    <div class="sb-user"><div class="sb-av">VR</div><div><div class="sb-uname">Vanessa Ramos</div><div class="sb-uemail">vanessa@estudio7.com.br</div></div></div>
+    <div class="sb-user"><div class="sb-av">VR</div><div><div class="sb-uname">Vanessa Ramos</div><div class="sb-uemail">" id="sess-email">vanessa@estudio7.com.br</div></div></div>
     <nav class="sb-nav">
       <div class="sb-section">Treinos</div>
       <button class="sb-item on" onclick="setMod('treinos',this)"><span class="sb-ico">💪</span> Fichas de treino</button>

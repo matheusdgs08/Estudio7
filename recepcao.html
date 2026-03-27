@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>
+// ── Verificação de sessão ──
+(function(){
+  const sess = JSON.parse(localStorage.getItem('se7e_session')||'null');
+  const rolesVanessa = ['admin','coordinator'];
+  const rolesRecepcao = ['admin','receptionist'];
+  const path = window.location.pathname;
+  if(!sess || sess.expires < Date.now()){
+    window.location.href='/login'; return;
+  }
+  if(path.includes('vanessa') && !rolesVanessa.includes(sess.role)){
+    window.location.href='/login'; return;
+  }
+  if(path.includes('recepcao') && !rolesRecepcao.includes(sess.role)){
+    window.location.href='/login'; return;
+  }
+})();
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Recepção — Estúdio Se7e</title>
@@ -122,8 +140,13 @@
   <div class="sb-user">
     <div class="sb-avatar">R</div>
     <div class="sb-user-info">
-      <div class="sb-user-name">Recepção</div>
-      <div class="sb-user-role">estudio7.com.br</div>
+      <div class="sb-user-name" id="sess-name-r">Recepção</div>
+      <div class="sb-user-role" id="sess-role-r">Recepcionista</div>
+      <script>
+        const _sr=JSON.parse(localStorage.getItem('se7e_session')||'{}');
+        if(_sr.name && document.getElementById('sess-name-r')) document.getElementById('sess-name-r').textContent=_sr.name.split(' ')[0];
+        if(_sr.role==='admin') document.getElementById('sess-role-r').textContent='Administrador';
+      </script>
     </div>
   </div>
   <div class="sb-section">Alunos</div>

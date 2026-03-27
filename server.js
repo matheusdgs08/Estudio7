@@ -9,6 +9,7 @@ const ROUTES = {
   '/vanessa': 'vanessa.html',
   '/coordenacao': 'vanessa.html',
   '/agendar': 'agendar.html',
+  '/login':    'login.html',
   '/recepcao': 'recepcao.html',
   '/impressao/servico/download': 'servico_impressao/impressora.py',
   '/questionario': 'questionario.html',
