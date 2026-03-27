@@ -3773,11 +3773,21 @@ async function renderAbaFrequencia(a){
 
 // ── ABA CONTRATO ──
 async function renderAbaContrato(a){
-  // Load contracts + replacement_credits
-  const [contracts, replacements] = await Promise.all([
+  // Load contracts + replacement_credits + fixed_slots
+  const [contracts, replacements, fixedSlots] = await Promise.all([
     sbGet('contracts',`student_id=eq.${a.id}&order=created_at.desc&select=*`),
     sbGet('replacement_credits',`student_id=eq.${a.id}&active=eq.true&select=*`).catch(()=>[]),
+    sbGet('fixed_slots',`student_id=eq.${a.id}&active=eq.true&select=class_slot_id`).catch(()=>[]),
   ]);
+
+  // Load class_slot details for fixed slots
+  let fixedHorarios = [];
+  if(fixedSlots.length){
+    const slotIds = fixedSlots.map(f=>f.class_slot_id);
+    const slotsData = await sbGet('class_slots','id=in.('+slotIds.join(',')+')&select=weekday,start_time&order=weekday,start_time');
+    const WD = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    fixedHorarios = slotsData.map(s=>({dia: WD[s.weekday], horario: s.start_time.slice(0,5), wd: s.weekday}));
+  }
 
   if(!contracts.length) return `<div class="detail">
     <div class="empty"><div class="empty-ico">📄</div><div class="empty-title">Sem contratos</div></div>
@@ -3834,6 +3844,22 @@ async function renderAbaContrato(a){
     </div>
 
     <!-- Check-ins -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">📌</span><span class="card-hdr-title">Horários fixos</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--ink3)">${fixedHorarios.length} horário${fixedHorarios.length!==1?'s':''}</span>
+      </div>
+      <div class="card-body">
+        ${fixedHorarios.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${fixedHorarios.map(h=>`<div style="display:flex;align-items:center;gap:6px;padding:8px 14px;background:var(--purple-l);border-radius:10px;border:1px solid #E9D5FF">
+            <span style="font-size:14px;font-weight:800;color:var(--purple)">${h.horario}</span>
+            <span style="font-size:12px;color:var(--purple);font-weight:600">${h.dia}</span>
+          </div>`).join('')}
+        </div>`
+        :'<div style="font-size:12px;color:var(--ink3)">Sem horários fixos cadastrados. Aluno flexível ou dados ainda não migrados.</div>'}
+      </div>
+    </div>
+
+    <!-- Frequência -->
     <div class="card">
       <div class="card-hdr"><span class="sb-ico">✅</span><span class="card-hdr-title">Check-ins no contrato</span></div>
       <div class="card-body">
