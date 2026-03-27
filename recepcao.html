@@ -21,7 +21,7 @@
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Recepção — Estúdio Se7e</title>
+<title>Recepção — Estúdio 7</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   :root{
@@ -134,7 +134,7 @@
 <!-- Sidebar -->
 <div class="sidebar">
   <div class="sb-brand">
-    <h1>ESTÚDIO <span>Se7e</span></h1>
+    <h1>ESTÚDIO <span>7</span></h1>
     <p>Painel da Recepção</p>
   </div>
   <div class="sb-user">
@@ -619,7 +619,7 @@ async function salvarNovoAluno(){
     if(phone){
       const token = 'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       const link  = `${window.location.origin}/questionario?t=${token}&tipo=entrada`;
-      const msg   = `Olá, ${nome.split(' ')[0]}! 😊\n\nBem-vindo ao Estúdio Se7e! Para montarmos o seu treino personalizado, precisamos de algumas informações. Leva menos de 2 minutinhos!\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+      const msg   = `Olá, ${nome.split(' ')[0]}! 😊\n\nBem-vindo ao Estúdio 7! Para montarmos o seu treino personalizado, precisamos de algumas informações. Leva menos de 2 minutinhos!\n\n👉 ${link}\n\n_Estúdio 7_`;
       // Salvar token no Supabase via API
       try {
         await fetch('/quest/tokens', {
@@ -761,7 +761,7 @@ async function enviarQuestionario(id, nm, phone){
   if(!phone){ alert('Este aluno não tem telefone cadastrado.'); return; }
   const token = 'q'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
   const link  = `${window.location.origin}/questionario?t=${token}&tipo=${tipo}`;
-  const msg   = `Olá, ${nm.split(' ')[0]}! 😊\n\nA Vanessa vai ${tipo==='entrada'?'montar o seu treino':'atualizar o seu treino'} em breve. Responda rapidinho:\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+  const msg   = `Olá, ${nm.split(' ')[0]}! 😊\n\nA Vanessa vai ${tipo==='entrada'?'montar o seu treino':'atualizar o seu treino'} em breve. Responda rapidinho:\n\n👉 ${link}\n\n_Estúdio 7_`;
   try {
     await fetch('/quest/tokens', {
       method:'POST',
@@ -2425,7 +2425,7 @@ function imprimirFichaNav(ficha){
       <div style="font-size:13px;color:#6D28D9;font-weight:700">${ficha.ficha_nome}</div>
       <div style="font-size:12px;color:#8A8278">${dataFmt}</div>
     </div>
-    <div style="font-size:11px;color:#8A8278;text-align:right">ESTÚDIO Se7e</div>
+    <div style="font-size:11px;color:#8A8278;text-align:right">ESTÚDIO 7</div>
   </div>
   <table style="width:100%;border-collapse:collapse;border:1px solid #E8E3DC">
     <thead><tr style="background:#1C1916;color:#fff">
@@ -2687,13 +2687,13 @@ function renderExpDetalhe(container){
           <div class="card-hdr"><span class="sb-ico">📲</span><span class="card-hdr-title">Mensagens rápidas</span></div>
           <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
             ${e?.scheduled_date?`<a href="${waLink(l.phone,
-              `Olá ${l.name.split(' ')[0]}! 😊 Confirmo sua aula experimental no Estúdio Se7e em ${fmtDate(e.scheduled_date)} às ${e.scheduled_time?.slice(0,5)||''}. Qualquer dúvida estou aqui! _Estúdio Se7e_`)}"
+              `Olá ${l.name.split(' ')[0]}! 😊 Confirmo sua aula experimental no Estúdio 7 em ${fmtDate(e.scheduled_date)} às ${e.scheduled_time?.slice(0,5)||''}. Qualquer dúvida estou aqui! _Estúdio 7_`)}"
               target="_blank" class="btn btn-green" style="text-decoration:none;font-size:12px">✅ Confirmação</a>`:''}
             ${e?.scheduled_date?`<a href="${waLink(l.phone,
-              `Olá ${l.name.split(' ')[0]}! 👋 Lembrando da sua aula experimental amanhã, ${fmtDate(e.scheduled_date)} às ${e.scheduled_time?.slice(0,5)||''}. Te esperamos! _Estúdio Se7e_`)}"
+              `Olá ${l.name.split(' ')[0]}! 👋 Lembrando da sua aula experimental amanhã, ${fmtDate(e.scheduled_date)} às ${e.scheduled_time?.slice(0,5)||''}. Te esperamos! _Estúdio 7_`)}"
               target="_blank" class="btn btn-secondary" style="text-decoration:none;font-size:12px">🔔 Lembrete</a>`:''}
             ${l.status==='attended'?`<a href="${waLink(l.phone,
-              `Olá ${l.name.split(' ')[0]}! 😊 Foi um prazer ter você no Estúdio Se7e! Como se sentiu? Posso te passar as opções de planos disponíveis? _Estúdio Se7e_`)}"
+              `Olá ${l.name.split(' ')[0]}! 😊 Foi um prazer ter você no Estúdio 7! Como se sentiu? Posso te passar as opções de planos disponíveis? _Estúdio 7_`)}"
               target="_blank" class="btn btn-secondary" style="text-decoration:none;font-size:12px">💬 Follow-up</a>`:''}
             <a href="${waLink(l.phone)}" target="_blank" class="btn btn-secondary" style="text-decoration:none;font-size:12px">📲 Abrir WhatsApp</a>
           </div>
@@ -2802,7 +2802,7 @@ async function salvarNovoLead(){
       });
       // Abrir WhatsApp com confirmação
       if(phoneF){
-        const msg = `Olá ${nome.split(' ')[0]}! 😊 Sua aula experimental no Estúdio Se7e está confirmada para ${fmtDate(expData)} às ${expHora}. Te esperamos! _Estúdio Se7e_`;
+        const msg = `Olá ${nome.split(' ')[0]}! 😊 Sua aula experimental no Estúdio 7 está confirmada para ${fmtDate(expData)} às ${expHora}. Te esperamos! _Estúdio 7_`;
         window.open(`https://wa.me/${phoneF}?text=${encodeURIComponent(msg)}`,'_blank');
       }
     }
@@ -2875,7 +2875,7 @@ async function confirmarAgendarExp(leadId){
     // WhatsApp
     const lead = expLeads.find(l=>l.id===leadId);
     if(lead?.phone){
-      const msg = `Olá ${lead.name.split(' ')[0]}! 😊 Sua aula experimental no Estúdio Se7e está confirmada para ${fmtDate(data)} às ${hora}. Qualquer dúvida estou aqui! _Estúdio Se7e_`;
+      const msg = `Olá ${lead.name.split(' ')[0]}! 😊 Sua aula experimental no Estúdio 7 está confirmada para ${fmtDate(data)} às ${hora}. Qualquer dúvida estou aqui! _Estúdio 7_`;
       window.open(`https://wa.me/${lead.phone}?text=${encodeURIComponent(msg)}`,'_blank');
     }
 
@@ -2943,7 +2943,7 @@ async function converterEmAluno(leadId){
 
     // WhatsApp boas-vindas
     if(phoneF){
-      const msg = `Olá ${l.name.split(' ')[0]}! 🎉 Seja bem-vindo(a) ao Estúdio Se7e! Seu cadastro foi criado. Em breve entraremos em contato para configurar seu plano. _Estúdio Se7e_`;
+      const msg = `Olá ${l.name.split(' ')[0]}! 🎉 Seja bem-vindo(a) ao Estúdio 7! Seu cadastro foi criado. Em breve entraremos em contato para configurar seu plano. _Estúdio 7_`;
       window.open(`https://wa.me/${phoneF}?text=${encodeURIComponent(msg)}`,'_blank');
     }
   } catch(e){
@@ -3059,8 +3059,8 @@ async function liberarAvaliacao(studentId, studentNm, studentPhone){
 
   // Montar mensagem WhatsApp
   const msgWpp = ultimaAval
-    ? `Olá, ${nome1}! 😊 Já fazem ${mesesDesde} ${mesesDesde===1?'mês':'meses'} desde sua última avaliação com a Vanessa. Que tal agendar a próxima?\n\n👉 ${link}\n\n_Estúdio Se7e_`
-    : `Olá, ${nome1}! 😊 Está na hora de fazer sua avaliação física com a Vanessa! Escolha o melhor horário pelo link abaixo:\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+    ? `Olá, ${nome1}! 😊 Já fazem ${mesesDesde} ${mesesDesde===1?'mês':'meses'} desde sua última avaliação com a Vanessa. Que tal agendar a próxima?\n\n👉 ${link}\n\n_Estúdio 7_`
+    : `Olá, ${nome1}! 😊 Está na hora de fazer sua avaliação física com a Vanessa! Escolha o melhor horário pelo link abaixo:\n\n👉 ${link}\n\n_Estúdio 7_`;
 
   const phone = studentPhone.replace(/\D/g,'');
   const phoneNum = phone.startsWith('55') ? phone : '55'+phone;
@@ -3108,8 +3108,8 @@ async function liberarAvaliacao(studentId, studentNm, studentPhone){
   } catch(e){ alert('Erro: '+e.message); return; }
 
   const msgWpp = ultimaAval
-    ? `Olá, ${nome1}! 😊 Já fazem ${mesesDesde} ${mesesDesde===1?'mês':'meses'} desde sua última avaliação com a Vanessa. Que tal agendar a próxima?\n\n👉 ${link}\n\n_Estúdio Se7e_`
-    : `Olá, ${nome1}! 😊 Está na hora de fazer sua avaliação física com a Vanessa! Escolha o melhor horário:\n\n👉 ${link}\n\n_Estúdio Se7e_`;
+    ? `Olá, ${nome1}! 😊 Já fazem ${mesesDesde} ${mesesDesde===1?'mês':'meses'} desde sua última avaliação com a Vanessa. Que tal agendar a próxima?\n\n👉 ${link}\n\n_Estúdio 7_`
+    : `Olá, ${nome1}! 😊 Está na hora de fazer sua avaliação física com a Vanessa! Escolha o melhor horário:\n\n👉 ${link}\n\n_Estúdio 7_`;
 
   const phone = studentPhone.replace(/\D/g,'');
   const phoneNum = phone.startsWith('55')?phone:'55'+phone;
