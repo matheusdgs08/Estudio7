@@ -86,10 +86,8 @@
   .li-sub{font-size:11px;color:var(--ink3);margin-top:1px}
 
   /* ── Detail panel ── */
-  .detail{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;scrollbar-width:thin}
-  .detail::-webkit-scrollbar{width:6px}
-  .detail::-webkit-scrollbar-track{background:transparent}
-  .detail::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+  .detail{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none}
+  .detail::-webkit-scrollbar{display:none}
   .card{background:var(--wh);border:1px solid var(--bg3);border-radius:var(--r);overflow:hidden}
   .card-hdr{padding:12px 16px;border-bottom:1px solid var(--bg3);display:flex;align-items:center;gap:8px;background:var(--bg)}
   .card-hdr-title{font-size:13px;font-weight:700;color:var(--ink)}
@@ -3801,14 +3799,38 @@ function renderAbaContrato(a){
           }
         }
         contratoAbaData = {contracts, replacements, fixedHorarios};
-        // Load check-ins for the most recent contract
+        // Load check-ins, payments, and previous contract reposições
         if(contracts.length){
           const ct0 = contracts[0];
-          const enrolls = await sbGet('class_enrollments',
-            `student_id=eq.${a.id}&class_date=gte.${ct0.start_date}&class_date=lte.${ct0.end_date}&select=status`).catch(()=>[]);
+          const [enrolls, payments] = await Promise.all([
+            sbGet('class_enrollments',
+              `student_id=eq.${a.id}&class_date=gte.${ct0.start_date}&class_date=lte.${ct0.end_date}&select=status`).catch(()=>[]),
+            sbGet('payments',
+              `contract_id=eq.${ct0.id}&order=due_date.desc&select=*`).catch(()=>[]),
+          ]);
           contratoAbaData.presencas  = enrolls.filter(e=>e.status==='attended').length;
           contratoAbaData.faltas     = enrolls.filter(e=>e.status==='missed').length;
           contratoAbaData.cancelados = enrolls.filter(e=>e.status==='cancelled').length;
+          contratoAbaData.payments   = payments;
+
+          // Check previous contract for transferable reposições
+          if(ct0.previous_contract_id && !ct0.replacements_transferred){
+            const prevReps = await sbGet('replacement_credits',
+              `contract_id=eq.${ct0.previous_contract_id}&active=eq.true&quantity_remaining=gt.0&select=*`).catch(()=>[]);
+            contratoAbaData.prevReps = prevReps;
+            contratoAbaData.prevContractId = ct0.previous_contract_id;
+          } else if(!ct0.replacements_transferred){
+            // Find last ended contract
+            const prevContracts = contracts.filter(c=>c.status==='ended'&&c.id!==ct0.id);
+            if(prevContracts.length){
+              const prevC = prevContracts[0];
+              const prevReps = await sbGet('replacement_credits',
+                `contract_id=eq.${prevC.id}&active=eq.true&quantity_remaining=gt.0&select=*`).catch(()=>[]);
+              contratoAbaData.prevReps = prevReps;
+              contratoAbaData.prevContractId = prevC.id;
+            }
+          }
+          contratoAbaData.replacements_transferred = ct0.replacements_transferred;
         }
       } catch(e){ contratoAbaData = {contracts:[], replacements:[], fixedHorarios:[]}; }
       renderContent();
@@ -3924,9 +3946,41 @@ function renderAbaContrato(a){
         ${replacements.length?`<div style="margin-top:10px;font-size:11px;color:var(--ink3)">
           ${replacements.map(r=>`<div style="padding:4px 0">
             ${r.origin_type==='cancellation'?'🔄':r.origin_type==='transferred'?'↗️':'✨'}
-            ${r.quantity_remaining}/${r.quantity_total} — ${r.origin_type==='cancellation'?'Cancelamento':r.origin_type==='transferred'?'Transferida':'Crédito extra'}
+            ${r.quantity_remaining}/${r.quantity_total} — ${r.origin_type==='cancellation'?'Cancelamento':r.origin_type==='transferred'?'Transferida do anterior':'Crédito extra'}
           </div>`).join('')}
         </div>`:'<div style="margin-top:8px;font-size:12px;color:var(--ink3)">Sem reposições acumuladas.</div>'}
+        ${(()=>{
+          const prevReps = contratoAbaData.prevReps||[];
+          const transferred = contratoAbaData.replacements_transferred;
+          const prevTotal = prevReps.reduce((s,r)=>s+(r.quantity_remaining||0),0);
+          if(transferred) return '<div style="margin-top:10px;padding:8px 12px;background:var(--green-l);border-radius:8px;font-size:12px;color:var(--green)">✅ Reposições do contrato anterior já foram transferidas.</div>';
+          if(prevTotal > 0) return '<div style="margin-top:10px;padding:10px 12px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px"><div style="font-size:12px;color:#1E40AF;margin-bottom:6px">📦 Contrato anterior tem <strong>'+prevTotal+'</strong> reposição(ões) disponível(is).</div><button class="btn btn-primary" style="padding:5px 14px;font-size:12px" onclick="transferirReposicoes(\\''+ct.id+'\\',\\''+contratoAbaData.prevContractId+'\\')">↗️ Transferir reposições</button></div>';
+          return '';
+        })()}
+      </div>
+    </div>
+
+    <!-- Financeiro -->
+    <div class="card">
+      <div class="card-hdr"><span class="sb-ico">💳</span><span class="card-hdr-title">Pagamento</span></div>
+      <div class="card-body">
+        ${(()=>{
+          const payments = contratoAbaData.payments||[];
+          const priceMap = {monthly:plan.monthly_price, recurring:plan.recurring_price, annual:plan.annual_price};
+          const valor = priceMap[ct.payment_type] || plan.monthly_price || 0;
+          const statusPag = {pending:'🟡 Pendente', paid:'🟢 Pago', failed:'🔴 Falhou', refunded:'↩️ Estornado'};
+          const metodoMap = {pix:'Pix', credit_card:'Cartão', link:'Link'};
+          if(!payments.length){
+            return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Valor do plano</span><span style="font-size:13px;font-weight:700">R$ '+(valor?valor.toFixed(2).replace('.',','):'—')+'</span></div><div style="margin-top:8px;font-size:12px;color:var(--ink3)">Sem pagamentos registrados.</div>';
+          }
+          const last = payments[0];
+          return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Valor do plano</span><span style="font-size:13px;font-weight:700">R$ '+(valor?valor.toFixed(2).replace('.',','):'—')+'</span></div>'
+            +'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Último pagamento</span><span style="font-size:13px;font-weight:600">'+(statusPag[last.status]||last.status)+'</span></div>'
+            +(last.paid_at?'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Data do pagamento</span><span style="font-size:13px">'+fmtDate(last.paid_at.slice(0,10))+'</span></div>':'')
+            +(last.payment_method?'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">Método</span><span style="font-size:13px">'+(metodoMap[last.payment_method]||last.payment_method)+'</span></div>':'')
+            +(last.due_date?'<div style="display:flex;justify-content:space-between;padding:8px 0"><span style="font-size:13px;color:var(--ink3)">Próximo vencimento</span><span style="font-size:13px;font-weight:600">'+fmtDate(last.due_date)+'</span></div>':'')
+            +(payments.length>1?'<div style="margin-top:8px;font-size:11px;color:var(--ink3);cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\\'none\\'?\\'block\\':\\'none\\'">📋 Histórico ('+payments.length+' pagamentos) ›</div><div style="display:none;margin-top:6px">'+payments.slice(1,5).map(p=>'<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;color:var(--ink3)"><span>'+fmtDate(p.due_date)+'</span><span>R$ '+(p.amount?p.amount.toFixed(2).replace('.',','):'—')+'</span><span>'+(statusPag[p.status]||p.status)+'</span></div>').join('')+'</div>':'');
+        })()}
       </div>
     </div>
 
@@ -3955,6 +4009,42 @@ function renderAbaContrato(a){
 }
 
 // ── Modal Pausa rápida (da aba contrato) ──
+async function transferirReposicoes(currentContractId, prevContractId){
+  if(!confirm('Transferir reposições do contrato anterior para o atual?\n\nEsta ação é irreversível.')) return;
+  try {
+    // Get previous contract replacement_credits
+    const prevReps = await sbGet('replacement_credits',
+      `contract_id=eq.${prevContractId}&active=eq.true&quantity_remaining=gt.0&select=*`);
+    const totalTransfer = prevReps.reduce((s,r)=>s+(r.quantity_remaining||0),0);
+    if(!totalTransfer){ showToast('Sem reposições para transferir.'); return; }
+
+    // Create new replacement_credit on current contract
+    await sbPost('replacement_credits', {
+      student_id: alunoSel.id,
+      contract_id: currentContractId,
+      origin_type: 'transferred',
+      source_contract_id: prevContractId,
+      quantity_total: totalTransfer,
+      quantity_remaining: totalTransfer,
+      active: true,
+    });
+
+    // Deactivate previous credits
+    for(const r of prevReps){
+      await sbPatch('replacement_credits', `id=eq.${r.id}`, {active: false});
+    }
+
+    // Mark previous contract as transferred
+    await sbPatch('contracts', `id=eq.${prevContractId}`, {replacements_transferred: true});
+
+    contratoAbaData = null;
+    renderContent();
+    showToast(`✅ ${totalTransfer} reposição(ões) transferida(s)!`);
+  } catch(e){
+    alert('Erro ao transferir: ' + e.message);
+  }
+}
+
 function abrirModalPausaAluno(cid, endDate){
   const hoje = new Date().toISOString().slice(0,10);
   document.getElementById('modal-root').innerHTML = `<div class="modal-bg" onclick="if(event.target.classList.contains('modal-bg'))fecharModal()">
