@@ -2160,16 +2160,13 @@ function abrirModalAgendarAgenda(horario, eventId, cap, total){
         <button class="modal-close" onclick="fecharModal()">✕</button>
       </div>
       <div class="modal-body">
-        <input class="mi" placeholder="Buscar aluno…" id="ag-busca" autofocus
-          oninput="filtrarAgendarAgenda(this.value,'${horario}',${eventId})">
-        <div style="margin-top:8px;font-size:11px;color:var(--ink3)">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <select id="ag-tipo" class="mi" style="width:auto;height:32px;font-size:12px">
-              <option value="fixa">Fixa</option>
-              <option value="reposicao">Reposição</option>
-            </select>
-            Tipo de aula
-          </label>
+        <div style="display:flex;gap:10px;margin-top:8px;align-items:center">
+          <input class="mi" placeholder="Buscar aluno…" id="ag-busca" autofocus style="flex:1"
+            oninput="filtrarAgendarAgenda(this.value,'${horario}',${eventId})">
+          <select id="ag-tipo" class="mi" style="width:140px;height:40px;font-size:12px;flex-shrink:0">
+            <option value="fixa">Fixa</option>
+            <option value="reposicao">Reposição</option>
+          </select>
         </div>
         <div id="ag-lista" style="max-height:320px;overflow-y:auto;border:1px solid var(--bg3);border-radius:8px;margin-top:8px">
           ${alunos.slice(0,15).map(a=>renderAgendarAgendaRow(a,horario,eventId)).join('')}
