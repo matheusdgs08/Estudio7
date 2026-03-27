@@ -1998,6 +1998,7 @@ let agendaHorarios = [];  // horários do Tecnofit
 let agendaTeachers = [];  // professores
 let agendaLoaded = false;
 let rodizioSlotId = null; // slot aberto no rodízio
+let agendaFiltro = 'todas'; // todas | vagas | lotadas
 // Compat: old code references
 let agendaSlots = [];
 let agendaEnrollments = [];
@@ -2035,7 +2036,14 @@ async function renderAgenda(container, ta){
       <button class="btn btn-secondary" style="padding:6px 10px" onclick="mudarDia(1)">›</button>
       ${agendaDia!==new Date().toISOString().slice(0,10)?`<button class="btn btn-secondary" style="padding:6px 12px" onclick="agendaDia=new Date().toISOString().slice(0,10);agendaLoaded=false;renderContent()">Hoje</button>`:''}
     </div>
-    <button class="btn btn-secondary" onclick="agendaLoaded=false;renderContent()">🔄</button>`;
+    <div style="display:flex;align-items:center;gap:6px">
+      <select class="mi" style="height:36px;width:auto;font-size:12px" onchange="agendaFiltro=this.value;renderContent()">
+        <option value="todas" ${agendaFiltro==='todas'?'selected':''}>Todas</option>
+        <option value="vagas" ${agendaFiltro==='vagas'?'selected':''}>Com vagas</option>
+        <option value="lotadas" ${agendaFiltro==='lotadas'?'selected':''}>Lotadas</option>
+      </select>
+      <button class="btn btn-secondary" onclick="agendaLoaded=false;renderContent()">🔄</button>
+    </div>`;
 
   if(!agendaLoaded){
     container.innerHTML = '<div class="empty"><div class="empty-ico">⏳</div><div class="empty-title">Carregando agenda do Tecnofit…</div></div>';
@@ -2051,8 +2059,17 @@ async function renderAgenda(container, ta){
   const totalAlunos = agendaHorarios.reduce((s,h)=>s+h.total,0);
   const totalCheckins = agendaHorarios.reduce((s,h)=>s+(h.alunos||[]).filter(a=>a.checkin).length,0);
 
+  // Apply filter
+  const filteredHorarios = agendaHorarios.filter(slot=>{
+    const cap = slot.capacidade || 9;
+    const total = slot.total || 0;
+    if(agendaFiltro==='vagas') return total < cap;
+    if(agendaFiltro==='lotadas') return total >= cap;
+    return true;
+  });
+
   // Build slot cards from Tecnofit data
-  const slotCards = agendaHorarios.map(slot=>{
+  const slotCards = filteredHorarios.map(slot=>{
     const cap     = slot.capacidade || 9;
     const total   = slot.total || 0;
     const alunos  = slot.alunos || [];
@@ -2116,7 +2133,7 @@ async function renderAgenda(container, ta){
           ${isHoje?'📅 Hoje — ':''}${dtFmt}
         </div>
         <div style="margin-left:auto;display:flex;gap:12px;font-size:12px;color:var(--ink3)">
-          <span>🕐 ${agendaHorarios.length} horários</span>
+          <span>🕐 ${filteredHorarios.length}/${agendaHorarios.length} horários</span>
           <span>👥 ${totalAlunos} alunos</span>
           <span style="font-size:10px;color:var(--ink3);opacity:.6">via Tecnofit</span>
         </div>
@@ -2124,9 +2141,11 @@ async function renderAgenda(container, ta){
 
       <!-- Grid de slots -->
       <div style="padding:16px 24px;overflow:auto;flex:1">
-        ${agendaHorarios.length
+        ${filteredHorarios.length
           ? `<div style="display:flex;gap:12px;flex-wrap:wrap">${slotCards}</div>`
-          : `<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">Sem horários neste dia</div><div class="empty-sub">O Tecnofit não retornou eventos. Pode ser fora do horário de funcionamento ou dia sem aulas.</div></div>`}
+          : agendaHorarios.length
+          ? `<div class="empty"><div class="empty-ico">🔍</div><div class="empty-title">Nenhum horário com esse filtro</div><div class="empty-sub">Tente outro filtro ou veja todos os horários.</div></div>`
+          : `<div class="empty"><div class="empty-ico">📅</div><div class="empty-title">Sem horários neste dia</div><div class="empty-sub">O Tecnofit não retornou eventos para este dia.</div></div>`}
       </div>
     </div>`;
 }
