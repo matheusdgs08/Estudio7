@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estúdio 7 — Central de Impressão</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0A0908;--bg2:#141210;--bg3:#1E1B18;--bg4:#2A2622;
+  --ink:#F5F0E8;--ink2:#BFB9AE;--ink3:#7A7369;
+  --gold:#C9A96E;--gold2:#E8C97D;--gold-dim:rgba(201,169,110,.12);
+  --green:#34D399;--green-bg:rgba(52,211,153,.1);
+  --red:#F87171;--red-bg:rgba(248,113,113,.1);
+  --purple:#A78BFA;--purple-bg:rgba(167,139,250,.1);
+  --blue:#60A5FA;--blue-bg:rgba(96,165,250,.1);
+  --radius:10px;--radius-sm:6px;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+
+/* Layout */
+.shell{display:flex;height:100vh}
+.sidebar{width:260px;background:var(--bg2);border-right:1px solid var(--bg4);display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{padding:20px 24px;border-bottom:1px solid var(--bg4)}
+.sb-logo-name{font-size:18px;font-weight:900;letter-spacing:-.5px;color:var(--gold)}
+.sb-logo-sub{font-size:11px;color:var(--ink3);margin-top:2px}
+.sb-nav{padding:12px;flex:1;overflow-y:auto}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;border:none;background:none;color:var(--ink2);font:inherit;font-size:13px;font-weight:500;cursor:pointer;width:100%;text-align:left;transition:.15s}
+.sb-item:hover{background:var(--bg4);color:var(--ink)}
+.sb-item.active{background:var(--gold-dim);color:var(--gold)}
+.sb-ico{font-size:16px;width:24px;text-align:center}
+.sb-footer{padding:16px;border-top:1px solid var(--bg4)}
+.sb-user{font-size:12px;color:var(--ink3)}
+.btn-logout{padding:8px;background:var(--bg4);border:1px solid rgba(255,255,255,.06);color:var(--ink3);border-radius:var(--radius-sm);font:inherit;font-size:11px;cursor:pointer;width:100%;margin-top:8px}
+.btn-logout:hover{color:var(--red)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:16px 28px;border-bottom:1px solid var(--bg4);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-title{font-size:16px;font-weight:700}
+.topbar-sub{font-size:12px;color:var(--ink3);margin-top:2px}
+.content{flex:1;overflow-y:auto;padding:24px 28px}
+
+/* Countdown banner */
+.countdown{padding:16px 28px;background:var(--bg2);border-bottom:1px solid var(--bg4);display:flex;align-items:center;gap:16px}
+.cd-ring{width:52px;height:52px;border-radius:50%;border:3px solid var(--bg4);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:var(--gold);flex-shrink:0;position:relative}
+.cd-ring.active{border-color:var(--gold);animation:pulse 2s infinite}
+.cd-ring.done{border-color:var(--green);color:var(--green)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,169,110,.3)}50%{box-shadow:0 0 0 10px rgba(201,169,110,0)}}
+.cd-info{flex:1}
+.cd-label{font-size:14px;font-weight:700}
+.cd-detail{font-size:12px;color:var(--ink3);margin-top:2px}
+.cd-actions{display:flex;gap:8px}
+
+/* Buttons */
+.btn{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--bg4);background:var(--bg3);color:var(--ink2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--bg4);color:var(--ink)}
+.btn-gold{background:var(--gold);color:var(--bg);border-color:var(--gold)}
+.btn-gold:hover{background:var(--gold2)}
+.btn-green{background:var(--green);color:var(--bg);border-color:var(--green)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* Timeline */
+.timeline{display:flex;flex-direction:column;gap:12px}
+.slot-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);overflow:hidden;transition:.2s}
+.slot-card.proxima{border-color:var(--gold)}
+.slot-card.passou{opacity:.6}
+.slot-hdr{padding:14px 18px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:.15s}
+.slot-hdr:hover{background:var(--bg3)}
+.slot-time{font-size:24px;font-weight:900;min-width:70px;color:var(--gold)}
+.slot-card.passou .slot-time{color:var(--ink3)}
+.slot-meta{flex:1}
+.slot-count{font-size:13px;font-weight:600}
+.slot-status{font-size:11px;margin-top:3px;display:flex;gap:8px}
+.slot-badge{padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.badge-ok{background:var(--green-bg);color:var(--green)}
+.badge-pending{background:var(--gold-dim);color:var(--gold)}
+.badge-missed{background:var(--red-bg);color:var(--red)}
+.slot-timer{font-size:11px;color:var(--ink3);text-align:right;min-width:60px}
+.slot-timer b{display:block;font-size:15px;font-weight:900;color:var(--gold)}
+.slot-card.passou .slot-timer b{color:var(--ink3)}
+
+.slot-actions{display:flex;gap:6px;margin-left:12px}
+
+/* Expanded slot */
+.slot-body{display:none;border-top:1px solid var(--bg4);padding:14px 18px}
+.slot-card.open .slot-body{display:block}
+.aluno-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:6px;background:var(--bg3);transition:.15s}
+.aluno-row:hover{background:var(--bg4)}
+.aluno-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.aluno-info{flex:1}
+.aluno-name{font-size:13px;font-weight:600}
+.aluno-ficha{font-size:11px;color:var(--ink3)}
+.aluno-print-status{font-size:11px;font-weight:600;display:flex;align-items:center;gap:4px}
+.print-ok{color:var(--green)}
+.print-pending{color:var(--gold)}
+
+/* Service status */
+.svc-status{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px}
+.svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.svc-dot.on{background:var(--green);box-shadow:0 0 6px var(--green)}
+.svc-dot.off{background:var(--red)}
+
+/* Stats bar */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg2);border:1px solid var(--bg4);border-radius:var(--radius);padding:16px}
+.stat-value{font-size:28px;font-weight:900;color:var(--gold)}
+.stat-label{font-size:11px;color:var(--ink3);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--gold);color:var(--bg);padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:600;z-index:999;animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* Print preview modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--bg2);border:1px solid var(--bg4);border-radius:12px;max-width:700px;width:95%;max-height:85vh;overflow:hidden;display:flex;flex-direction:column}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--bg4);display:flex;align-items:center;justify-content:space-between}
+.modal-hdr-title{font-size:15px;font-weight:700}
+.modal-close{background:none;border:none;color:var(--ink3);font-size:20px;cursor:pointer}
+.modal-body{overflow-y:auto;flex:1;padding:20px}
+
+/* Ficha preview */
+.ficha-prev{background:#fff;color:#1C1916;padding:20px;border-radius:8px}
+.ficha-hdr{display:flex;justify-content:space-between;align-items:start;border-bottom:3px solid #6D28D9;padding-bottom:12px;margin-bottom:12px}
+.ficha-nome{font-size:20px;font-weight:900}
+.ficha-treino{font-size:13px;color:#6D28D9;font-weight:700}
+.ficha-data{font-size:12px;color:#8A8278}
+.ficha-table{width:100%;border-collapse:collapse}
+.ficha-table th{background:#1C1916;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.ficha-table td{padding:6px 10px;font-size:12px;border-bottom:1px solid #E8E3DC}
+.ficha-table tr:nth-child(even) td{background:#F9F7F4}
+.ficha-carga{text-align:center;font-weight:700;color:#DC2626}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sb-logo">
+      <div class="sb-logo-name">ESTÚDIO 7</div>
+      <div class="sb-logo-sub">Central de Impressão</div>
+    </div>
+    <div class="sb-nav">
+      <button class="sb-item active"><span class="sb-ico">🖨️</span> Impressão ao vivo</button>
+      <button class="sb-item" onclick="window.location.href='/recepcao'"><span class="sb-ico">📋</span> Recepção</button>
+      <button class="sb-item" onclick="window.location.href='/vanessa'"><span class="sb-ico">⚙️</span> Painel Vanessa</button>
+      <button class="sb-item" onclick="window.location.href='/colaborador'"><span class="sb-ico">👤</span> App Colaborador</button>
+    </div>
+    <div class="sb-footer">
+      <div class="sb-user" id="sb-user">Recepção</div>
+      <button class="btn-logout" onclick="if(confirm('Sair?')){localStorage.removeItem('se7e_session');window.location.href='/login'}">← Sair</button>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">🖨️ Central de Impressão</div>
+        <div class="topbar-sub" id="topbar-date"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="svc-status" id="svc-status">
+          <div class="svc-dot off"></div>
+          <span>Serviço local</span>
+        </div>
+        <button class="btn" onclick="refreshData()">🔄 Atualizar</button>
+      </div>
+    </div>
+
+    <div class="countdown" id="countdown-bar"></div>
+
+    <div class="content" id="content">
+      <div style="text-align:center;padding:60px 0;color:var(--ink3)">⏳ Carregando…</div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+// ── Config ──
+const API_KEY = 'se7e2025';
+const HEADERS = {'x-api-key': API_KEY};
+const REFRESH_SEC = 30;
+
+// ── State ──
+let horariosData = null;
+let fichasCache = {};
+let openSlots = {};
+let refreshTimer = null;
+let countdownTimer = null;
+
+// ── Session guard ──
+(function(){
+  const s = localStorage.getItem('se7e_session');
+  if(!s){window.location.href='/login';return}
+  try{
+    const d=JSON.parse(s);
+    if(Date.now()-d.ts > 8*3600000){localStorage.removeItem('se7e_session');window.location.href='/login';return}
+    document.getElementById('sb-user').textContent = d.nome || 'Recepção';
+  }catch(e){window.location.href='/login'}
+})();
+
+// ── Helpers ──
+function hoje(){ return new Date().toISOString().slice(0,10); }
+function agora(){ return new Date(); }
+function horaStr(d){ return d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+function dataFmt(d){ return new Date(d+'T12:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+function toast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+function avatarColor(name){
+  const colors=['#6D28D9','#DC2626','#059669','#D97706','#2563EB','#DB2777','#7C3AED','#EA580C'];
+  let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);
+  return colors[Math.abs(h)%colors.length];
+}
+
+// ── Data fetching ──
+async function fetchHorarios(){
+  try{
+    const r = await fetch(`/impressao/horarios/${hoje()}`,{headers:HEADERS});
+    if(!r.ok) throw new Error(r.status);
+    return await r.json();
+  }catch(e){console.error('fetchHorarios:',e);return {horarios:[]};}
+}
+
+async function fetchFichas(slotId){
+  if(fichasCache[slotId]) return fichasCache[slotId];
+  try{
+    const r = await fetch(`/impressao/aula/${slotId}/${hoje()}`,{headers:HEADERS});
+    if(!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    fichasCache[slotId] = data;
+    return data;
+  }catch(e){console.error('fetchFichas:',e);return {fichas:[]};}
+}
+
+async function marcarImpresso(enrollmentId){
+  try{
+    await fetch(`/impressao/marcar/${enrollmentId}`,{method:'POST',headers:HEADERS});
+  }catch(e){console.error('marcarImpresso:',e);}
+}
+
+// ── Countdown ──
+function getProximaAula(horarios){
+  const now = agora();
+  const h = hoje();
+  for(const slot of horarios){
+    const aula = new Date(`${h}T${slot.horario}:00`);
+    const diff = (aula - now)/60000;
+    if(diff > -5) return {slot, aula, diff};
+  }
+  return null;
+}
+
+function renderCountdown(horarios){
+  const bar = document.getElementById('countdown-bar');
+  const prox = getProximaAula(horarios);
+
+  if(!prox || !horarios.length){
+    bar.innerHTML = `
+      <div class="cd-ring done">✓</div>
+      <div class="cd-info">
+        <div class="cd-label">Sem aulas pendentes</div>
+        <div class="cd-detail">Todas as aulas de hoje já foram processadas</div>
+      </div>`;
+    return;
+  }
+
+  const {slot, aula, diff} = prox;
+  const printTime = new Date(aula.getTime() - 5*60000);
+  const diffPrint = Math.round((printTime - agora())/60000);
+  const minLeft = Math.max(0, Math.round(diff));
+  const isWindow = diff >= -2 && diff <= 7;
+
+  if(diffPrint <= 0 && diff > -5){
+    bar.innerHTML = `
+      <div class="cd-ring active">🖨️</div>
+      <div class="cd-info">
+        <div class="cd-label">Imprimindo — Aula das ${slot.horario}</div>
+        <div class="cd-detail">${slot.confirmados} aluno${slot.confirmados!==1?'s':''} · Fichas sendo enviadas para a impressora</div>
+      </div>
+      <div class="cd-actions">
+        <button class="btn btn-gold" onclick="imprimirSlot('${slot.slot_id}')">🖨️ Imprimir agora</button>
+      </div>`;
+  } else if(diffPrint > 0){
+    bar.innerHTML = `
+      <div class="cd-ring">${diffPrint}'</div>
+      <div class="cd-info">
+        <div class="cd-label">Próxima impressão: Aula das ${slot.horario}</div>
+        <div class="cd-detail">${slot.confirmados} aluno${slot.confirmados!==1?'s':''} · Impressão automática em ${diffPrint} min</div>
+      </div>
+      <div class="cd-actions">
+        <button class="btn" onclick="imprimirSlot('${slot.slot_id}')">🖨️ Antecipar</button>
+      </div>`;
+  } else {
+    bar.innerHTML = `
+      <div class="cd-ring done">✓</div>
+      <div class="cd-info">
+        <div class="cd-label">Aula das ${slot.horario} em andamento</div>
+        <div class="cd-detail">${slot.confirmados} aluno${slot.confirmados!==1?'s':''}</div>
+      </div>`;
+  }
+}
+
+// ── Render ──
+function render(){
+  if(!horariosData) return;
+
+  const horarios = horariosData.horarios || [];
+  const now = agora();
+  const h = hoje();
+
+  // Date
+  document.getElementById('topbar-date').textContent = dataFmt(h) + ' · Atualiza a cada 30s';
+
+  // Countdown
+  renderCountdown(horarios);
+
+  // Stats
+  let totalAlunos = 0, totalSlots = horarios.length, impressos = 0, pendentes = 0;
+  horarios.forEach(sl => totalAlunos += sl.confirmados);
+
+  // Count printed from cached fichas
+  Object.values(fichasCache).forEach(d => {
+    (d.fichas||[]).forEach(f => { if(f.ja_impressa) impressos++; else pendentes++; });
+  });
+
+  const content = document.getElementById('content');
+  const statsHtml = `
+    <div class="stats">
+      <div class="stat-card"><div class="stat-value">${totalSlots}</div><div class="stat-label">Horários hoje</div></div>
+      <div class="stat-card"><div class="stat-value">${totalAlunos}</div><div class="stat-label">Alunos confirmados</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:var(--green)">${impressos}</div><div class="stat-label">Fichas impressas</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:${pendentes?'var(--gold)':'var(--green)'}">${pendentes}</div><div class="stat-label">Pendentes</div></div>
+    </div>`;
+
+  // Timeline
+  const slotsHtml = horarios.map(sl => {
+    const aula = new Date(`${h}T${sl.horario}:00`);
+    const diff = Math.round((aula - now)/60000);
+    const passou = diff < -60;
+    const proxima = diff >= -5 && diff <= 10;
+    const isOpen = openSlots[sl.slot_id];
+    const cached = fichasCache[sl.slot_id];
+
+    // Count print status from cache
+    let slImpressos = 0, slPendentes = 0;
+    if(cached){
+      (cached.fichas||[]).forEach(f => f.ja_impressa ? slImpressos++ : slPendentes++);
+    }
+
+    const timerHtml = diff > 0
+      ? `<div class="slot-timer">em<b>${diff}'</b></div>`
+      : diff >= -60
+        ? `<div class="slot-timer">agora<b>⏱️</b></div>`
+        : `<div class="slot-timer">passou<b>—</b></div>`;
+
+    let bodyHtml = '';
+    if(isOpen && cached){
+      const fichas = cached.fichas || [];
+      if(fichas.length === 0){
+        bodyHtml = '<div style="text-align:center;padding:20px;color:var(--ink3)">Nenhuma ficha encontrada</div>';
+      } else {
+        bodyHtml = fichas.map(f => {
+          const cor = avatarColor(f.nome);
+          const initials = f.nome.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+          return `
+            <div class="aluno-row">
+              <div class="aluno-avatar" style="background:${cor}20;color:${cor}">${initials}</div>
+              <div class="aluno-info">
+                <div class="aluno-name">${f.nome}</div>
+                <div class="aluno-ficha">${f.ficha_nome} · ${f.exercicios.length} exercícios</div>
+              </div>
+              <div class="aluno-print-status ${f.ja_impressa?'print-ok':'print-pending'}">
+                ${f.ja_impressa ? '✓ Impresso' : '⏳ Pendente'}
+              </div>
+              <button class="btn btn-sm" onclick="previewFicha('${sl.slot_id}','${f.enrollment_id}')">👁️ Ver</button>
+              <button class="btn btn-sm" onclick="imprimirUm('${sl.slot_id}','${f.enrollment_id}')">🖨️</button>
+            </div>`;
+        }).join('');
+      }
+    } else if(isOpen){
+      bodyHtml = '<div style="text-align:center;padding:20px;color:var(--ink3)">⏳ Carregando fichas…</div>';
+    }
+
+    return `
+      <div class="slot-card ${proxima?'proxima':''} ${passou?'passou':''} ${isOpen?'open':''}">
+        <div class="slot-hdr" onclick="toggleSlot('${sl.slot_id}')">
+          <div class="slot-time">${sl.horario}</div>
+          <div class="slot-meta">
+            <div class="slot-count">${sl.confirmados} aluno${sl.confirmados!==1?'s':''} · Cap. ${sl.capacidade}</div>
+            <div class="slot-status">
+              ${cached ? (slImpressos ? `<span class="slot-badge badge-ok">${slImpressos} impresso${slImpressos!==1?'s':''}</span>` : '') : ''}
+              ${cached ? (slPendentes ? `<span class="slot-badge badge-pending">${slPendentes} pendente${slPendentes!==1?'s':''}</span>` : '') : ''}
+              ${!cached ? '<span class="slot-badge" style="background:var(--bg4);color:var(--ink3)">Clique para ver</span>' : ''}
+            </div>
+          </div>
+          ${timerHtml}
+          <div class="slot-actions">
+            <button class="btn btn-sm ${proxima?'btn-gold':''}" onclick="event.stopPropagation();imprimirSlot('${sl.slot_id}')">
+              🖨️ ${proxima ? 'Imprimir' : 'Imprimir'}
+            </button>
+          </div>
+        </div>
+        <div class="slot-body">${bodyHtml}</div>
+      </div>`;
+  }).join('');
+
+  const emptyHtml = !horarios.length
+    ? '<div style="text-align:center;padding:60px 0;color:var(--ink3)"><div style="font-size:48px;margin-bottom:12px">📋</div><div style="font-size:15px;font-weight:600">Sem aulas confirmadas hoje</div></div>'
+    : '';
+
+  content.innerHTML = `
+    ${statsHtml}
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700">Horários do dia</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="imprimirTodosPendentes()">🖨️ Imprimir todos pendentes</button>
+        <a href="/impressao/servico/download" class="btn btn-sm" style="text-decoration:none">📥 Baixar serviço local</a>
+      </div>
+    </div>
+    <div class="timeline">${slotsHtml}${emptyHtml}</div>`;
+}
+
+// ── Actions ──
+async function toggleSlot(slotId){
+  openSlots[slotId] = !openSlots[slotId];
+  if(openSlots[slotId] && !fichasCache[slotId]){
+    render();
+    await fetchFichas(slotId);
+  }
+  render();
+}
+
+async function imprimirSlot(slotId){
+  toast('⏳ Buscando fichas…');
+  const data = await fetchFichas(slotId);
+  const fichas = data.fichas || [];
+  if(!fichas.length){toast('Nenhuma ficha neste horário');return;}
+
+  let count = 0;
+  for(const f of fichas){
+    if(!f.ja_impressa){
+      imprimirFichaPopup(f);
+      await marcarImpresso(f.enrollment_id);
+      f.ja_impressa = true;
+      count++;
+      await new Promise(r=>setTimeout(r,1200));
+    }
+  }
+  if(count === 0){
+    toast('Todas as fichas já foram impressas');
+  } else {
+    toast(`🖨️ ${count} ficha${count!==1?'s':''} enviada${count!==1?'s':''}`);
+  }
+  fichasCache[slotId] = null;
+  await fetchFichas(slotId);
+  render();
+}
+
+async function imprimirUm(slotId, enrollmentId){
+  const data = fichasCache[slotId];
+  if(!data) return;
+  const ficha = (data.fichas||[]).find(f=>f.enrollment_id===enrollmentId);
+  if(!ficha){toast('Ficha não encontrada');return;}
+
+  imprimirFichaPopup(ficha);
+  await marcarImpresso(enrollmentId);
+  ficha.ja_impressa = true;
+  render();
+  toast(`🖨️ Ficha de ${ficha.nome.split(' ')[0]} enviada`);
+}
+
+async function imprimirTodosPendentes(){
+  let total = 0;
+  for(const sl of (horariosData?.horarios||[])){
+    if(!fichasCache[sl.slot_id]) await fetchFichas(sl.slot_id);
+    const data = fichasCache[sl.slot_id];
+    if(!data) continue;
+    for(const f of (data.fichas||[])){
+      if(!f.ja_impressa){
+        imprimirFichaPopup(f);
+        await marcarImpresso(f.enrollment_id);
+        f.ja_impressa = true;
+        total++;
+        await new Promise(r=>setTimeout(r,1200));
+      }
+    }
+  }
+  if(total === 0) toast('Nenhuma ficha pendente');
+  else toast(`🖨️ ${total} ficha${total!==1?'s':''} enviada${total!==1?'s':''}`);
+  render();
+}
+
+// ── Print popup (browser print → thermal printer set as default) ──
+function imprimirFichaPopup(ficha){
+  const dataFmt = new Date(ficha.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const exRows = (ficha.exercicios||[]).map((ex,i)=>`
+    <tr style="background:${i%2===0?'#fff':'#F9F7F4'}">
+      <td style="padding:4px 6px;font-size:10px;color:#6B5E52">${ex.grupo||''}</td>
+      <td style="padding:4px 6px;font-size:11px;font-weight:600">${ex.nome}</td>
+      <td style="padding:4px 6px;font-size:11px;text-align:center;color:#6D28D9;font-weight:700">${ex.series}×${ex.reps}</td>
+      <td style="padding:4px 6px;font-size:11px;text-align:center;font-weight:700;color:${ex.ultima_carga?'#DC2626':'#aaa'}">${ex.ultima_carga?ex.ultima_carga+'kg':'—'}</td>
+      <td style="padding:4px 6px;font-size:9px;color:#8A8278">${ex.obs||''}</td>
+    </tr>`).join('');
+
+  // Layout otimizado para 80mm térmica (largura ~72mm úteis)
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Arial,sans-serif;width:72mm;padding:2mm;font-size:10px}
+    @media print{@page{size:80mm auto;margin:0}body{width:72mm;padding:2mm}}
+    table{width:100%;border-collapse:collapse}
+    th{background:#222;color:#fff;padding:3px 4px;text-align:left;font-size:9px}
+    td{padding:3px 4px;font-size:9px;border-bottom:1px solid #ddd}
+  </style></head><body>
+  <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:4px">
+    <div style="font-size:14px;font-weight:900">${ficha.nome}</div>
+    <div style="font-size:11px;font-weight:700;color:#6D28D9">${ficha.ficha_nome}</div>
+    <div style="font-size:9px;color:#888">${dataFmt} · ESTÚDIO 7</div>
+  </div>
+  <table>
+    <thead><tr>
+      <th style="width:50px">GRUPO</th>
+      <th>EXERCÍCIO</th>
+      <th style="width:40px;text-align:center">S×R</th>
+      <th style="width:40px;text-align:center">CARGA</th>
+      <th style="width:50px">OBS</th>
+    </tr></thead>
+    <tbody>${exRows}</tbody>
+  </table>
+  <div style="border-top:1px dashed #888;margin-top:4px;padding-top:4px;text-align:center;font-size:8px;color:#888">
+    — fim da ficha —
+  </div>
+  <script>
+    window.onload=function(){
+      setTimeout(function(){window.print();},600);
+      setTimeout(function(){window.close();},1500);
+    };
+  <\/script>
+  </body></html>`;
+
+  const w = window.open('','_blank','width=320,height=600');
+  if(w){w.document.write(html);w.document.close();}
+}
+
+// ── Preview modal ──
+function previewFicha(slotId, enrollmentId){
+  const data = fichasCache[slotId];
+  if(!data) return;
+  const f = (data.fichas||[]).find(fi=>fi.enrollment_id===enrollmentId);
+  if(!f) return;
+
+  const dataFmt = new Date(f.data+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const exRows = (f.exercicios||[]).map((ex,i)=>`
+    <tr${i%2?'':' style="background:#F9F7F4"'}>
+      <td>${ex.grupo||''}</td>
+      <td style="font-weight:600">${ex.nome}</td>
+      <td style="text-align:center;color:#6D28D9;font-weight:700">${ex.series}×${ex.reps}</td>
+      <td class="ficha-carga">${ex.ultima_carga?ex.ultima_carga+' kg':'—'}</td>
+      <td style="color:#8A8278;font-size:11px">${ex.obs||''}</td>
+    </tr>`).join('');
+
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this)closeModal()">
+      <div class="modal-box">
+        <div class="modal-hdr">
+          <div class="modal-hdr-title">Pré-visualização da ficha</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-sm btn-gold" onclick="imprimirUm('${slotId}','${enrollmentId}');closeModal()">🖨️ Imprimir</button>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div class="ficha-prev">
+            <div class="ficha-hdr">
+              <div>
+                <div class="ficha-nome">${f.nome}</div>
+                <div class="ficha-treino">${f.ficha_nome}</div>
+                <div class="ficha-data">${dataFmt}</div>
+              </div>
+              <div style="font-size:11px;color:#8A8278;text-align:right">ESTÚDIO 7</div>
+            </div>
+            <table class="ficha-table">
+              <thead><tr>
+                <th style="width:80px">GRUPO</th>
+                <th>EXERCÍCIO</th>
+                <th style="width:70px;text-align:center">SÉRIES</th>
+                <th style="width:70px;text-align:center">CARGA</th>
+                <th style="width:100px">OBS</th>
+              </tr></thead>
+              <tbody>${exRows}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+// ── Service status check ──
+async function checkService(){
+  // The local service exposes /health on localhost:8899 — we can't check from browser
+  // Instead, check if recent fichas have printed_at set recently (last 10min = service active)
+  const svc = document.getElementById('svc-status');
+  let recentPrint = false;
+  for(const d of Object.values(fichasCache)){
+    if(!d) continue;
+    for(const f of (d.fichas||[])){
+      if(f.ja_impressa) recentPrint = true;
+    }
+  }
+  const dot = svc.querySelector('.svc-dot');
+  const txt = svc.querySelector('span');
+  if(recentPrint){
+    dot.className='svc-dot on';
+    txt.textContent='Fichas sendo impressas';
+  } else {
+    dot.className='svc-dot off';
+    txt.textContent='Serviço local';
+  }
+}
+
+// ── Refresh loop ──
+async function refreshData(){
+  fichasCache = {};
+  horariosData = await fetchHorarios();
+  // Pre-fetch fichas for upcoming slots
+  const now = agora();
+  const h = hoje();
+  for(const sl of (horariosData.horarios||[])){
+    const aula = new Date(`${h}T${sl.horario}:00`);
+    const diff = (aula - now)/60000;
+    if(diff >= -30 && diff <= 15){
+      await fetchFichas(sl.slot_id);
+    }
+  }
+  render();
+  checkService();
+}
+
+async function init(){
+  horariosData = await fetchHorarios();
+  render();
+
+  // Refresh every 30s
+  refreshTimer = setInterval(async()=>{
+    horariosData = await fetchHorarios();
+    // Refresh cached fichas for open slots
+    for(const slotId of Object.keys(openSlots)){
+      if(openSlots[slotId]){
+        fichasCache[slotId] = null;
+        await fetchFichas(slotId);
+      }
+    }
+    render();
+    checkService();
+  }, REFRESH_SEC * 1000);
+
+  // Update countdown every 10s
+  countdownTimer = setInterval(()=>{
+    if(horariosData) renderCountdown(horariosData.horarios||[]);
+  }, 10000);
+}
+
+init();
+</script>
+</body>
+</html>

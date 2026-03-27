@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3000;
 const ROUTES = {
   '/': 'index.html',
   '/colaborador': 'colaborador.html',
+  '/impressao': 'impressao.html',
   '/vanessa': 'vanessa.html',
   '/coordenacao': 'vanessa.html',
   '/agendar': 'agendar.html',
