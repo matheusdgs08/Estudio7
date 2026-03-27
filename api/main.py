@@ -831,104 +831,95 @@ async def tecnofit_grids(data: str, _=Depends(check_api_key)):
 
 @app.post("/tecnofit/sync-fixed-slots")
 async def sync_fixed_slots(_=Depends(check_api_key)):
-    """Busca membros fixos de cada grid no Tecnofit e sincroniza com fixed_slots no Supabase."""
-    from datetime import date as dt_date
+    """Detecta horários fixos comparando agenda de 2 semanas (atual + próxima).
+    Alunos que aparecem no mesmo weekday+horário em ambas = fixo.
+    Limpa e reconstrói todos os fixed_slots."""
+    from datetime import date as dt_date, timedelta
+    from collections import defaultdict
     import httpx as hx
 
-    today = dt_date.today().isoformat()
+    today = dt_date.today()
+    # Find Monday of this week and next
+    mon_a = today - timedelta(days=today.weekday())
+    mon_b = mon_a + timedelta(days=7)
 
-    # 1. Get all grids
-    result = await tf_get(f"agenda/grids?date={today}")
-    grids = result.get("grids", [])
-    personal = [g for g in grids if "PERSONAL" in g.get("name", "")]
+    week_a = [(mon_a + timedelta(days=i)).isoformat() for i in range(5)]
+    week_b = [(mon_b + timedelta(days=i)).isoformat() for i in range(5)]
 
-    # 2. For each grid, get members
-    grid_members = []
-    for g in personal:
-        grid_id = g["id"]
-        day = g.get("day", 0)  # 1=seg ... 5=sex
-        start_time = g.get("startTime", "")
-        try:
-            members_data = await tf_get(f"agenda/grids/{grid_id}/members")
-            members = members_data if isinstance(members_data, list) else members_data.get("members", members_data.get("data", []))
-            for m in members:
-                code = m.get("code") or m.get("memberCode")
-                name = m.get("name") or m.get("memberName", "")
-                if code:
-                    grid_members.append({
-                        "code": code, "name": name,
-                        "weekday": day, "horario": start_time,
-                        "grid_id": grid_id
-                    })
-        except Exception as e:
-            grid_members.append({"error": str(e), "grid_id": grid_id})
+    # Collect slots per student per week
+    slots_a = defaultdict(set)
+    slots_b = defaultdict(set)
 
-    # 3. Build student → slots mapping
-    from collections import defaultdict
-    student_slots = defaultdict(set)
-    for m in grid_members:
-        if "error" in m:
-            continue
-        student_slots[m["code"]].add((m["weekday"], m["horario"]))
+    for i, d in enumerate(week_a):
+        wd = i + 1  # 1=seg
+        events = await tf_get_agenda_dia(d)
+        personal = [e for e in events if "PERSONAL" in e.get("name", "")]
+        for evt in personal:
+            evt_id = evt["id"]
+            try:
+                checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
+            except:
+                checkins = []
+            for c in checkins:
+                if c.get("code"):
+                    slots_a[c["code"]].add((wd, evt.get("start", "")))
 
-    # 4. Get Supabase data
+    for i, d in enumerate(week_b):
+        wd = i + 1
+        events = await tf_get_agenda_dia(d)
+        personal = [e for e in events if "PERSONAL" in e.get("name", "")]
+        for evt in personal:
+            evt_id = evt["id"]
+            try:
+                checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
+            except:
+                checkins = []
+            for c in checkins:
+                if c.get("code"):
+                    slots_b[c["code"]].add((wd, evt.get("start", "")))
+
+    # Fixed = intersection
+    fixed_detected = {}
+    for code in set(slots_a.keys()) | set(slots_b.keys()):
+        common = slots_a.get(code, set()) & slots_b.get(code, set())
+        if common:
+            fixed_detected[code] = common
+
+    # Load Supabase data
     headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
-
     async with hx.AsyncClient() as client:
-        # Students: matricula → id
-        r = await client.get(f"{SUPABASE_URL}/rest/v1/students?select=id,matricula",
-                             headers=headers, timeout=15)
-        students = r.json()
-        mat_to_uuid = {s["matricula"]: s["id"] for s in students if s.get("matricula")}
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/students?select=id,matricula", headers=headers, timeout=15)
+        mat_to_uuid = {s["matricula"]: s["id"] for s in r.json() if s.get("matricula")}
 
-        # Class slots: (weekday, start_time) → id
-        r = await client.get(f"{SUPABASE_URL}/rest/v1/class_slots?select=id,weekday,start_time",
-                             headers=headers, timeout=15)
-        slots = r.json()
-        slot_lookup = {(s["weekday"], s["start_time"][:5]): s["id"] for s in slots}
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/class_slots?select=id,weekday,start_time", headers=headers, timeout=15)
+        slot_lookup = {(s["weekday"], s["start_time"][:5]): s["id"] for s in r.json()}
 
-        # Active contracts
-        r = await client.get(f"{SUPABASE_URL}/rest/v1/contracts?status=eq.active&has_fixed_schedule=eq.true&select=id,student_id,start_date,end_date",
-                             headers=headers, timeout=15)
-        contracts = r.json()
-        student_contract = {c["student_id"]: c for c in contracts}
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/contracts?status=eq.active&has_fixed_schedule=eq.true&select=id,student_id,start_date,end_date", headers=headers, timeout=15)
+        student_contract = {c["student_id"]: c for c in r.json()}
 
-        # Existing fixed_slots
-        r = await client.get(f"{SUPABASE_URL}/rest/v1/fixed_slots?active=eq.true&select=student_id,class_slot_id",
-                             headers=headers, timeout=15)
-        existing = r.json()
-        existing_set = set((e["student_id"], e["class_slot_id"]) for e in existing)
+        # Clear existing
+        await client.delete(f"{SUPABASE_URL}/rest/v1/fixed_slots?active=eq.true",
+            headers={**headers, "Prefer": "return=minimal"}, timeout=15)
 
-    # 5. Build inserts
+    # Build inserts
     inserts = []
-    stats = {"total_grid_members": len(grid_members), "matched": 0, "already": 0,
-             "no_student": 0, "no_contract": 0, "no_slot": 0}
+    stats = {"alunos_fixos": len(fixed_detected), "no_student": 0, "no_contract": 0, "no_slot": 0}
 
-    for code, slots_set in student_slots.items():
+    for code, slots_set in fixed_detected.items():
         uuid = mat_to_uuid.get(code)
-        if not uuid:
-            stats["no_student"] += 1
-            continue
+        if not uuid: stats["no_student"] += 1; continue
         contract = student_contract.get(uuid)
-        if not contract:
-            stats["no_contract"] += 1
-            continue
+        if not contract: stats["no_contract"] += 1; continue
         for wd, hr in slots_set:
             slot_id = slot_lookup.get((wd, hr))
-            if not slot_id:
-                stats["no_slot"] += 1
-                continue
-            if (uuid, slot_id) in existing_set:
-                stats["already"] += 1
-                continue
+            if not slot_id: stats["no_slot"] += 1; continue
             inserts.append({
                 "student_id": uuid, "contract_id": contract["id"],
                 "class_slot_id": slot_id, "start_date": contract["start_date"],
                 "end_date": contract["end_date"], "active": True
             })
-            stats["matched"] += 1
 
-    # 6. Insert
+    # Insert
     inserted = 0
     if inserts:
         async with hx.AsyncClient() as client:
@@ -941,7 +932,8 @@ async def sync_fixed_slots(_=Depends(check_api_key)):
                     inserted += len(batch)
 
     stats["inserted"] = inserted
-    stats["total_fixed_slots"] = len(existing_set) + inserted
+    stats["semana_a"] = week_a
+    stats["semana_b"] = week_b
     return stats
 
 
