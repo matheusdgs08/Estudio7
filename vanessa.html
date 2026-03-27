@@ -2932,9 +2932,8 @@ function renderAvalHistorico(){
   const a = avalAluno;
   if(!a){ avalTab='lista'; return renderAvalLista(); }
 
-  if(!_avaliacoesSupa || (_avaliacoesSupa.length && _avaliacoesSupa[0]?.student_id !== a.id)){
-    loadAvaliacoesSupa(a.id).then(()=>{ _avaliacoesSupa = _avaliacoesSupa||[]; render(); });
-    _avaliacoesSupa = [];
+  if(_avaliacoesSupa === null){
+    loadAvaliacoesSupa(a.id).then(()=>render());
     return '<div style="padding:40px;text-align:center;color:var(--ink3)">⏳ Carregando avaliações…</div>';
   }
 
@@ -2948,16 +2947,14 @@ function renderAvalHistorico(){
       <button onclick="avalTab='form';avalForm={};_avaliacoesSupa=null;render()" style="padding:10px 20px;background:var(--purple);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;margin-top:8px">+ Nova avaliação</button>
     </div>`;
 
-  const cards = avals.map((av,i)=>{
-    const m = getMeasurements(av);
-    const selected = avalCompSel.includes(i);
-    const selIdx   = avalCompSel.indexOf(i);
-    return `<div style="background:var(--wh);border:1.5px solid ${selected?'var(--purple)':'var(--bg3)'};border-radius:12px;padding:12px 14px;cursor:pointer;background:${selected?'var(--purple-l)':'var(--wh)'}"
-      onclick="toggleAvalCompSel(${i})">
+  // Lista das avaliações em ordem cronológica (mais antiga primeiro)
+  const avalsOrdem = [...avals].reverse();
+
+  const cards = avalsOrdem.map((av,i)=>{
+    const isLast = i===avalsOrdem.length-1;
+    return `<div style="background:var(--wh);border:1.5px solid ${isLast?'var(--purple)':'var(--bg3)'};border-radius:12px;padding:12px 14px;${isLast?'background:var(--purple-l)':''}">
       <div style="display:flex;align-items:center;gap:10px">
-        ${selected
-          ? `<div style="width:22px;height:22px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">${selIdx+1}</div>`
-          : `<div style="width:22px;height:22px;border-radius:50%;border:2px solid var(--bg3);flex-shrink:0"></div>`}
+        <div style="width:26px;height:26px;border-radius:50%;background:${isLast?'var(--purple)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${isLast?'#fff':'var(--ink3)'};flex-shrink:0">${i+1}</div>
         <div style="flex:1">
           <div style="font-size:14px;font-weight:700">${fmtDt(av.assessed_at)}</div>
           <div style="font-size:12px;color:var(--ink3);margin-top:2px">
@@ -2966,145 +2963,147 @@ function renderAvalHistorico(){
             ${av.lean_mass_kg?' · '+av.lean_mass_kg+'kg magra':''}
           </div>
         </div>
-        ${i===0?'<span style="font-size:10px;background:#ECFDF5;color:#065F46;border-radius:20px;padding:2px 8px;border:1px solid #A7F3D0">Mais recente</span>':''}
+        ${isLast?'<span style="font-size:10px;background:#ECFDF5;color:#065F46;border-radius:20px;padding:2px 8px;border:1px solid #A7F3D0">Mais recente</span>':''}
       </div>
     </div>`;
   }).join('');
 
-  const canCompare = avalCompSel.filter(x=>x!==null).length===2;
-
   return `
     <div style="margin-bottom:12px;font-size:13px;color:var(--ink3)">
-      Selecione <strong>2 avaliações</strong> para comparar lado a lado:
+      ${avalsOrdem.length} avaliação${avalsOrdem.length!==1?'s':''} registrada${avalsOrdem.length!==1?'s':''}
     </div>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">${cards}</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">${cards}</div>
     <div style="display:flex;gap:8px">
       <button onclick="avalTab='form';avalForm={};_avaliacoesSupa=null;render()" style="flex:1;padding:10px;font-size:13px;border:1.5px solid var(--bg3);border-radius:8px;cursor:pointer;background:var(--bg)">+ Nova avaliação</button>
-      <button onclick="verComparacao()" ${canCompare?'':'disabled'}
-        style="flex:1;padding:10px;font-size:13px;border:none;border-radius:8px;cursor:${canCompare?'pointer':'not-allowed'};background:${canCompare?'var(--purple)':'var(--bg3)'};color:${canCompare?'#fff':'var(--ink3)'};font-weight:600">
-        📊 Comparar
-      </button>
+      ${avalsOrdem.length>=2?`<button onclick="avalTab='comparar';render()" style="flex:1;padding:10px;font-size:13px;border:none;border-radius:8px;cursor:pointer;background:var(--purple);color:#fff;font-weight:600">📊 Comparar todas</button>`:''}
     </div>`;
 }
 
-function toggleAvalCompSel(idx){
-  if(avalCompSel[0]===idx){ avalCompSel[0]=null; render(); return; }
-  if(avalCompSel[1]===idx){ avalCompSel[1]=null; render(); return; }
-  if(avalCompSel[0]===null){ avalCompSel[0]=idx; render(); return; }
-  if(avalCompSel[1]===null){ avalCompSel[1]=idx; render(); return; }
-  avalCompSel[1]=idx; render();
-}
-
-function verComparacao(){
-  if(avalCompSel.filter(x=>x!==null).length<2) return;
-  avalTab='comparar'; render();
-}
-
-// ── Comparação lado a lado ──
+// ── Comparação — todas as avaliações em colunas (igual Tecnofit) ──
 function renderAvalComparar(){
   const avals = _avaliacoesSupa||[];
-  // Mais antiga = A (esquerda), mais recente = B (direita)
-  const sorted = [...avalCompSel.filter(x=>x!==null)].sort((a,b)=>a-b);
-  const avA = avals[sorted[1]]; // índice maior = avaliação mais antiga (desc order)
-  const avB = avals[sorted[0]]; // índice menor = avaliação mais recente
-  const mA  = getMeasurements(avA);
-  const mB  = getMeasurements(avB);
-  const fmtDt = d => d ? new Date(d+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+  if(avals.length < 2){ avalTab='historico'; return renderAvalHistorico(); }
 
-  function delt(campo, casas, menorMelhor){
-    if(casas===undefined) casas=1;
+  // Mais antiga primeiro
+  const avOrdem = [...avals].reverse();
+  const medidas = avOrdem.map(av=>getMeasurements(av));
+  const fmtDt   = d => d ? new Date(d+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+
+  // Delta: última - primeira (mais recente - mais antiga)
+  function delt(campo, menorMelhor){
     if(menorMelhor===undefined) menorMelhor=true;
-    const va=parseFloat(mA[campo]); const vb=parseFloat(mB[campo]);
-    if(isNaN(va)||isNaN(vb)) return '<span style="color:#8A8278;font-size:12px">—</span>';
-    const d=(vb-va).toFixed(casas);
-    const zero=parseFloat(d)===0;
-    const posi=parseFloat(d)>0;
+    const v0=parseFloat(medidas[0][campo]);
+    const vN=parseFloat(medidas[medidas.length-1][campo]);
+    if(isNaN(v0)||isNaN(vN)) return '<span style="color:#8A8278;font-size:11px">0 —</span>';
+    const d=(vN-v0);
+    const zero=Math.abs(d)<0.01;
+    const posi=d>0;
     const melhora=zero?false:(menorMelhor?!posi:posi);
     const cor=zero?'#8A8278':melhora?'#16A34A':'#DC2626';
     const ico=zero?'—':posi?'▲':'▼';
-    return `<span style="color:${cor};font-size:12px;font-weight:700">${parseFloat(d)>0?'+':''}${d} ${ico}</span>`;
+    const val=Number.isInteger(d)?d:d.toFixed(d===Math.round(d)?0:2);
+    return `<span style="color:${cor};font-size:11px;font-weight:700">${posi?'+':''}${val} ${ico}</span>`;
+  }
+
+  function cellVal(campo, unit, i){
+    const v=medidas[i][campo];
+    if(v===null||v===undefined||v==='') return '<span style="color:#ccc">—</span>';
+    return `<span style="font-size:12px;font-weight:${i===medidas.length-1?'700':'400'};color:${i===medidas.length-1?'var(--purple)':'var(--ink2)'}">${v}${unit?' '+unit:''}</span>`;
   }
 
   function row(label, campo, unit, menorMelhor){
     if(unit===undefined) unit='';
     if(menorMelhor===undefined) menorMelhor=true;
-    const va=mA[campo]; const vb=mB[campo];
-    if((va===null||va===undefined)&&(vb===null||vb===undefined)) return '';
-    const fmtV=v=>v!==null&&v!==undefined?v+(unit?' '+unit:''):'—';
+    // Skip row if all values empty
+    const hasAny = medidas.some(m=>m[campo]!=null&&m[campo]!=='');
+    if(!hasAny) return '';
+    const cells = medidas.map((_,i)=>`<td style="padding:5px 8px;text-align:center;border-right:1px solid var(--bg3)">${cellVal(campo,unit,i)}</td>`).join('');
     return `<tr style="border-bottom:1px solid var(--bg3)">
-      <td style="padding:6px 10px;font-size:12px;color:var(--ink2);min-width:140px">${label}</td>
-      <td style="padding:6px 10px;font-size:13px;font-weight:500;text-align:center">${fmtV(va)}</td>
-      <td style="padding:6px 10px;font-size:13px;font-weight:600;text-align:center;color:var(--purple)">${fmtV(vb)}</td>
-      <td style="padding:6px 8px;text-align:right;white-space:nowrap">${delt(campo,1,menorMelhor)}</td>
+      <td style="padding:5px 10px;font-size:12px;color:var(--ink2);white-space:nowrap">${label}</td>
+      ${cells}
+      <td style="padding:5px 8px;text-align:right;white-space:nowrap">${delt(campo,menorMelhor)}</td>
     </tr>`;
   }
 
   function rowBi(label,campoD,campoE){
-    const rows=[];
-    if(mA[campoD]||mB[campoD]) rows.push(row(label+' (Dir)',campoD,'cm'));
-    if(mA[campoE]||mB[campoE]) rows.push(row(label+' (Esq)',campoE,'cm'));
-    return rows.join('');
+    const hasD=medidas.some(m=>m[campoD]!=null&&m[campoD]!=='');
+    const hasE=medidas.some(m=>m[campoE]!=null&&m[campoE]!=='');
+    let rows='';
+    if(hasD){
+      const cells=medidas.map((_,i)=>`<td style="padding:5px 8px;text-align:center;border-right:1px solid var(--bg3)">${cellVal(campoD,'cm',i)}</td>`).join('');
+      rows+=`<tr style="border-bottom:1px solid var(--bg3)"><td style="padding:5px 10px;font-size:12px;color:var(--ink2);white-space:nowrap">${label} (Dir)</td>${cells}<td style="padding:5px 8px;text-align:right">${delt(campoD)}</td></tr>`;
+    }
+    if(hasE){
+      const cells=medidas.map((_,i)=>`<td style="padding:5px 8px;text-align:center;border-right:1px solid var(--bg3)">${cellVal(campoE,'cm',i)}</td>`).join('');
+      rows+=`<tr style="border-bottom:1px solid var(--bg3)"><td style="padding:5px 10px;font-size:12px;color:var(--ink2);white-space:nowrap">${label} (Esq)</td>${cells}<td style="padding:5px 8px;text-align:right">${delt(campoE)}</td></tr>`;
+    }
+    return rows;
   }
 
   function secRow(title){
-    return `<tr style="background:var(--ink)"><td colspan="4" style="padding:7px 10px;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px">${title}</td></tr>`;
+    const cols=medidas.length+2; // label + N datas + delta
+    return `<tr style="background:var(--ink)"><td colspan="${cols}" style="padding:7px 10px;font-size:11px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:1px">${title}</td></tr>`;
   }
 
+  // Header colunas de datas
+  const headerCols = avOrdem.map((av,i)=>`<th style="padding:7px 8px;font-size:11px;font-weight:700;color:${i===avOrdem.length-1?'var(--purple)':'var(--ink3)'};text-align:center;white-space:nowrap;border-right:1px solid var(--bg3)">${fmtDt(av.assessed_at)}</th>`).join('');
+
   return `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
       <button onclick="avalTab='historico';render()" style="border:none;background:none;font-size:18px;cursor:pointer;color:var(--ink3)">←</button>
       <div style="font-size:13px;font-weight:600">Comparação de avaliações</div>
-      <div style="font-size:12px;color:var(--ink3)">${fmtDt(avA.assessed_at)} → ${fmtDt(avB.assessed_at)}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-left:4px">${avOrdem.length} avaliações · Δ = primeira → última</div>
     </div>
+
     <div style="overflow-x:auto;border:1px solid var(--bg3);border-radius:12px">
       <table style="width:100%;border-collapse:collapse;font-family:inherit">
         <thead>
           <tr style="background:var(--bg)">
-            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--ink3);text-align:left">ITEM</th>
-            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--ink3);text-align:center">${fmtDt(avA.assessed_at)}</th>
-            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--purple);text-align:center">${fmtDt(avB.assessed_at)}</th>
-            <th style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--ink3);text-align:right">Δ</th>
+            <th style="padding:7px 10px;font-size:11px;font-weight:700;color:var(--ink3);text-align:left;min-width:150px">ITEM AVALIADO</th>
+            ${headerCols}
+            <th style="padding:7px 8px;font-size:11px;font-weight:700;color:var(--ink3);text-align:right;white-space:nowrap">Δ</th>
           </tr>
         </thead>
         <tbody>
-          ${secRow('Medidas Básicas')}
-          ${row('Peso','peso','kg',true)}
-          ${row('IMC','imc','',true)}
-          ${row('Altura','altura','cm',false)}
-          ${secRow('Composição Corporal')}
-          ${row('% Gordura','gord_pct','%',true)}
-          ${row('Massa Gorda','massa_gorda','kg',true)}
-          ${row('Massa Magra','massa_magra','kg',false)}
-          ${row('% Massa Magra','pct_massa_magra','%',false)}
-          ${row('TMB','tmb','kcal',false)}
-          ${secRow('Dobras Cutâneas')}
-          ${row('Peitoral','peitoral','mm',true)}
-          ${row('Abdominal','abdominal','mm',true)}
-          ${row('Coxa','coxa_dobra','mm',true)}
-          ${row('Tríceps','triceps','mm',true)}
-          ${row('Subescapular','subescapular','mm',true)}
-          ${row('Supra-ilíaca','suprailiaca','mm',true)}
-          ${row('Axilar média','axilar','mm',true)}
-          ${secRow('Dados Antropométricos')}
-          ${row('Pescoço','pescoco','cm',true)}
+          ${secRow('DADOS ANTROPOMÉTRICOS')}
+          ${row('Pescoço','pescoco','cm')}
           ${row('Ombro','ombro','cm',false)}
           ${row('Tórax Inspirado','torax_insp','cm',false)}
-          ${row('Tórax Expirado','torax_exp','cm',false)}
-          ${row('Cintura Escapular','cintura_esc','cm',false)}
-          ${row('Peito','peito','cm',false)}
           ${row('Cintura','cintura','cm',true)}
           ${row('Abdome','abdominal_circ','cm',true)}
           ${row('Quadril','quadril','cm',true)}
-          ${rowBi('Braço Relaxado','braco_rel_d','braco_rel_e')}
-          ${rowBi('Braço Contraído','braco_con_d','braco_con_e')}
-          ${rowBi('Antebraço','antebraco_d','antebraco_e')}
           ${rowBi('Coxa Relaxada','coxa_rel_d','coxa_rel_e')}
           ${rowBi('Coxa Contraída','coxa_con_d','coxa_con_e')}
           ${rowBi('Panturrilha','panturrilha_d','panturrilha_e')}
+          ${rowBi('Braço Relaxado','braco_rel_d','braco_rel_e')}
+          ${rowBi('Braço Contraído','braco_con_d','braco_con_e')}
+          ${rowBi('Antebraço','antebraco_d','antebraco_e')}
+          ${row('Peito','peito','cm',false)}
+          ${row('Tórax Expirado','torax_exp','cm',false)}
+          ${row('Cintura Escapular','cintura_esc','cm',false)}
+
+          ${secRow('COMPOSIÇÃO CORPORAL')}
+          ${row('Bíceps (dobra)','biceps','mm',true)}
+          ${row('Tríceps (dobra)','triceps','mm',true)}
+          ${row('Peitoral (dobra)','peitoral','mm',true)}
+          ${row('Axilar média','axilar','mm',true)}
+          ${row('Subescapular','subescapular','mm',true)}
+          ${row('Supra-ilíaca','suprailiaca','mm',true)}
+          ${row('Abdome (dobra)','abdominal','mm',true)}
+          ${row('Coxa (dobra)','coxa_dobra','mm',true)}
+          ${row('% de Gordura','gord_pct','%',true)}
+          ${row('Massa Gordura','massa_gorda','kg',true)}
+          ${row('Massa Magra','massa_magra','kg',false)}
+          ${row('% Massa Magra','pct_massa_magra','%',false)}
+          ${row('Peso','peso','kg',true)}
+          ${row('IMC','imc','',true)}
+          ${row('Altura','altura','cm',false)}
+          ${row('TMB','tmb','kcal',false)}
         </tbody>
       </table>
     </div>`;
 }
+
 
 
 function renderAvalForm(){
