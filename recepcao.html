@@ -3974,7 +3974,7 @@ function renderAbaContrato(a){
           const valor = priceMap[ct.payment_type] || plan.monthly_price || 0;
           const statusPag = {pending:'🟡 Pendente', paid:'🟢 Pago', failed:'🔴 Falhou', refunded:'↩️ Estornado'};
           const metodoMap = {pix:'Pix', credit_card:'Cartão', link:'Link'};
-          const fmtVal = v => v ? 'R$ '+Number(v).toFixed(2).replace('.',',') : '—';
+          const fmtVal = v => v ? 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
           const pRow = (l,v) => '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bg3)"><span style="font-size:13px;color:var(--ink3)">'+l+'</span><span style="font-size:13px;font-weight:600">'+v+'</span></div>';
 
           if(ct.payment_type === 'recurring'){
