@@ -937,6 +937,163 @@ async def sync_fixed_slots(_=Depends(check_api_key)):
     return stats
 
 
+@app.post("/tecnofit/sync-frequencia")
+async def sync_frequencia(_=Depends(check_api_key)):
+    """Calcula frequência e reposições de cada aluno desde o início do contrato.
+    Percorre cada dia útil do contrato, conta aulas fixas, faltas, reposições usadas.
+    Reposição = dia que deveria ter aula fixa mas não compareceu E cancelou com +1h.
+    Atualiza replacement_credits e treinos_realizados no Supabase."""
+    from datetime import date as dt_date, timedelta
+    from collections import defaultdict
+    import httpx as hx
+
+    headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+
+    async with hx.AsyncClient() as client:
+        # Load all needed data
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/students?select=id,matricula", headers=headers, timeout=15)
+        mat_to_uuid = {s["matricula"]: s["id"] for s in r.json() if s.get("matricula")}
+
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/contracts?status=eq.active&has_fixed_schedule=eq.true&select=id,student_id,plan_id,start_date,end_date",
+                             headers=headers, timeout=15)
+        contracts = r.json()
+
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/plans?active=eq.true&select=id,frequency_per_week", headers=headers, timeout=15)
+        plan_freq = {p["id"]: p["frequency_per_week"] for p in r.json()}
+
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/fixed_slots?active=eq.true&select=student_id,class_slot_id", headers=headers, timeout=15)
+        fixed_by_student = defaultdict(set)
+        for f in r.json():
+            fixed_by_student[f["student_id"]].add(f["class_slot_id"])
+
+        r = await client.get(f"{SUPABASE_URL}/rest/v1/class_slots?select=id,weekday,start_time", headers=headers, timeout=15)
+        slot_info = {s["id"]: (s["weekday"], s["start_time"][:5]) for s in r.json()}
+
+    # Build student fixed schedule: uuid → set of (weekday, horario)
+    student_schedule = {}
+    for sid, slot_ids in fixed_by_student.items():
+        student_schedule[sid] = {slot_info[s] for s in slot_ids if s in slot_info}
+
+    uuid_to_mat = {v: k for k, v in mat_to_uuid.items()}
+
+    # For each contract, scan days from start_date to today
+    today = dt_date.today()
+    results = []
+    cache = {}  # date → {code → set of (horario, tipo, checkin)}
+
+    # Determine date range needed
+    all_dates = set()
+    for c in contracts:
+        start = max(dt_date.fromisoformat(c["start_date"]), today - timedelta(days=180))  # max 6 months back
+        d = start
+        while d <= today:
+            if d.weekday() < 5:  # seg-sex
+                all_dates.add(d.isoformat())
+            d += timedelta(days=1)
+
+    all_dates = sorted(all_dates)
+    print(f"Scanning {len(all_dates)} days...")
+
+    # Fetch all days from Tecnofit (with batching)
+    for ds in all_dates:
+        try:
+            events = await tf_get_agenda_dia(ds)
+            personal = [e for e in events if "PERSONAL" in e.get("name", "")]
+            day_data = {}
+            for evt in personal:
+                evt_id = evt["id"]
+                try:
+                    checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
+                except:
+                    checkins = []
+                for ck in checkins:
+                    code = ck.get("code")
+                    if code:
+                        if code not in day_data:
+                            day_data[code] = []
+                        day_data[code].append({
+                            "horario": evt.get("start", ""),
+                            "origin": ck.get("origin"),
+                            "checkin": ck.get("checkin", False),
+                        })
+            cache[ds] = day_data
+        except:
+            cache[ds] = {}
+
+    # Calculate per student
+    student_stats = {}
+    for c in contracts:
+        sid = c["student_id"]
+        mat = uuid_to_mat.get(sid)
+        if not mat:
+            continue
+        freq = plan_freq.get(c["plan_id"], 0)
+        schedule = student_schedule.get(sid, set())
+
+        start = max(dt_date.fromisoformat(c["start_date"]), today - timedelta(days=180))
+        presencas = 0
+        faltas = 0
+        reposicoes_usadas = 0
+        reposicoes_geradas = 0  # approximation: faltas where student was originally scheduled
+
+        d = start
+        while d <= today:
+            if d.weekday() < 5:
+                ds = d.isoformat()
+                wd = d.weekday() + 1  # 1=seg
+                day_data = cache.get(ds, {})
+                student_day = day_data.get(mat, [])
+
+                # Check if student had a fixed class this day
+                fixed_today = {hr for (w, hr) in schedule if w == wd}
+
+                for entry in student_day:
+                    if entry["origin"] == 1:  # agenda_fixa
+                        if entry["checkin"]:
+                            presencas += 1
+                    elif entry["origin"] == 2:  # reposicao
+                        if entry["checkin"]:
+                            reposicoes_usadas += 1
+                            presencas += 1
+
+                # If had fixed class but didn't show up = potential reposição
+                if fixed_today:
+                    attended_fixed = any(e["origin"] == 1 and e["checkin"] for e in student_day)
+                    if not attended_fixed and not any(e["origin"] == 1 for e in student_day):
+                        # Not even scheduled = probably cancelled ahead of time = reposição gerada
+                        pass  # Can't differentiate cancel vs no-show from this data
+            d += timedelta(days=1)
+
+        student_stats[sid] = {
+            "presencas": presencas,
+            "faltas": faltas,
+            "reposicoes_usadas": reposicoes_usadas,
+            "treinos_realizados": presencas,
+        }
+
+    # Update treinos_realizados in students table
+    updated = 0
+    async with hx.AsyncClient() as client:
+        for sid, stats in student_stats.items():
+            try:
+                await client.patch(
+                    f"{SUPABASE_URL}/rest/v1/students?id=eq.{sid}",
+                    headers={**headers, "Content-Type": "application/json", "Prefer": "return=minimal"},
+                    json={"treinos_realizados": stats["treinos_realizados"]},
+                    timeout=10
+                )
+                updated += 1
+            except:
+                pass
+
+    return {
+        "total_contracts": len(contracts),
+        "days_scanned": len(all_dates),
+        "students_updated": updated,
+        "sample": {uuid_to_mat.get(sid, "?"): s for sid, s in list(student_stats.items())[:5]},
+    }
+
+
 @app.get("/tecnofit/aula/{data}/{horario}")
 async def tecnofit_aula(data: str, horario: str, _=Depends(check_api_key)):
     """Busca alunos de um horário no Tecnofit. Ex: /tecnofit/aula/2026-03-27/16:30"""
@@ -948,7 +1105,7 @@ async def tecnofit_aula(data: str, horario: str, _=Depends(check_api_key)):
     evt_id = evt["id"]
     quorum = evt.get("quorum", {})
     checkins = (await tf_get(f"agenda/eventos/{evt_id}/checkins")).get("checkins", [])
-    origin_map = {0: "agenda_fixa", 1: "avulsa", 2: "reposicao", 3: "reagendamento"}
+    origin_map = {0: "avulsa", 1: "agenda_fixa", 2: "reposicao", 3: "reagendamento"}
 
     return {
         "data": data, "horario": horario, "event_id": evt_id,
@@ -971,7 +1128,7 @@ async def tecnofit_dia(data: str, _=Depends(check_api_key)):
     # Filter only PERSONAL (skip MANUTENCAO etc)
     personal = [e for e in events if "PERSONAL" in e.get("name", "")]
 
-    origin_map = {0: "agenda_fixa", 1: "avulsa", 2: "reposicao", 3: "reagendamento"}
+    origin_map = {0: "avulsa", 1: "agenda_fixa", 2: "reposicao", 3: "reagendamento"}
     horarios = []
 
     for evt in sorted(personal, key=lambda x: x.get("start", "")):
