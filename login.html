@@ -39,8 +39,9 @@
     width:100%;max-width:380px;
     background:rgba(255,255,255,.03);
     border:1px solid rgba(201,168,76,.15);
-    padding:48px 40px 40px;
+    padding:40px 28px 32px;
     animation:fadeUp .6s ease both;
+    border-radius:8px;
   }
   @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 
@@ -220,10 +221,11 @@ async function fazerLogin(){
 }
 
 function redirecionar(role){
+  const isMobile = window.innerWidth <= 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
   if(role==='coordinator'||role==='admin'){
-    window.location.href='/vanessa';
+    window.location.href = isMobile ? '/gestao' : '/vanessa';
   } else if(role==='receptionist'){
-    window.location.href='/recepcao';
+    window.location.href = isMobile ? '/gestao' : '/recepcao';
   }
 }
 </script>
