@@ -496,9 +496,6 @@ function renderDetalheAlunoVisao(a){
             <div class="val" style="font-size:22px;font-weight:800">Ficha ${a.next_training_session||1}</div></div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onclick="enviarQuestionario('${a.id}','${(a.full_name||'').replace(/'/g,"\\'")}','${a.phone||''}')">
-            📋 Enviar questionário
-          </button>
           <button class="btn btn-secondary" onclick="liberarAvaliacao('${a.id}','${(a.full_name||'').replace(/'/g,"\\'")}',${'\'' + (a.phone||'') + '\''})">
             📊 Liberar avaliação
           </button>
@@ -506,6 +503,51 @@ function renderDetalheAlunoVisao(a){
             ? `<button class="btn btn-green" onclick="desbloquearAluno('${a.id}')">✅ Desbloquear</button>`
             : `<button class="btn btn-danger" onclick="bloquearAluno('${a.id}')">🔴 Bloquear</button>`}
         </div>
+        <!-- Último relatório -->
+        <div id="ultimo-relatorio-${a.id}" data-mat="${a.matricula||0}" style="margin-top:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:6px">Última aula registrada</div>
+          <div style="font-size:12px;color:var(--ink3)">⏳ Carregando...</div>
+        </div>
+        ${(()=>{
+          // Fetch last class from Tecnofit async
+          const elId = 'ultimo-relatorio-'+a.id;
+          setTimeout(async()=>{
+            const el = document.getElementById(elId);
+            if(!el) return;
+            const mat = parseInt(el.dataset.mat)||0;
+            if(!mat){ el.querySelector('div:last-child').textContent='—'; return; }
+            try {
+              const hoje = new Date();
+              let found = null;
+              for(let d=0; d<10 && !found; d++){
+                const dt = new Date(hoje); dt.setDate(dt.getDate()-d);
+                const ds = dt.toISOString().slice(0,10);
+                const resp = await fetch('/tecnofit/dia/'+ds, {headers:{'x-api-key':'se7e2025'}});
+                const data = await resp.json();
+                for(const h of (data.horarios||[])){
+                  const al = h.alunos?.find(x=>x.code===mat);
+                  if(al && al.checkin){
+                    found = {data: ds, horario: h.horario, tipo: al.tipo};
+                    break;
+                  }
+                }
+              }
+              if(found){
+                el.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;margin-bottom:6px">Última aula registrada</div>'
+                  +'<div style="padding:10px 12px;background:var(--bg);border-radius:8px;display:flex;align-items:center;gap:12px">'
+                  +'<div style="font-size:24px">✅</div>'
+                  +'<div><div style="font-size:13px;font-weight:600">'+fmtDate(found.data)+' às '+found.horario+'</div>'
+                  +'<div style="font-size:11px;color:var(--ink3)">Tipo: '+(found.tipo==='avulsa'?'Agenda fixa':found.tipo)+'</div></div>'
+                  +'</div>';
+              } else {
+                el.querySelector('div:last-child').textContent='Sem check-in nos últimos 10 dias.';
+              }
+            } catch(e){
+              el.querySelector('div:last-child').textContent='—';
+            }
+          },200);
+          return '';
+        })()}
         ${a.blocked&&a.blocked_reason?`<div style="margin-top:8px;padding:8px 12px;background:var(--red-l);border-radius:8px;font-size:12px;color:var(--red)">⛔ ${a.blocked_reason}</div>`:''}
       </div>
     </div>
