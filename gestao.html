@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<script>
+(function(){
+  const s=JSON.parse(localStorage.getItem('se7e_session')||'null');
+  if(!s||s.expires<Date.now()||!['admin','coordinator'].includes(s.role))
+    window.location.href='/login';
+})();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1C1916">
+<link rel="manifest" href="/manifest.json">
+<title>Estúdio 7 — Gestão</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F7F5F0;--bg2:#EDE9E1;--bg3:#DDD8CE;
+  --wh:#FFFEF9;--ink:#1C1916;--ink2:#4A453F;--ink3:#8A8278;
+  --purple:#7C3AED;--purple-l:#F3EEFF;--purple-b:#C4B5FD;
+  --green:#059669;--green-l:#ECFDF5;
+  --red:#DC2626;--red-l:#FEF2F2;
+  --gold:#B8860B;--gold-l:#FEF9EE;
+  --r:14px;--r2:20px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-t:env(safe-area-inset-top,0px);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;display:flex;flex-direction:column}
+
+/* ── Status bar spacer ── */
+.status-bar{height:var(--safe-t);background:var(--ink);flex-shrink:0}
+
+/* ── Header ── */
+.header{background:var(--ink);padding:12px 20px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.header-logo{color:var(--gold);font-weight:800;font-size:18px;letter-spacing:-0.5px}
+.header-logo span{color:#fff}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.header-date{color:var(--ink3);font-size:12px;font-weight:500}
+.header-avatar{width:32px;height:32px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
+
+/* ── Content ── */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:16px 16px calc(70px + var(--safe-b));scrollbar-width:none}
+.content::-webkit-scrollbar{display:none}
+
+/* ── Bottom nav ── */
+.nav{position:fixed;bottom:0;left:0;right:0;background:var(--wh);border-top:1px solid var(--bg3);display:flex;padding:6px 8px calc(6px + var(--safe-b));z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;border-radius:12px;cursor:pointer;transition:all .2s}
+.nav-item.on{background:var(--purple-l)}
+.nav-ico{font-size:20px;line-height:1}
+.nav-lbl{font-size:10px;font-weight:600;color:var(--ink3)}
+.nav-item.on .nav-lbl{color:var(--purple)}
+
+/* ── Cards ── */
+.card{background:var(--wh);border-radius:var(--r);border:1px solid var(--bg3);margin-bottom:12px;overflow:hidden}
+.card-h{padding:14px 16px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--bg3)}
+.card-h .badge{margin-left:auto;font-size:11px;font-weight:600;padding:2px 10px;border-radius:20px}
+.card-b{padding:14px 16px}
+
+/* ── Time slots ── */
+.slot{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bg3);cursor:pointer;transition:background .15s;gap:12px}
+.slot:active{background:var(--bg)}
+.slot:last-child{border:none}
+.slot-time{font-size:18px;font-weight:800;color:var(--purple);min-width:55px}
+.slot-info{flex:1;min-width:0}
+.slot-count{font-size:13px;font-weight:600}
+.slot-bar{height:5px;background:var(--bg3);border-radius:3px;margin-top:4px;overflow:hidden}
+.slot-fill{height:100%;border-radius:3px;transition:width .3s}
+.slot-arrow{color:var(--ink3);font-size:16px}
+
+/* ── Aluno row ── */
+.aluno-row{display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bg3);gap:10px;cursor:pointer;transition:background .15s}
+.aluno-row:active{background:var(--bg)}
+.aluno-row:last-child{border:none}
+.aluno-av{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.aluno-av-txt{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.aluno-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aluno-sub{font-size:11px;color:var(--ink3)}
+.aluno-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:12px;flex-shrink:0}
+
+/* ── Modal ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s}
+.modal{background:var(--wh);width:100%;max-width:500px;max-height:85vh;border-radius:var(--r2) var(--r2) 0 0;overflow-y:auto;animation:slideUp .25s;padding-bottom:var(--safe-b)}
+.modal-h{padding:16px 20px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--bg3);position:sticky;top:0;background:var(--wh);z-index:1}
+.modal-close{margin-left:auto;background:none;border:none;font-size:20px;color:var(--ink3);cursor:pointer;padding:4px}
+.modal-b{padding:16px 20px}
+
+/* ── Rodízio ── */
+.prof-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg);border-radius:20px;font-size:12px;font-weight:600;margin:3px}
+.prof-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+
+/* ── Search ── */
+.search{width:100%;padding:10px 14px;border:1px solid var(--bg3);border-radius:var(--r);font-size:14px;background:var(--wh);outline:none;font-family:inherit;margin-bottom:12px}
+.search:focus{border-color:var(--purple-b);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+
+/* ── Button ── */
+.btn{padding:10px 18px;border-radius:var(--r);font-size:13px;font-weight:600;border:none;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--purple);color:#fff}
+.btn-s{background:var(--bg);color:var(--ink)}
+.btn-d{background:var(--red-l);color:var(--red)}
+
+/* ── Pull to refresh indicator ── */
+.ptr{text-align:center;padding:8px;font-size:12px;color:var(--ink3);display:none}
+
+/* ── Animations ── */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.loading{animation:pulse 1.2s infinite;text-align:center;padding:40px;color:var(--ink3)}
+
+/* ── Empty state ── */
+.empty{text-align:center;padding:40px 20px;color:var(--ink3)}
+.empty-ico{font-size:40px;margin-bottom:8px}
+.empty-t{font-size:15px;font-weight:600;margin-bottom:4px}
+.empty-s{font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="status-bar"></div>
+<div class="header">
+  <div class="header-logo">ESTÚDIO <span>7</span></div>
+  <div class="header-right">
+    <div class="header-date" id="hdr-date"></div>
+    <div class="header-avatar" id="hdr-av"></div>
+  </div>
+</div>
+<div class="content" id="content">
+  <div class="loading">⏳ Carregando...</div>
+</div>
+<nav class="nav">
+  <div class="nav-item on" onclick="go('agenda')"><div class="nav-ico">📅</div><div class="nav-lbl">Agenda</div></div>
+  <div class="nav-item" onclick="go('rodizio')"><div class="nav-ico">🔄</div><div class="nav-lbl">Rodízio</div></div>
+  <div class="nav-item" onclick="go('alunos')"><div class="nav-ico">👤</div><div class="nav-lbl">Alunos</div></div>
+  <div class="nav-item" onclick="go('config')"><div class="nav-ico">⚙️</div><div class="nav-lbl">Config</div></div>
+</nav>
+<div id="modal-root"></div>
+
+<script>
+// ══════════════════════════════════════
+// CONFIG & STATE
+// ══════════════════════════════════════
+const SUPA_URL='https://kfmkcbhalwupgknysukj.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmbWtjYmhhbHd1cGdrbnlzdWtqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzQzMjE2NCwiZXhwIjoyMDg5MDA4MTY0fQ.xvRFjKk7GnXqrykjEr9Cp1yGGV-wGmcsZ-9SHZ1u9UU';
+const API_URL='https://dynamic-smile-production-9fc8.up.railway.app';
+const API_KEY='se7e2025';
+const sess=JSON.parse(localStorage.getItem('se7e_session')||'{}');
+
+let tab='agenda';
+let agendaData=null;
+let agendaDate=new Date().toISOString().slice(0,10);
+let alunos=[];
+let alunosLoaded=false;
+let slotDetail=null;
+let searchQ='';
+
+// ══════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════
+async function sbGet(t,q=''){
+  const r=await fetch(`${SUPA_URL}/rest/v1/${t}?${q}`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});
+  return r.json();
+}
+async function apiGet(path){
+  const r=await fetch(`${API_URL}/${path}`,{headers:{'x-api-key':API_KEY}});
+  return r.json();
+}
+function ini(nm){return (nm||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function avColor(nm){const h=[...nm].reduce((a,c)=>c.charCodeAt(0)+((a<<5)-a),0);return `hsl(${Math.abs(h)%360},45%,55%)`;}
+function fmtDate(d){if(!d)return'—';const dt=new Date(d+'T12:00');return dt.toLocaleDateString('pt-BR',{day:'numeric',month:'short',year:'numeric'});}
+const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const DIAS_FULL=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+// Header
+document.getElementById('hdr-av').textContent=ini(sess.name||'');
+function updateHeaderDate(){
+  const dt=new Date(agendaDate+'T12:00');
+  document.getElementById('hdr-date').textContent=dt.toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+}
+updateHeaderDate();
+
+// ══════════════════════════════════════
+// NAV
+// ══════════════════════════════════════
+function go(t){
+  tab=t;
+  document.querySelectorAll('.nav-item').forEach((el,i)=>{
+    el.classList.toggle('on',['agenda','rodizio','alunos','config'][i]===t);
+  });
+  render();
+}
+
+function render(){
+  const c=document.getElementById('content');
+  if(tab==='agenda') renderAgenda(c);
+  else if(tab==='rodizio') renderRodizio(c);
+  else if(tab==='alunos') renderAlunos(c);
+  else if(tab==='config') renderConfig(c);
+}
+
+// ══════════════════════════════════════
+// AGENDA
+// ══════════════════════════════════════
+async function renderAgenda(c){
+  if(!agendaData){
+    c.innerHTML='<div class="loading">⏳ Carregando agenda...</div>';
+    try{
+      agendaData=await apiGet(`tecnofit/dia/${agendaDate}`);
+    }catch(e){agendaData={horarios:[]};}
+    renderAgenda(c);
+    return;
+  }
+  const horarios=agendaData.horarios||[];
+  const agora=new Date();
+  const isToday=agendaDate===new Date().toISOString().slice(0,10);
+
+  // Date nav
+  let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <button onclick="changeDate(-1)" style="border:none;background:var(--bg);width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer">←</button>
+    <div style="flex:1;text-align:center">
+      <div style="font-size:18px;font-weight:800">${DIAS_FULL[new Date(agendaDate+'T12:00').getDay()]}</div>
+      <div style="font-size:12px;color:var(--ink3)">${fmtDate(agendaDate)}</div>
+    </div>
+    <button onclick="changeDate(1)" style="border:none;background:var(--bg);width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer">→</button>
+  </div>`;
+
+  if(isToday){
+    html+=`<div style="text-align:center;margin-bottom:12px">
+      <span style="font-size:11px;padding:3px 12px;border-radius:20px;background:var(--green-l);color:var(--green);font-weight:600">● HOJE — ${agendaData.total_alunos||0} alunos no dia</span>
+    </div>`;
+  }
+
+  // Stats
+  const totalAlunos=horarios.reduce((s,h)=>s+(h.alunos?.length||0),0);
+  const totalCapacidade=horarios.reduce((s,h)=>s+(h.capacidade||9),0);
+  const ocupacao=totalCapacidade?Math.round(totalAlunos/totalCapacidade*100):0;
+
+  html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+    <div style="background:var(--wh);border-radius:var(--r);padding:12px;text-align:center;border:1px solid var(--bg3)">
+      <div style="font-size:22px;font-weight:800;color:var(--purple)">${horarios.length}</div>
+      <div style="font-size:10px;color:var(--ink3);font-weight:600">HORÁRIOS</div>
+    </div>
+    <div style="background:var(--wh);border-radius:var(--r);padding:12px;text-align:center;border:1px solid var(--bg3)">
+      <div style="font-size:22px;font-weight:800;color:var(--ink)">${totalAlunos}</div>
+      <div style="font-size:10px;color:var(--ink3);font-weight:600">ALUNOS</div>
+    </div>
+    <div style="background:var(--wh);border-radius:var(--r);padding:12px;text-align:center;border:1px solid var(--bg3)">
+      <div style="font-size:22px;font-weight:800;color:${ocupacao>=80?'var(--green)':ocupacao>=50?'var(--gold)':'var(--red)'}">${ocupacao}%</div>
+      <div style="font-size:10px;color:var(--ink3);font-weight:600">OCUPAÇÃO</div>
+    </div>
+  </div>`;
+
+  // Slots list
+  html+=`<div class="card">`;
+  if(!horarios.length) html+=`<div class="empty"><div class="empty-ico">📅</div><div class="empty-t">Sem aulas</div><div class="empty-s">Nenhum horário para este dia.</div></div>`;
+  
+  for(const h of horarios){
+    const total=h.alunos?.length||0;
+    const cap=h.capacidade||9;
+    const pct=Math.round(total/cap*100);
+    const isFull=total>=cap;
+    const horaAula=new Date(`${agendaDate}T${h.horario}:00`);
+    const isNow=isToday&&agora>=new Date(horaAula.getTime()-10*60000)&&agora<=new Date(horaAula.getTime()+50*60000);
+    const isPast=isToday&&agora>new Date(horaAula.getTime()+50*60000);
+    const fillColor=isFull?'var(--red)':pct>=70?'var(--gold)':'var(--green)';
+
+    html+=`<div class="slot" onclick="openSlot('${h.horario}')" style="${isNow?'background:var(--purple-l);border-left:3px solid var(--purple)':''}${isPast?';opacity:.5':''}">
+      <div class="slot-time">${h.horario}</div>
+      <div class="slot-info">
+        <div class="slot-count">${total}/${cap} alunos ${isFull?'<span style="color:var(--red);font-size:11px">LOTADO</span>':''}</div>
+        <div class="slot-bar"><div class="slot-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+      </div>
+      <div class="slot-arrow">›</div>
+    </div>`;
+  }
+  html+=`</div>`;
+  c.innerHTML=html;
+}
+
+function changeDate(delta){
+  const d=new Date(agendaDate+'T12:00');
+  d.setDate(d.getDate()+delta);
+  // Skip weekends
+  if(d.getDay()===0) d.setDate(d.getDate()+(delta>0?1:-2));
+  if(d.getDay()===6) d.setDate(d.getDate()+(delta>0?2:-1));
+  agendaDate=d.toISOString().slice(0,10);
+  agendaData=null;
+  updateHeaderDate();
+  render();
+}
+
+function openSlot(horario){
+  const h=(agendaData?.horarios||[]).find(x=>x.horario===horario);
+  if(!h)return;
+  const alunos=h.alunos||[];
+  const tipoLabel={agenda_fixa:'Fixo',reposicao:'Repo',reagendamento:'Reag',avulsa:'Avulsa'};
+  const tipoColor={agenda_fixa:'var(--green)',reposicao:'var(--purple)',reagendamento:'var(--gold)',avulsa:'var(--ink3)'};
+
+  let html=`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-h">
+        <span style="font-size:20px">🕐</span>
+        ${horario} — ${fmtDate(agendaDate)}
+        <span style="font-size:12px;color:var(--ink3)">${alunos.length}/${h.capacidade||9}</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>`;
+
+  if(!alunos.length){
+    html+=`<div class="empty"><div class="empty-ico">👤</div><div class="empty-t">Sem alunos</div></div>`;
+  } else {
+    for(const a of alunos){
+      const cor=avColor(a.name||'');
+      const tipo=tipoLabel[a.tipo]||a.tipo;
+      const tc=tipoColor[a.tipo]||'var(--ink3)';
+      html+=`<div class="aluno-row" onclick="openAlunoFromSlot(${a.code})">
+        ${a.photo?`<img class="aluno-av" src="${a.photo}" onerror="this.outerHTML='<div class=aluno-av-txt style=background:${cor}>${ini(a.name)}</div>'">`
+          :`<div class="aluno-av-txt" style="background:${cor}">${ini(a.name)}</div>`}
+        <div style="flex:1;min-width:0">
+          <div class="aluno-name">${a.name}</div>
+          <div class="aluno-sub">mat. ${a.code}${a.checkin?' · ✅ Check-in':''}</div>
+        </div>
+        <span class="aluno-badge" style="background:${tc}15;color:${tc}">${tipo}</span>
+      </div>`;
+    }
+  }
+  html+=`</div></div>`;
+  document.getElementById('modal-root').innerHTML=html;
+}
+
+// ══════════════════════════════════════
+// RODÍZIO
+// ══════════════════════════════════════
+async function renderRodizio(c){
+  if(!agendaData){
+    c.innerHTML='<div class="loading">⏳ Carregando...</div>';
+    try{agendaData=await apiGet(`tecnofit/dia/${agendaDate}`);}catch(e){agendaData={horarios:[]};}
+    renderRodizio(c);return;
+  }
+
+  // Load professors
+  let profs;
+  try{profs=await sbGet('profiles','role=eq.teacher&active=eq.true&select=id,full_name');}
+  catch(e){profs=[];}
+
+  const horarios=agendaData.horarios||[];
+  const agora=new Date();
+  const isToday=agendaDate===new Date().toISOString().slice(0,10);
+
+  // Find current/next slot
+  let currentSlot=null;
+  if(isToday){
+    for(const h of horarios){
+      const t=new Date(`${agendaDate}T${h.horario}:00`);
+      if(agora>=new Date(t.getTime()-10*60000)&&agora<=new Date(t.getTime()+50*60000)){
+        currentSlot=h; break;
+      }
+    }
+    if(!currentSlot){
+      for(const h of horarios){
+        const t=new Date(`${agendaDate}T${h.horario}:00`);
+        if(t>agora){currentSlot=h;break;}
+      }
+    }
+  }
+
+  let html=`<div style="margin-bottom:14px">
+    <div style="font-size:18px;font-weight:800">Rodízio de Professores</div>
+    <div style="font-size:12px;color:var(--ink3)">${DIAS_FULL[new Date(agendaDate+'T12:00').getDay()]} — ${fmtDate(agendaDate)}</div>
+  </div>`;
+
+  // Professor list
+  html+=`<div class="card">
+    <div class="card-h">👨‍🏫 Professores disponíveis <span class="badge" style="background:var(--green-l);color:var(--green)">${profs.length}</span></div>
+    <div class="card-b" style="display:flex;flex-wrap:wrap;gap:4px">
+      ${profs.map(p=>`<div class="prof-chip"><span class="dot"></span>${p.full_name.split(' ')[0]}</div>`).join('')}
+    </div>
+  </div>`;
+
+  // Current slot detail
+  if(currentSlot){
+    const al=currentSlot.alunos||[];
+    html+=`<div class="card" style="border-color:var(--purple-b)">
+      <div class="card-h" style="background:var(--purple-l);color:var(--purple)">
+        🕐 ${isToday?'Agora':'Próximo'}: ${currentSlot.horario}
+        <span class="badge" style="background:var(--purple);color:#fff">${al.length}/${currentSlot.capacidade||9}</span>
+      </div>`;
+
+    // Simple round-robin assignment
+    if(al.length && profs.length){
+      html+=`<div style="padding:0">`;
+      al.forEach((a,i)=>{
+        const prof=profs[i%profs.length];
+        const cor=avColor(a.name||'');
+        html+=`<div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--bg3);gap:10px">
+          ${a.photo?`<img class="aluno-av" src="${a.photo}" onerror="this.outerHTML='<div class=aluno-av-txt style=background:${cor}>${ini(a.name)}</div>'">`
+            :`<div class="aluno-av-txt" style="background:${cor}">${ini(a.name)}</div>`}
+          <div style="flex:1;min-width:0">
+            <div class="aluno-name">${a.name}</div>
+          </div>
+          <div style="font-size:12px;font-weight:600;color:var(--purple)">→ ${prof.full_name.split(' ')[0]}</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  }
+
+  // All slots summary
+  html+=`<div class="card"><div class="card-h">📋 Todos os horários</div>`;
+  for(const h of horarios){
+    const al=h.alunos?.length||0;
+    html+=`<div class="slot" onclick="go('agenda');openSlot('${h.horario}')">
+      <div class="slot-time" style="font-size:15px">${h.horario}</div>
+      <div class="slot-info"><div class="slot-count" style="font-size:12px">${al}/${h.capacidade||9} alunos</div></div>
+      <div class="slot-arrow">›</div>
+    </div>`;
+  }
+  html+=`</div>`;
+  c.innerHTML=html;
+}
+
+// ══════════════════════════════════════
+// ALUNOS
+// ══════════════════════════════════════
+async function renderAlunos(c){
+  if(!alunosLoaded){
+    c.innerHTML='<div class="loading">⏳ Carregando alunos...</div>';
+    try{
+      const [profiles,students]=await Promise.all([
+        sbGet('profiles','role=eq.student&active=eq.true&select=id,full_name,phone,photo_url&order=full_name'),
+        sbGet('students','select=id,matricula,blocked,treinos_realizados,next_training_session')
+      ]);
+      const sMap=Object.fromEntries(students.map(s=>[s.id,s]));
+      alunos=profiles.map(p=>({...p,...(sMap[p.id]||{})}));
+      alunosLoaded=true;
+    }catch(e){alunos=[];}
+    renderAlunos(c);return;
+  }
+
+  const filtrados=searchQ?alunos.filter(a=>(a.full_name||'').toLowerCase().includes(searchQ.toLowerCase())||String(a.matricula).includes(searchQ)):alunos;
+
+  let html=`<input class="search" placeholder="Buscar aluno..." value="${searchQ}" oninput="searchQ=this.value;renderAlunos(document.getElementById('content'))">`;
+  html+=`<div style="font-size:11px;color:var(--ink3);margin-bottom:8px">${filtrados.length} aluno${filtrados.length!==1?'s':''}</div>`;
+  html+=`<div class="card">`;
+
+  for(const a of filtrados.slice(0,50)){
+    const cor=avColor(a.full_name||'');
+    html+=`<div class="aluno-row" onclick="openAlunoDetail('${a.id}')">
+      ${a.photo_url?`<img class="aluno-av" src="${a.photo_url}" onerror="this.outerHTML='<div class=aluno-av-txt style=background:${cor}>${ini(a.full_name)}</div>'">`
+        :`<div class="aluno-av-txt" style="background:${cor}">${ini(a.full_name)}</div>`}
+      <div style="flex:1;min-width:0">
+        <div class="aluno-name">${a.full_name}</div>
+        <div class="aluno-sub">mat. ${a.matricula||'—'} · Treino ${a.next_training_session||1} · ${a.treinos_realizados||0} feitos</div>
+      </div>
+      ${a.blocked?'<span class="aluno-badge" style="background:var(--red-l);color:var(--red)">Bloq</span>':''}
+    </div>`;
+  }
+  if(filtrados.length>50) html+=`<div style="padding:12px;text-align:center;font-size:12px;color:var(--ink3)">Mostrando 50 de ${filtrados.length}. Refine a busca.</div>`;
+  html+=`</div>`;
+  c.innerHTML=html;
+}
+
+async function openAlunoDetail(id){
+  const a=alunos.find(x=>x.id===id);
+  if(!a)return;
+
+  // Load contract + fixed_slots + replacement_credits
+  let contracts=[],fixedSlots=[],repCredits=[],plan={};
+  try{
+    [contracts,repCredits]=await Promise.all([
+      sbGet('contracts',`student_id=eq.${id}&status=eq.active&order=created_at.desc&limit=1&select=*`),
+      sbGet('replacement_credits',`student_id=eq.${id}&active=eq.true&select=quantity_remaining`),
+    ]);
+    if(contracts.length){
+      const ct=contracts[0];
+      const plans=await sbGet('plans',`id=eq.${ct.plan_id}&select=*`);
+      plan=plans[0]||{};
+      fixedSlots=await sbGet('fixed_slots',`student_id=eq.${id}&active=eq.true&select=class_slot_id`);
+      if(fixedSlots.length){
+        const slotIds=fixedSlots.map(f=>f.class_slot_id);
+        const slotsData=await sbGet('class_slots',`id=in.(${slotIds.join(',')})&select=weekday,start_time&order=weekday,start_time`);
+        fixedSlots=slotsData.map(s=>({dia:DIAS[s.weekday],hr:s.start_time.slice(0,5)}));
+      }
+    }
+  }catch(e){}
+
+  const ct=contracts[0]||{};
+  const repDisp=repCredits.reduce((s,r)=>s+(r.quantity_remaining||0),0);
+  const cor=avColor(a.full_name||'');
+  const tipoMap={monthly:'Mensal',recurring:'Recorrente',annual:'Anual'};
+
+  let html=`<div class="modal-bg" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-h">
+        ${a.photo_url?`<img src="${a.photo_url}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">`
+          :`<div class="aluno-av-txt" style="background:${cor};width:32px;height:32px;font-size:11px">${ini(a.full_name)}</div>`}
+        <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.full_name}</div>
+        <div style="font-size:11px;color:var(--ink3)">mat. ${a.matricula||'—'}</div></div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-b">
+        <!-- Status cards -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+          <div style="text-align:center;padding:10px;background:var(--purple-l);border-radius:var(--r)">
+            <div style="font-size:20px;font-weight:800;color:var(--purple)">${a.treinos_realizados||0}</div>
+            <div style="font-size:9px;color:var(--purple);font-weight:600">TREINOS</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:var(--green-l);border-radius:var(--r)">
+            <div style="font-size:20px;font-weight:800;color:var(--green)">Ficha ${a.next_training_session||1}</div>
+            <div style="font-size:9px;color:var(--green);font-weight:600">PRÓXIMO</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:${repDisp>0?'var(--gold-l)':'var(--bg)'};border-radius:var(--r)">
+            <div style="font-size:20px;font-weight:800;color:${repDisp>0?'var(--gold)':'var(--ink3)'}">${repDisp}</div>
+            <div style="font-size:9px;color:var(--ink3);font-weight:600">REPOSIÇÕES</div>
+          </div>
+        </div>
+
+        ${ct.id?`
+        <!-- Contrato -->
+        <div style="background:var(--bg);border-radius:var(--r);padding:12px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:700;margin-bottom:6px">${plan.name||'Plano'} · ${tipoMap[ct.payment_type]||''}</div>
+          <div style="font-size:11px;color:var(--ink3)">${fmtDate(ct.start_date)} → ${fmtDate(ct.end_date)}</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:2px">${ct.remaining_classes||0}/${ct.total_classes||0} aulas restantes · ${plan.frequency_per_week||0}x/semana</div>
+        </div>
+
+        <!-- Horários fixos -->
+        ${fixedSlots.length?`<div style="margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ink3);margin-bottom:6px">HORÁRIOS FIXOS</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${fixedSlots.map(s=>`<div style="display:flex;flex-direction:column;align-items:center;padding:8px 14px;background:var(--purple-l);border-radius:10px;border:1px solid var(--purple-b)">
+              <span style="font-size:11px;font-weight:700;color:var(--purple)">${s.dia}</span>
+              <span style="font-size:15px;font-weight:800;color:var(--purple)">${s.hr}</span>
+            </div>`).join('')}
+          </div>
+        </div>`:''}
+        `:'<div style="font-size:12px;color:var(--ink3);margin-bottom:12px">Sem contrato ativo.</div>'}
+
+        <!-- Actions -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${a.phone?`<a href="https://wa.me/${(a.phone||'').replace(/\D/g,'')}" class="btn btn-s" style="text-decoration:none">💬 WhatsApp</a>`:''}
+          ${a.blocked
+            ?`<button class="btn btn-p" onclick="toggleBlock('${a.id}',false)">✅ Desbloquear</button>`
+            :`<button class="btn btn-d" onclick="toggleBlock('${a.id}',true)">🔴 Bloquear</button>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('modal-root').innerHTML=html;
+}
+
+async function openAlunoFromSlot(code){
+  closeModal();
+  if(!alunosLoaded){
+    // Quick load
+    const [profiles,students]=await Promise.all([
+      sbGet('profiles','role=eq.student&active=eq.true&select=id,full_name,phone,photo_url&order=full_name'),
+      sbGet('students','select=id,matricula,blocked,treinos_realizados,next_training_session')
+    ]);
+    const sMap=Object.fromEntries(students.map(s=>[s.id,s]));
+    alunos=profiles.map(p=>({...p,...(sMap[p.id]||{})}));
+    alunosLoaded=true;
+  }
+  const a=alunos.find(x=>x.matricula===code);
+  if(a) openAlunoDetail(a.id);
+}
+
+async function toggleBlock(id,block){
+  await fetch(`${SUPA_URL}/rest/v1/students?id=eq.${id}`,{
+    method:'PATCH',
+    headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify({blocked:block,blocked_reason:block?'Bloqueado via app gestão':null})
+  });
+  // Update local
+  const a=alunos.find(x=>x.id===id);
+  if(a) a.blocked=block;
+  closeModal();
+  openAlunoDetail(id);
+}
+
+// ══════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════
+function renderConfig(c){
+  c.innerHTML=`
+    <div style="margin-bottom:14px">
+      <div style="font-size:18px;font-weight:800">Configurações</div>
+      <div style="font-size:12px;color:var(--ink3)">Logado como ${sess.name}</div>
+    </div>
+    <div class="card">
+      <div class="aluno-row" onclick="syncFixedSlots()">
+        <div style="font-size:20px">📌</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600">Sincronizar horários fixos</div>
+        <div style="font-size:11px;color:var(--ink3)">Detecta horários fixos do Tecnofit</div></div>
+        <div class="slot-arrow">›</div>
+      </div>
+      <div class="aluno-row" onclick="syncFrequencia()">
+        <div style="font-size:20px">📊</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600">Sincronizar frequência</div>
+        <div style="font-size:11px;color:var(--ink3)">Recalcula treinos e reposições</div></div>
+        <div class="slot-arrow">›</div>
+      </div>
+      <div class="aluno-row" onclick="logout()">
+        <div style="font-size:20px">🚪</div>
+        <div style="flex:1"><div style="font-size:14px;font-weight:600;color:var(--red)">Sair</div>
+        <div style="font-size:11px;color:var(--ink3)">Encerrar sessão</div></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--ink3)">
+      Estúdio 7 · App de Gestão v1.0<br>
+      © 2026 — Todos os direitos reservados
+    </div>`;
+}
+
+async function syncFixedSlots(){
+  if(!confirm('Sincronizar horários fixos do Tecnofit?')) return;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">🔄 Sincronizando horários fixos...<br><span style="font-size:11px">Pode levar até 2 minutos</span></div>';
+  try{
+    const r=await fetch(`${API_URL}/tecnofit/sync-fixed-slots`,{method:'POST',headers:{'x-api-key':API_KEY}});
+    const data=await r.json();
+    alert(`✅ Sincronizado!\n\nAlunos fixos: ${data.alunos_fixos||'?'}\nInseridos: ${data.inserted||'?'}`);
+  }catch(e){alert('Erro: '+e.message);}
+  renderConfig(c);
+}
+
+async function syncFrequencia(){
+  if(!confirm('Recalcular frequência de todos os alunos?\nIsso pode levar alguns minutos.')) return;
+  const c=document.getElementById('content');
+  c.innerHTML='<div class="loading">🔄 Calculando frequência...<br><span style="font-size:11px">Analisando dados do Tecnofit</span></div>';
+  try{
+    const r=await fetch(`${API_URL}/tecnofit/sync-frequencia`,{method:'POST',headers:{'x-api-key':API_KEY}});
+    const data=await r.json();
+    alert(`✅ Frequência atualizada!\n\nAlunos: ${data.students_updated||'?'}\nDias analisados: ${data.days_scanned||'?'}`);
+    alunosLoaded=false;
+  }catch(e){alert('Erro: '+e.message);}
+  renderConfig(c);
+}
+
+function logout(){
+  if(!confirm('Sair da sessão?'))return;
+  localStorage.removeItem('se7e_session');
+  window.location.href='/login';
+}
+
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+// ══════════════════════════════════════
+// INIT
+// ══════════════════════════════════════
+render();
+</script>
+</body>
+</html>

@@ -14,6 +14,7 @@ const ROUTES = {
   '/recepcao': 'recepcao.html',
   '/impressao/servico/download': 'servico_impressao/impressora.py',
   '/questionario': 'questionario.html',
+  '/gestao': 'gestao.html',
 };
 
 const MIME = {
