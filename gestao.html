@@ -219,43 +219,52 @@ function stMenu(el,code,name,checkinId,evtId){closePop();const r=el.getBoundingC
   document.body.appendChild(popup);
 }
 async function doRemove(evtId,checkinId,name){
-  if(!confirm(`Remover ${name} desta aula?`))return;
+  const slot=(agData?.horarios||[]).find(x=>x.horario===aulaView.hr);
+  const aluno=(slot?.alunos||[]).find(a=>a.checkin_id===checkinId);
+  const isRepo=aluno&&(aluno.tipo==='reposicao'||aluno.tipo==='reagendamento');
+  if(isRepo){
+    if(!confirm(`⚠️ ATENÇÃO — REPOSIÇÃO\n\n${name} está agendado como REPOSIÇÃO.\n\nReposições desmarcadas são perdidas DEFINITIVAMENTE.\nO aluno NÃO terá direito a remarcar esta aula.\n\nTem certeza que deseja remover?`))return;
+  }else{
+    if(!confirm(`Remover ${name} desta aula?\n\nO aluno receberá um crédito de reposição.`))return;
+  }
   try{
     const r=await fetch(`${API}/tecnofit/aula/remover`,{method:'POST',headers:{'x-api-key':AK,'Content-Type':'application/json'},body:JSON.stringify({event_id:evtId,checkin_id:checkinId})});
     if(!r.ok)throw new Error('Erro '+r.status);
-    alert('✅ Aluno removido!');
+    alert(isRepo?'✅ Reposição removida. Aula perdida definitivamente.':'✅ Aluno removido. Crédito de reposição gerado.');
     agData=null;render();
   }catch(e){alert('❌ Erro: '+e.message)}
 }
 function closePop(){if(popup){popup.remove();popup=null}}
+let addOrigin=1;
 function addSt(evtId){
+  addOrigin=1;
   const s=document.createElement('div');
-  s.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-handle"></div><div class="sheet-h">👥 Adicionar Aluno</div><div class="sheet-b"><input class="search" style="padding-left:16px;margin-bottom:12px" placeholder="Buscar aluno..." oninput="srcAdd(this.value,this.parentElement,${evtId})" autofocus><div id="add-r" style="max-height:50vh;overflow-y:auto"></div></div></div></div>`;
+  s.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-handle"></div><div class="sheet-h">👥 Adicionar Aluno</div><div class="sheet-b">
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button id="btn-tf" onclick="setOrig(1)" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--green);background:var(--green-bg);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Agenda Fixa</button>
+    <button id="btn-tr" onclick="setOrig(2)" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--bg4);background:transparent;color:var(--ink3);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Reposição</button>
+  </div>
+  <input class="search" style="padding-left:16px;margin-bottom:12px" placeholder="Buscar aluno..." oninput="srcAdd(this.value,this.parentElement,${evtId})" autofocus><div id="add-r" style="max-height:50vh;overflow-y:auto"></div></div></div></div>`;
   document.body.appendChild(s);s.querySelector('input').focus();
 }
+function setOrig(t){addOrigin=t;const f=document.getElementById('btn-tf'),r=document.getElementById('btn-tr');if(f&&r){f.style.cssText=`flex:1;padding:10px;border-radius:8px;border:1.5px solid ${t===1?'var(--green)':'var(--bg4)'};background:${t===1?'var(--green-bg)':'transparent'};color:${t===1?'var(--green)':'var(--ink3)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit`;r.style.cssText=`flex:1;padding:10px;border-radius:8px;border:1.5px solid ${t===2?'var(--gold)':'var(--bg4)'};background:${t===2?'var(--gold-bg)':'transparent'};color:${t===2?'var(--gold)':'var(--ink3)'};font-size:13px;font-weight:600;cursor:pointer;font-family:inherit`}}
 async function srcAdd(q,c,evtId){const el=c.querySelector('#add-r');if(q.length<2){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--ink3);font-size:13px">Digite ao menos 2 letras</div>';return}
   el.innerHTML='<div class="loading"><div class="spin"></div></div>';
-  // Search in Tecnofit agenda to get personId
   const aula=await apiG(`tecnofit/aula/${aulaView.dt}/${aulaView.hr}`);
   const jaInscritos=new Set((aula.alunos||[]).map(a=>a.code));
-  // Search Supabase for matching students
   const r=await sbG('profiles',`full_name=ilike.*${encodeURIComponent(q)}*&role=eq.student&active=eq.true&limit=15&select=id,full_name,photo_url`);
   const students=await sbG('students',`id=in.(${r.map(p=>p.id).join(',')})&select=id,matricula`);
   const matMap=Object.fromEntries(students.map(s=>[s.id,s.matricula]));
-  // Filter out already enrolled
   const available=r.filter(p=>!jaInscritos.has(matMap[p.id]));
-  el.innerHTML=available.length?available.map(a=>{
-    const mat=matMap[a.id];
-    return`<div class="client-row" onclick="doAdd(${evtId},${mat},'${a.full_name.replace(/'/g,"\\'")}');this.closest('.sheet-bg').remove()">${a.photo_url?`<img src="${a.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">`:`<div class="cl-av" style="background:${avC(a.full_name)}">${ini(a.full_name)}</div>`}<div style="flex:1;min-width:0"><div class="cl-name">${a.full_name}</div><div style="font-size:11px;color:var(--ink3)">mat. ${mat||'—'}</div></div></div>`}).join(''):'<div style="padding:16px;text-align:center;color:var(--ink3)">Nenhum aluno disponível.</div>';
+  el.innerHTML=available.length?available.map(a=>{const mat=matMap[a.id];return`<div class="client-row" onclick="doAdd(${evtId},${mat},'${a.full_name.replace(/'/g,"\\'")}');this.closest('.sheet-bg').remove()">${a.photo_url?`<img src="${a.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">`:`<div class="cl-av" style="background:${avC(a.full_name)}">${ini(a.full_name)}</div>`}<div style="flex:1;min-width:0"><div class="cl-name">${a.full_name}</div><div style="font-size:11px;color:var(--ink3)">mat. ${mat||'—'}</div></div></div>`}).join(''):'<div style="padding:16px;text-align:center;color:var(--ink3)">Nenhum aluno disponível.</div>';
 }
 async function doAdd(evtId,matricula,name){
   if(!matricula){alert('Aluno sem matrícula');return}
+  if(addOrigin===2){if(!confirm(`⚠️ ATENÇÃO — REPOSIÇÃO\n\nVocê está agendando ${name} como REPOSIÇÃO.\n\nEsta aula NÃO poderá ser desmarcada.\nSe o aluno não comparecer, perderá a aula definitivamente.\n\n${name} confirma este horário?`))return}
   try{
-    // First we need the personId — get it from the current day checkins
-    // Search all events for this student code
-    const r=await fetch(`${API}/tecnofit/aula/adicionar-por-matricula`,{method:'POST',headers:{'x-api-key':AK,'Content-Type':'application/json'},body:JSON.stringify({event_id:evtId,matricula:matricula,origin:2})});
+    const r=await fetch(`${API}/tecnofit/aula/adicionar-por-matricula`,{method:'POST',headers:{'x-api-key':AK,'Content-Type':'application/json'},body:JSON.stringify({event_id:evtId,matricula:matricula,origin:addOrigin})});
     if(!r.ok){const e=await r.text();throw new Error(e.slice(0,100))}
-    alert(`✅ ${name} adicionado!`);
+    alert(`✅ ${name} adicionado como ${addOrigin===1?'Agenda Fixa':'Reposição'}!`);
     agData=null;render();
   }catch(e){alert('❌ Erro: '+e.message)}
 }
