@@ -204,30 +204,60 @@ function openAula(hr){aulaView={hr,dt:agDate};render()}
 // ── AULA DETAIL ──
 function renderAula(app){
   const s=(agData?.horarios||[]).find(x=>x.horario===aulaView.hr);if(!s){app.innerHTML='';aulaView=null;render();return}
-  const al=s.alunos||[],cap=s.capacidade||9;
+  const al=s.alunos||[],cap=s.capacidade||9,evtId=s.event_id;
   const tm={agenda_fixa:'Agenda Fixa',reposicao:'Reposição',reagendamento:'Reagendamento',avulsa:'Avulsa'};
   let h=`<div class="aula-hdr"><button class="aula-back" onclick="aulaView=null;render()">←</button><div class="aula-info"><div class="aula-title">${aulaView.hr} - PERSONAL</div><div class="aula-sub">PROFESSOR ${aulaView.hr.replace(':','H')} · ${aulaView.hr} - ${nxtHr(aulaView.hr)}</div></div><div class="slot-cap ${al.length>=cap?'full':''}" style="font-size:14px">👥 ${al.length}/${cap}</div></div>
   <div class="content" id="ct" style="padding-bottom:calc(80px + var(--safe-b))"><div style="padding:8px 20px;font-size:12px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:1px">Lista de Presença</div>`;
   for(const a of al){const c=avC(a.name||'');
-    h+=`<div class="student-card">${a.photo?`<img class="st-av" src="${a.photo}" onerror="this.outerHTML='<div class=st-av-txt style=background:${c}>${ini(a.name)}</div>'">`:`<div class="st-av-txt" style="background:${c}">${ini(a.name)}</div>`}<div class="st-info"><div class="st-name">${a.name}</div><div class="st-tipo">${tm[a.tipo]||a.tipo||''}</div></div><div class="toggle-area"><div class="toggle-lbl">Presença</div><div class="toggle ${a.checkin?'on':''}"></div></div><button class="st-dots" onclick="event.stopPropagation();stMenu(this,${a.code},'${(a.name||'').replace(/'/g,"\\'")}')">⋮</button></div>`}
-  h+=`</div><div class="add-bar"><button class="add-btn" onclick="addSt()">👥 Adicionar Aluno</button></div>`;
+    h+=`<div class="student-card">${a.photo?`<img class="st-av" src="${a.photo}" onerror="this.outerHTML='<div class=st-av-txt style=background:${c}>${ini(a.name)}</div>'">`:`<div class="st-av-txt" style="background:${c}">${ini(a.name)}</div>`}<div class="st-info"><div class="st-name">${a.name}</div><div class="st-tipo">${tm[a.tipo]||a.tipo||''}</div></div><div class="toggle-area"><div class="toggle-lbl">Presença</div><div class="toggle ${a.checkin?'on':''}"></div></div><button class="st-dots" onclick="event.stopPropagation();stMenu(this,${a.code||0},'${(a.name||'').replace(/'/g,"\\'")}',${a.checkin_id||0},${evtId})">⋮</button></div>`}
+  h+=`</div><div class="add-bar"><button class="add-btn" onclick="addSt(${evtId})">👥 Adicionar Aluno</button></div>`;
   app.innerHTML=h;
 }
-function stMenu(el,code,name){closePop();const r=el.getBoundingClientRect();
+function stMenu(el,code,name,checkinId,evtId){closePop();const r=el.getBoundingClientRect();
   popup=document.createElement('div');
-  popup.innerHTML=`<div class="popup-overlay" onclick="closePop()"></div><div class="popup" style="top:${Math.min(r.bottom,innerHeight-160)}px;right:16px"><div class="popup-item" onclick="closePop();openClByCode(${code})"><span class="pi-ico">👤</span>Perfil do Aluno</div><div class="popup-item" onclick="closePop();openWa(${code})"><span class="pi-ico">💬</span>WhatsApp</div><div class="popup-item danger" onclick="closePop()"><span class="pi-ico">🗑</span>Remover Check-In</div></div>`;
+  popup.innerHTML=`<div class="popup-overlay" onclick="closePop()"></div><div class="popup" style="top:${Math.min(r.bottom,innerHeight-160)}px;right:16px"><div class="popup-item" onclick="closePop();openClByCode(${code})"><span class="pi-ico">👤</span>Perfil do Aluno</div><div class="popup-item" onclick="closePop();openWa(${code})"><span class="pi-ico">💬</span>WhatsApp</div><div class="popup-item danger" onclick="closePop();doRemove(${evtId},${checkinId},'${name}')"><span class="pi-ico">🗑</span>Remover Check-In</div></div>`;
   document.body.appendChild(popup);
 }
+async function doRemove(evtId,checkinId,name){
+  if(!confirm(`Remover ${name} desta aula?`))return;
+  try{
+    const r=await fetch(`${API}/tecnofit/aula/remover`,{method:'POST',headers:{'x-api-key':AK,'Content-Type':'application/json'},body:JSON.stringify({event_id:evtId,checkin_id:checkinId})});
+    if(!r.ok)throw new Error('Erro '+r.status);
+    alert('✅ Aluno removido!');
+    agData=null;render();
+  }catch(e){alert('❌ Erro: '+e.message)}
+}
 function closePop(){if(popup){popup.remove();popup=null}}
-function addSt(){
+function addSt(evtId){
   const s=document.createElement('div');
-  s.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-handle"></div><div class="sheet-h">👥 Adicionar Aluno</div><div class="sheet-b"><input class="search" style="padding-left:16px;margin-bottom:12px" placeholder="Buscar aluno..." oninput="srcAdd(this.value,this.parentElement)" autofocus><div id="add-r" style="max-height:50vh;overflow-y:auto"></div></div></div></div>`;
+  s.innerHTML=`<div class="sheet-bg" onclick="if(event.target===this)this.remove()"><div class="sheet"><div class="sheet-handle"></div><div class="sheet-h">👥 Adicionar Aluno</div><div class="sheet-b"><input class="search" style="padding-left:16px;margin-bottom:12px" placeholder="Buscar aluno..." oninput="srcAdd(this.value,this.parentElement,${evtId})" autofocus><div id="add-r" style="max-height:50vh;overflow-y:auto"></div></div></div></div>`;
   document.body.appendChild(s);s.querySelector('input').focus();
 }
-async function srcAdd(q,c){const el=c.querySelector('#add-r');if(q.length<2){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--ink3);font-size:13px">Digite ao menos 2 letras</div>';return}
+async function srcAdd(q,c,evtId){const el=c.querySelector('#add-r');if(q.length<2){el.innerHTML='<div style="padding:16px;text-align:center;color:var(--ink3);font-size:13px">Digite ao menos 2 letras</div>';return}
   el.innerHTML='<div class="loading"><div class="spin"></div></div>';
-  const r=await sbG('profiles',`full_name=ilike.*${encodeURIComponent(q)}*&role=eq.student&active=eq.true&limit=10&select=id,full_name,photo_url`);
-  el.innerHTML=r.length?r.map(a=>`<div class="client-row" onclick="this.closest('.sheet-bg').remove()">${a.photo_url?`<img src="${a.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">`:`<div class="cl-av" style="background:${avC(a.full_name)}">${ini(a.full_name)}</div>`}<div style="flex:1;min-width:0"><div class="cl-name">${a.full_name}</div></div></div>`).join(''):'<div style="padding:16px;text-align:center;color:var(--ink3)">Nenhum encontrado.</div>';
+  // Search in Tecnofit agenda to get personId
+  const aula=await apiG(`tecnofit/aula/${aulaView.dt}/${aulaView.hr}`);
+  const jaInscritos=new Set((aula.alunos||[]).map(a=>a.code));
+  // Search Supabase for matching students
+  const r=await sbG('profiles',`full_name=ilike.*${encodeURIComponent(q)}*&role=eq.student&active=eq.true&limit=15&select=id,full_name,photo_url`);
+  const students=await sbG('students',`id=in.(${r.map(p=>p.id).join(',')})&select=id,matricula`);
+  const matMap=Object.fromEntries(students.map(s=>[s.id,s.matricula]));
+  // Filter out already enrolled
+  const available=r.filter(p=>!jaInscritos.has(matMap[p.id]));
+  el.innerHTML=available.length?available.map(a=>{
+    const mat=matMap[a.id];
+    return`<div class="client-row" onclick="doAdd(${evtId},${mat},'${a.full_name.replace(/'/g,"\\'")}');this.closest('.sheet-bg').remove()">${a.photo_url?`<img src="${a.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover">`:`<div class="cl-av" style="background:${avC(a.full_name)}">${ini(a.full_name)}</div>`}<div style="flex:1;min-width:0"><div class="cl-name">${a.full_name}</div><div style="font-size:11px;color:var(--ink3)">mat. ${mat||'—'}</div></div></div>`}).join(''):'<div style="padding:16px;text-align:center;color:var(--ink3)">Nenhum aluno disponível.</div>';
+}
+async function doAdd(evtId,matricula,name){
+  if(!matricula){alert('Aluno sem matrícula');return}
+  try{
+    // First we need the personId — get it from the current day checkins
+    // Search all events for this student code
+    const r=await fetch(`${API}/tecnofit/aula/adicionar-por-matricula`,{method:'POST',headers:{'x-api-key':AK,'Content-Type':'application/json'},body:JSON.stringify({event_id:evtId,matricula:matricula,origin:2})});
+    if(!r.ok){const e=await r.text();throw new Error(e.slice(0,100))}
+    alert(`✅ ${name} adicionado!`);
+    agData=null;render();
+  }catch(e){alert('❌ Erro: '+e.message)}
 }
 
 // ── CLIENTES ──

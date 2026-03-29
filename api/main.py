@@ -1112,7 +1112,8 @@ async def tecnofit_aula(data: str, horario: str, _=Depends(check_api_key)):
         "capacidade": quorum.get("capacity", 9),
         "alunos": [{"code": c.get("code"), "name": c.get("name"), "photo": c.get("photo"),
                      "contract": c.get("contract"), "tipo": origin_map.get(c.get("origin"), "?"),
-                     "checkin": c.get("checkin"), "phone": c.get("cellphone")} for c in checkins],
+                     "checkin": c.get("checkin"), "phone": c.get("cellphone"),
+                     "checkin_id": c.get("id"), "personId": c.get("personId")} for c in checkins],
         "total": len(checkins), "fixos": quorum.get("fixed", 0),
         "reposicoes": quorum.get("replacements", 0),
     }
@@ -1146,7 +1147,9 @@ async def tecnofit_dia(data: str, _=Depends(check_api_key)):
             "alunos": [{"code": c.get("code"), "name": c.get("name"),
                         "photo": c.get("photo"),
                         "tipo": origin_map.get(c.get("origin"), "?"),
-                        "checkin": c.get("checkin")} for c in checkins],
+                        "checkin": c.get("checkin"),
+                        "checkin_id": c.get("id"),
+                        "personId": c.get("personId")} for c in checkins],
             "total": quorum.get("total", len(checkins)),
             "fixos": quorum.get("fixed", 0),
             "reposicoes": quorum.get("replacements", 0),
@@ -1159,3 +1162,110 @@ async def tecnofit_dia(data: str, _=Depends(check_api_key)):
         "total_horarios": len(horarios),
         "total_alunos": sum(h["total"] for h in horarios),
     }
+
+
+# ════════════════════════════════════════════════════════
+# TECNOFIT: ADICIONAR / REMOVER ALUNO DE AULA
+# ════════════════════════════════════════════════════════
+
+class TecnofitAddStudent(BaseModel):
+    event_id: int
+    person_id: int
+    origin: int = 2  # 1=fixa, 2=reposição
+
+class TecnofitRemoveStudent(BaseModel):
+    event_id: int
+    checkin_id: int
+
+@app.post("/tecnofit/aula/adicionar")
+async def tecnofit_add_student(body: TecnofitAddStudent, _=Depends(check_api_key)):
+    """Adiciona aluno a uma aula no Tecnofit.
+    origin: 1=agenda_fixa, 2=reposição, 3=reagendamento"""
+    try:
+        result = await tf_post(
+            f"agenda/eventos/{body.event_id}/checkins",
+            {"checkin": {"personId": body.person_id, "origin": body.origin}}
+        )
+        return {"ok": True, "checkin_id": result.get("checkin"), "event_id": body.event_id}
+    except httpx.HTTPStatusError as e:
+        detail = e.response.text[:200] if e.response else str(e)
+        raise HTTPException(e.response.status_code if e.response else 500, detail=detail)
+
+@app.post("/tecnofit/aula/remover")
+async def tecnofit_remove_student(body: TecnofitRemoveStudent, _=Depends(check_api_key)):
+    """Remove aluno de uma aula no Tecnofit."""
+    try:
+        token = await tf_login()
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/eventos/{body.event_id}/checkins/{body.checkin_id}/remover",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"},
+                json={},
+                timeout=20
+            )
+            r.raise_for_status()
+        return {"ok": True, "removed_checkin_id": body.checkin_id, "event_id": body.event_id}
+    except httpx.HTTPStatusError as e:
+        detail = e.response.text[:200] if e.response else str(e)
+        raise HTTPException(e.response.status_code if e.response else 500, detail=detail)
+
+
+class TecnofitAddByMatricula(BaseModel):
+    event_id: int
+    matricula: int
+    origin: int = 2  # 1=fixa, 2=reposição
+
+@app.post("/tecnofit/aula/adicionar-por-matricula")
+async def tecnofit_add_by_matricula(body: TecnofitAddByMatricula, _=Depends(check_api_key)):
+    """Adiciona aluno a uma aula usando matrícula. Resolve personId automaticamente."""
+    # Step 1: Find personId by scanning the day's checkins for this matricula
+    # Or search across recent events
+    token = await tf_login()
+    person_id = None
+
+    # First, try to find personId from any event on the same day
+    async with httpx.AsyncClient() as client:
+        # Get the event to know which day
+        r = await client.post(
+            f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/grade/2026-03-24/2026-03-28",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"},
+            json={},
+            timeout=30
+        )
+        r.raise_for_status()
+        grid = r.json().get("grid", [])
+
+        # Scan all events to find this person's personId
+        for day in grid:
+            for evt in day.get("events", []):
+                if "PERSONAL" not in evt.get("name", ""):
+                    continue
+                r2 = await client.get(
+                    f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/eventos/{evt['id']}/checkins",
+                    headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                    timeout=15
+                )
+                if r2.status_code != 200:
+                    continue
+                for c in r2.json().get("checkins", []):
+                    if c.get("code") == body.matricula:
+                        person_id = c.get("personId")
+                        break
+                if person_id:
+                    break
+            if person_id:
+                break
+
+    if not person_id:
+        raise HTTPException(404, f"Matrícula {body.matricula} não encontrada no Tecnofit esta semana")
+
+    # Step 2: Add student using personId
+    try:
+        result = await tf_post(
+            f"agenda/eventos/{body.event_id}/checkins",
+            {"checkin": {"personId": person_id, "origin": body.origin}}
+        )
+        return {"ok": True, "checkin_id": result.get("checkin"), "event_id": body.event_id, "person_id": person_id}
+    except httpx.HTTPStatusError as e:
+        detail = e.response.text[:200] if e.response else str(e)
+        raise HTTPException(e.response.status_code if e.response else 500, detail=detail)
