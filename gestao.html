@@ -302,13 +302,38 @@ async function openClByCode(code){if(!clients)await loadCl();const c=clients?.fi
 async function openWa(code){if(!clients)await loadCl();const c=clients?.find(x=>x.matricula===code);if(c?.phone)window.open(`https://wa.me/${c.phone.replace(/\D/g,'')}`)}
 
 // ── FINANCEIRO ──
+let finData=null;
 function pgFinanceiro(){const m=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).toUpperCase();
+  if(!finData){loadFin();return`<div class="pg-hdr"><div class="pg-title">Financeiro</div></div><div class="content" id="ct"><div class="loading"><div class="spin"></div><br>Carregando financeiro...</div></div>`}
+  const rev=finData.revenue||{},rec=finData.receipts||{},sales=finData.sales||{},cust=finData.customers||{},status=finData.status||[];
   return`<div class="pg-hdr"><div class="pg-title">Financeiro</div></div><div class="content" id="ct">
-  <div style="padding:24px 20px;background:var(--bg)"><div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:1px;font-weight:600">SALDO DE ${m}</div><div style="font-size:36px;font-weight:800;margin-top:4px;color:var(--green)">—</div><div style="font-size:13px;color:var(--ink2);margin-top:4px">Dados via Tecnofit/Mundipag</div>
-  <div style="display:flex;gap:10px;margin-top:16px"><div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:14px">↗️</span><span style="font-size:11px;color:var(--ink3);font-weight:600">ENTRADA</span></div><div style="font-size:18px;font-weight:700;color:var(--green)">—</div><div style="font-size:10px;margin-top:4px;color:var(--green)">R$ 0,00 em aberto</div></div>
-  <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:14px">↙️</span><span style="font-size:11px;color:var(--ink3);font-weight:600">SAÍDA</span></div><div style="font-size:18px;font-weight:700;color:var(--red)">—</div><div style="font-size:10px;margin-top:4px;color:var(--red)">R$ 0,00 em aberto</div></div></div></div>
-  <div class="card" style="margin-top:12px"><div class="card-h">💳 Formas de Recebimento</div><div class="card-b"><div style="display:flex;flex-wrap:wrap;gap:8px">${['Boleto','Cartão de Crédito','Cartão de Crédito Online','Cartão de Débito','Dinheiro','Pix'].map(m=>`<span style="padding:6px 12px;border-radius:20px;background:var(--bg3);font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px"><span style="color:var(--green)">✓</span>${m}</span>`).join('')}</div></div></div>
-  <div style="padding:20px;text-align:center;font-size:12px;color:var(--ink3)">Financeiro detalhado no painel desktop.</div></div>`;
+  <div style="padding:24px 20px;background:var(--bg)"><div style="font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:1px;font-weight:600">SALDO DE ${m}</div><div style="font-size:36px;font-weight:800;margin-top:4px;color:var(--green)">${fmtV(rev.monthRevenue)}</div><div style="font-size:13px;color:var(--ink2);margin-top:4px">${fmtV(rev.monthRevenue)} em relação ao período anterior</div>
+  <div style="display:flex;gap:10px;margin-top:16px"><div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:14px">↗️</span><span style="font-size:11px;color:var(--ink3);font-weight:600">ENTRADA</span></div><div style="font-size:18px;font-weight:700;color:var(--green)">${fmtV(rec.totalReceipt||rev.monthRevenue)}</div><div style="font-size:10px;margin-top:4px;color:var(--green)">R$ 0,00 em aberto</div></div>
+  <div style="flex:1;background:var(--bg2);border-radius:var(--r);padding:14px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:14px">↙️</span><span style="font-size:11px;color:var(--ink3);font-weight:600">SAÍDA</span></div><div style="font-size:18px;font-weight:700;color:var(--red)">R$ 0,00</div><div style="font-size:10px;margin-top:4px;color:var(--red)">R$ 0,00 em aberto</div></div></div></div>
+  <div style="padding:0 16px;margin-top:12px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">Resumo</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:var(--bg2);border-radius:var(--r);padding:14px"><div style="font-size:11px;color:var(--ink3)">Vendas no mês</div><div style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px">${fmtV(sales.month)}</div></div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:14px"><div style="font-size:11px;color:var(--ink3)">Clientes ativos</div><div style="font-size:18px;font-weight:800;margin-top:2px">${cust.total||'—'}</div></div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:14px"><div style="font-size:11px;color:var(--ink3)">Recebido hoje</div><div style="font-size:18px;font-weight:800;color:var(--green);margin-top:2px">${fmtV(rev.dayRevenue)}</div></div>
+      <div style="background:var(--bg2);border-radius:var(--r);padding:14px"><div style="font-size:11px;color:var(--ink3)">Variação mês</div><div style="font-size:18px;font-weight:800;color:${(rev.monthVariation||0)>=0?'var(--green)':'var(--red)'};margin-top:2px">${(rev.monthVariation||0)>=0?'+':''}${(rev.monthVariation||0).toFixed(1)}%</div></div>
+    </div>
+  </div>
+  ${status.length?`<div style="padding:0 16px;margin-top:16px"><div style="font-size:14px;font-weight:700;margin-bottom:8px">Contratos</div>
+    <div style="background:var(--bg2);border-radius:var(--r);overflow:hidden">${status.map(s=>`<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bg3)"><span style="width:10px;height:10px;border-radius:50%;background:${s.statusName==='Ativo'?'var(--green)':s.statusName==='Bloqueado'?'var(--red)':'var(--gold)'};margin-right:10px"></span><div style="flex:1;font-size:14px">${s.statusName}</div><div style="font-size:16px;font-weight:700">${s.total}</div></div>`).join('')}</div>
+  </div>`:''}
+  <div class="card" style="margin-top:16px"><div class="card-h">💳 Formas de Recebimento</div><div class="card-b"><div style="display:flex;flex-wrap:wrap;gap:8px">${['Boleto','Cartão de Crédito','Cartão de Crédito Online','Cartão de Débito','Dinheiro','Pix'].map(m=>`<span style="padding:6px 12px;border-radius:20px;background:var(--bg3);font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px"><span style="color:var(--green)">✓</span>${m}</span>`).join('')}</div></div></div>
+  </div>`;
+}
+async function loadFin(){
+  try{
+    const [rev,rec,sales,cust,status]=await Promise.all([
+      apiG('tecnofit/finance/month-revenue'),apiG('tecnofit/finance/receipts'),
+      apiG('tecnofit/finance/sales'),apiG('tecnofit/finance/customers'),
+      apiG('tecnofit/finance/contract-status')
+    ]);
+    finData={revenue:rev.revenue||{},receipts:rec.receipts||{},sales:sales.totalSales||{},customers:cust.totalCustomerActive||{},status:status.totalStatus||[]};
+  }catch(e){finData={revenue:{},receipts:{},sales:{},customers:{},status:[]}}
+  render();
 }
 
 // ── MENU ──

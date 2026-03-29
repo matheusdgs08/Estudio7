@@ -1281,3 +1281,48 @@ async def tecnofit_person_cache(_=Depends(check_api_key)):
     """Retorna cache de personIds. Útil para debug."""
     cache = await _build_person_cache()
     return {"total": len(cache), "cache": cache}
+
+# ════════════════════════════════════════════════════════
+# TECNOFIT: FINANCEIRO (proxy para dashboard finance)
+# ════════════════════════════════════════════════════════
+
+@app.get("/tecnofit/finance/month-revenue")
+async def tf_finance_revenue(_=Depends(check_api_key)):
+    return await tf_get("finance/dashboard/month-revenue")
+
+@app.get("/tecnofit/finance/receipts")
+async def tf_finance_receipts(_=Depends(check_api_key)):
+    return await tf_get("finance/dashboard/receipt/monthly")
+
+@app.get("/tecnofit/finance/sales")
+async def tf_finance_sales(_=Depends(check_api_key)):
+    return await tf_get("finance/dashboard/total-sales/monthly")
+
+@app.get("/tecnofit/finance/customers")
+async def tf_finance_customers(_=Depends(check_api_key)):
+    return await tf_get("finance/dashboard/total-customer-active")
+
+@app.get("/tecnofit/finance/contract-status")
+async def tf_finance_contract_status(_=Depends(check_api_key)):
+    return await tf_get("contract/dashboard/total-status")
+
+@app.get("/tecnofit/finance/cashier")
+async def tf_finance_cashier(_=Depends(check_api_key)):
+    return await tf_get("finance/dashboard/cashier")
+
+@app.get("/tecnofit/finance/customer-contracts")
+async def tf_finance_customer_contracts(_=Depends(check_api_key)):
+    """Todos os alunos com seus contratos individuais e valores."""
+    return await tf_get("customer/dashboard/contract")
+
+@app.get("/tecnofit/finance/new-customers")
+async def tf_finance_new_customers(_=Depends(check_api_key)):
+    return await tf_get("finance/dashboard/new-customers")
+
+@app.get("/tecnofit/finance/daily")
+async def tf_finance_daily(_=Depends(check_api_key)):
+    """Resumo financeiro do dia."""
+    rev = await tf_get("finance/dashboard/month-revenue")
+    rec = await tf_get("finance/dashboard/receipt/daily")
+    sales = await tf_get("finance/dashboard/total-sales/daily")
+    return {"revenue": rev.get("revenue",{}), "receipts": rec.get("receipts",{}), "sales": sales.get("totalSales",{})}
