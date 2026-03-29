@@ -748,6 +748,8 @@ TECNOFIT_EMPRESA  = "103025"
 
 _tf_token = None
 _tf_token_ts = 0
+_tf_person_cache = {}  # matricula -> personId
+_tf_person_cache_ts = 0
 
 async def tf_login():
     """Autentica no Tecnofit e retorna o token JWT."""
@@ -1215,28 +1217,29 @@ class TecnofitAddByMatricula(BaseModel):
     matricula: int
     origin: int = 2  # 1=fixa, 2=reposição
 
-@app.post("/tecnofit/aula/adicionar-por-matricula")
-async def tecnofit_add_by_matricula(body: TecnofitAddByMatricula, _=Depends(check_api_key)):
-    """Adiciona aluno a uma aula usando matrícula. Resolve personId automaticamente."""
-    # Step 1: Find personId by scanning the day's checkins for this matricula
-    # Or search across recent events
-    token = await tf_login()
-    person_id = None
+async def _build_person_cache():
+    """Builds matricula->personId cache by scanning 5 days of Tecnofit agenda."""
+    global _tf_person_cache, _tf_person_cache_ts
+    import time
+    # Cache for 4 hours
+    if _tf_person_cache and (time.time() - _tf_person_cache_ts) < 14400:
+        return _tf_person_cache
 
-    # First, try to find personId from any event on the same day
+    from datetime import date, timedelta
+    today = date.today()
+    start = today - timedelta(days=today.weekday())  # Monday
+    end = start + timedelta(days=4)  # Friday
+
+    token = await tf_login()
+    cache = {}
     async with httpx.AsyncClient() as client:
-        # Get the event to know which day
         r = await client.post(
-            f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/grade/2026-03-24/2026-03-28",
+            f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/grade/{start}/{end}",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"},
-            json={},
-            timeout=30
+            json={}, timeout=30
         )
         r.raise_for_status()
-        grid = r.json().get("grid", [])
-
-        # Scan all events to find this person's personId
-        for day in grid:
+        for day in r.json().get("grid", []):
             for evt in day.get("events", []):
                 if "PERSONAL" not in evt.get("name", ""):
                     continue
@@ -1245,21 +1248,24 @@ async def tecnofit_add_by_matricula(body: TecnofitAddByMatricula, _=Depends(chec
                     headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
                     timeout=15
                 )
-                if r2.status_code != 200:
-                    continue
-                for c in r2.json().get("checkins", []):
-                    if c.get("code") == body.matricula:
-                        person_id = c.get("personId")
-                        break
-                if person_id:
-                    break
-            if person_id:
-                break
+                if r2.status_code == 200:
+                    for c in r2.json().get("checkins", []):
+                        if c.get("code") and c.get("personId"):
+                            cache[c["code"]] = c["personId"]
+
+    _tf_person_cache = cache
+    _tf_person_cache_ts = time.time()
+    return cache
+
+@app.post("/tecnofit/aula/adicionar-por-matricula")
+async def tecnofit_add_by_matricula(body: TecnofitAddByMatricula, _=Depends(check_api_key)):
+    """Adiciona aluno a uma aula usando matrícula. Resolve personId via cache."""
+    cache = await _build_person_cache()
+    person_id = cache.get(body.matricula)
 
     if not person_id:
-        raise HTTPException(404, f"Matrícula {body.matricula} não encontrada no Tecnofit esta semana")
+        raise HTTPException(404, f"Matrícula {body.matricula} não encontrada no Tecnofit")
 
-    # Step 2: Add student using personId
     try:
         result = await tf_post(
             f"agenda/eventos/{body.event_id}/checkins",
@@ -1269,3 +1275,9 @@ async def tecnofit_add_by_matricula(body: TecnofitAddByMatricula, _=Depends(chec
     except httpx.HTTPStatusError as e:
         detail = e.response.text[:200] if e.response else str(e)
         raise HTTPException(e.response.status_code if e.response else 500, detail=detail)
+
+@app.get("/tecnofit/person-cache")
+async def tecnofit_person_cache(_=Depends(check_api_key)):
+    """Retorna cache de personIds. Útil para debug."""
+    cache = await _build_person_cache()
+    return {"total": len(cache), "cache": cache}
