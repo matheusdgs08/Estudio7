@@ -1326,3 +1326,167 @@ async def tf_finance_daily(_=Depends(check_api_key)):
     rec = await tf_get("finance/dashboard/receipt/daily")
     sales = await tf_get("finance/dashboard/total-sales/daily")
     return {"revenue": rev.get("revenue",{}), "receipts": rec.get("receipts",{}), "sales": sales.get("totalSales",{})}
+
+# ════════════════════════════════════════════════════════
+# SYNC DIÁRIO AUTOMÁTICO (roda 1x por dia via cron)
+# ════════════════════════════════════════════════════════
+
+@app.post("/tecnofit/sync-daily")
+async def tecnofit_sync_daily(_=Depends(check_api_key)):
+    """Sync diário completo: alunos, contratos, frequência, fotos, financeiro.
+    Roda automaticamente 1x por dia via cron job."""
+    import time
+    start = time.time()
+    results = {}
+
+    # 1. Rebuild person cache
+    cache = await _build_person_cache()
+    results["person_cache"] = len(cache)
+
+    # 2. Sync contract data from Tecnofit
+    try:
+        contract_data = await tf_get("customer/dashboard/contract")
+        tf_contracts = contract_data.get("contractTicket", [])
+        
+        tf_freq_map = {
+            "1 X SEMANA - COBRANÇA RECORRENTE": 1, "1X - ANUAL": 1, "1X - MENSAL": 1,
+            "2 X SEMANA - COBRANÇA RECORRENTE": 2, "2X - ANUAL": 2, "2X - MENSAL": 2,
+            "3 X SEMANA - COBRANÇA RECORRENTE": 3, "3X - ANUAL": 3, "3X - MENSAL": 3,
+            "4 X SEMANA - COBRANÇA RECORRENTE": 4, "4X - ANUAL": 4, "4X - MENSAL": 4,
+            "5 X SEMANA - COBRANÇA RECORRENTE": 5, "5X - ANUAL": 5, "5X - MENSAL": 5,
+            "A - 1X - ANUAL - DEBITO RECORRENTE": 1, "A - 2X - ANUAL - DEBITO RECORRENTE": 2,
+            "A - 3X - ANUAL - DEBITO RECORRENTE": 3, "FIT 3 X SEMANA": 3,
+        }
+        
+        # Get plan mapping
+        plans = await sb_get("plans", "active=eq.true&select=id,frequency_per_week")
+        plan_by_freq = {p["frequency_per_week"]: p["id"] for p in plans}
+        
+        # Get student mapping
+        students = await sb_get("students", "select=id,matricula&matricula=not.is.null")
+        mat_to_id = {s["matricula"]: s["id"] for s in students}
+        
+        # Get existing active contracts
+        contracts = await sb_get("contracts", "status=eq.active&select=id,student_id,plan_id")
+        existing = {c["student_id"]: c["id"] for c in contracts}
+        
+        updated_contracts = 0
+        for ct_type in tf_contracts:
+            freq = tf_freq_map.get(ct_type["contractName"].strip(), 0)
+            plan_id = plan_by_freq.get(freq)
+            if not plan_id:
+                continue
+            ct_name = ct_type["contractName"].strip()
+            ptype = "recurring" if "RECORRENTE" in ct_name or "DEBITO" in ct_name else "annual" if "ANUAL" in ct_name else "monthly"
+            
+            for cust in ct_type.get("customers", []):
+                sb_id = mat_to_id.get(cust["personCode"])
+                if not sb_id or sb_id not in existing:
+                    continue
+                cid = existing[sb_id]
+                await sb_patch("contracts", f"id=eq.{cid}", {"plan_id": plan_id, "payment_type": ptype})
+                updated_contracts += 1
+        
+        results["contracts_updated"] = updated_contracts
+    except Exception as e:
+        results["contracts_error"] = str(e)[:100]
+
+    # 3. Sync photos and phones from Tecnofit checkins
+    try:
+        profiles_no_photo = await sb_get("profiles", "photo_url=is.null&role=eq.student&select=id")
+        no_photo_ids = {p["id"] for p in profiles_no_photo}
+        id_to_mat = {v: k for k, v in mat_to_id.items()}
+        
+        # Build photo/phone map from cache scan data
+        token = await tf_login()
+        from datetime import date, timedelta
+        today = date.today()
+        start_d = today - timedelta(days=today.weekday())
+        end_d = start_d + timedelta(days=4)
+        
+        async with httpx.AsyncClient() as client:
+            r = await client.post(
+                f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/grade/{start_d}/{end_d}",
+                headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"},
+                json={}, timeout=30)
+            grid = r.json().get("grid", [])
+            
+            photo_updates = 0
+            phone_updates = 0
+            
+            for day in grid:
+                for evt in day.get("events", []):
+                    if "PERSONAL" not in evt.get("name", ""):
+                        continue
+                    r2 = await client.get(
+                        f"{TECNOFIT_BASE}/api-core/{TECNOFIT_EMPRESA}/agenda/eventos/{evt['id']}/checkins",
+                        headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+                        timeout=15)
+                    if r2.status_code != 200:
+                        continue
+                    for c in r2.json().get("checkins", []):
+                        code = c.get("code")
+                        sb_id = mat_to_id.get(code)
+                        if not sb_id:
+                            continue
+                        # Update photo
+                        if sb_id in no_photo_ids and c.get("photo"):
+                            await sb_patch("profiles", f"id=eq.{sb_id}", {"photo_url": c["photo"]})
+                            no_photo_ids.discard(sb_id)
+                            photo_updates += 1
+            
+            results["photos_updated"] = photo_updates
+    except Exception as e:
+        results["photos_error"] = str(e)[:100]
+
+    # 4. Financial snapshot
+    try:
+        rev = await tf_get("finance/dashboard/month-revenue")
+        cust = await tf_get("finance/dashboard/total-customer-active")
+        status = await tf_get("contract/dashboard/total-status")
+        results["finance"] = {
+            "month_revenue": rev.get("revenue", {}).get("monthRevenue"),
+            "active_customers": cust.get("totalCustomerActive", {}).get("total"),
+            "contract_status": status.get("totalStatus", []),
+        }
+    except Exception as e:
+        results["finance_error"] = str(e)[:100]
+
+    elapsed = round(time.time() - start, 1)
+    results["elapsed_seconds"] = elapsed
+    return {"ok": True, "sync": results}
+
+# ════════════════════════════════════════════════════════
+# AUTO-CRON: Trigger sync diário via setInterval no startup
+# ════════════════════════════════════════════════════════
+
+import threading, time as _time
+
+def _daily_sync_thread():
+    """Roda sync diário em background. Executa na primeira vez após 60s,
+    depois a cada 24h."""
+    import asyncio
+    _time.sleep(60)  # Wait for server startup
+    
+    while True:
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            # Call sync via HTTP to own server
+            import urllib.request
+            req = urllib.request.Request(
+                f"http://localhost:{os.getenv('PORT', '8000')}/tecnofit/sync-daily",
+                method="POST",
+                headers={"x-api-key": API_SECRET or "se7e2025"}
+            )
+            resp = urllib.request.urlopen(req, timeout=300)
+            print(f"[CRON] Daily sync completed: {resp.read().decode()[:200]}")
+        except Exception as e:
+            print(f"[CRON] Daily sync error: {e}")
+        
+        # Sleep 24 hours
+        _time.sleep(86400)
+
+# Start cron thread on server boot
+_cron = threading.Thread(target=_daily_sync_thread, daemon=True)
+_cron.start()
