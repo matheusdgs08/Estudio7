@@ -17,9 +17,13 @@
   if(path.includes('recepcao') && !rolesRecepcao.includes(sess.role)){
     window.location.href='/login'; return;
   }
+  // Mobile → redirect to /gestao
+  const isMobile = window.innerWidth <= 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+  if(isMobile && !path.includes('gestao')){
+    window.location.href='/gestao'; return;
+  }
 })();
 </script>
-<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Recepção — Estúdio 7</title>
 <style>
